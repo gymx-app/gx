@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../auth/AuthContext'
 
@@ -115,7 +115,6 @@ export default function LissDay({
 }) {
   const { user } = useAuth()
   const cooldown = workout.cd || []
-  const scrollRef = useRef(null)
 
   // Equipment options based on travel mode
   const equipmentOptions = isTravelMode ? TRAVEL_OPTIONS : GYM_OPTIONS
@@ -292,11 +291,7 @@ export default function LissDay({
         <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-[#555555] mb-2">
           Equipment
         </p>
-        <div
-          ref={scrollRef}
-          className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4"
-          style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
-        >
+        <div className="flex flex-wrap gap-2">
           {equipmentOptions.map(key => {
             const eq = EQUIPMENT_CONFIG[key]
             const isActive = selectedEquipment === key
@@ -304,13 +299,13 @@ export default function LissDay({
               <button
                 key={key}
                 onClick={() => handleSelectEquipment(key)}
-                className={`shrink-0 flex items-center gap-2 px-4 min-h-[44px] text-[12px] font-semibold transition-colors ${
+                className={`flex items-center gap-1.5 px-3 h-9 text-[13px] font-medium transition-colors ${
                   isActive
                     ? 'bg-[#ff4520] text-white'
-                    : 'bg-[#111111] border border-[#1a1a1a] text-[#888888] active:bg-[#1a1a1a]'
+                    : 'bg-[#111111] border border-[#2a2a2a] text-[#888888] active:bg-[#1a1a1a]'
                 }`}
               >
-                <span className="text-[16px]">{eq.icon}</span>
+                <span className="text-[14px]">{eq.icon}</span>
                 <span>{eq.label}</span>
               </button>
             )
@@ -335,7 +330,7 @@ export default function LissDay({
         {config.inputs.map(name => (
           <div
             key={name}
-            className="flex-1 bg-[#111111] border border-[#1a1a1a] focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-colors"
+            className="flex-1 bg-[#111111] border border-[#2a2a2a] focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-colors"
           >
             <label className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#555555] mb-2">
               {name.charAt(0).toUpperCase() + name.slice(1)}
@@ -347,7 +342,7 @@ export default function LissDay({
               value={inputValues[name] || ''}
               onChange={e => handleInputChange(name, e.target.value)}
               readOnly={isLogged}
-              className="w-full bg-transparent text-center text-[24px] font-black text-white placeholder-[#333333] focus:outline-none"
+              className="w-full bg-transparent text-center text-[24px] font-black text-white placeholder-[#555555] focus:outline-none"
               placeholder={config.placeholders[name] || ''}
             />
             <span className="text-[10px] text-[#444444] mt-1">{config.units[name]}</span>
@@ -369,13 +364,13 @@ export default function LissDay({
       {/* ─── 6. LOG CARDIO BUTTON ─── */}
       <button
         onClick={handleLog}
-        disabled={!hasDuration || isLogged}
+        disabled={isLogged}
         className={`w-full mt-4 h-[56px] text-[13px] font-black tracking-wider uppercase transition-all ${
           isLogged
             ? 'bg-[#22c55e] text-white'
             : hasDuration
             ? 'bg-[#ff4520] text-white active:scale-[0.98]'
-            : 'bg-[#1a1a1a] text-[#333333] border border-[#1a1a1a]'
+            : 'bg-[#ff4520]/60 text-white/60'
         }`}
       >
         {isLogged ? '✓ CARDIO LOGGED' : 'LOG CARDIO'}
