@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useAuth } from '../auth/AuthContext'
+import { useLoading } from '../hooks/useLoading'
 import { supabase } from '../lib/supabase'
 import {
   computePhaseAndWeek,
@@ -182,6 +183,7 @@ function CooldownSection({ items, dateStr, checklistLogs, onUpdate }) {
 // ═══════════════════════════════════════════
 export default function Today() {
   const { user } = useAuth()
+  const { startLoading, stopLoading } = useLoading()
 
   // ── Screen state ──
   const [screenState, setScreenState] = useState('orientation')
@@ -226,6 +228,12 @@ export default function Today() {
     else if (loading) setSyncStatus('saving')
     else setSyncStatus('synced')
   }, [loading, error])
+
+  // ── Loading bar ──
+  useEffect(() => {
+    if (loading) startLoading()
+    else stopLoading()
+  }, [loading, startLoading, stopLoading])
 
   // Wrapped refetch that flashes saving state
   const syncRefetch = useCallback(async () => {

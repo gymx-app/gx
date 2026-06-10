@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { useLoading } from '../hooks/useLoading'
 import { supabase } from '../lib/supabase'
 
 async function ensureProgrammeConfig(userId) {
@@ -26,11 +27,13 @@ export default function Login() {
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const { signIn } = useAuth()
+  const { startLoading, stopLoading } = useLoading()
   const navigate = useNavigate()
 
   async function handleSignIn() {
     setError(null)
     setSubmitting(true)
+    startLoading()
 
     try {
       const { user } = await signIn(email, password)
@@ -40,6 +43,7 @@ export default function Login() {
       setError(err.message)
     } finally {
       setSubmitting(false)
+      stopLoading()
     }
   }
 
