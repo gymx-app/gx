@@ -21,6 +21,7 @@ import SetLogSheet from '../components/today/SetLogSheet'
 import RestTimerHUD from '../components/today/RestTimerHUD'
 import LissDay from '../components/today/LissDay'
 import WorkoutCompleteSheet from '../components/today/WorkoutCompleteSheet'
+import TodaySkeleton from '../components/today/TodaySkeleton'
 
 // ───────────────────────────────────────────
 // Top Bar (inline — small component)
@@ -272,6 +273,7 @@ export default function Today() {
     exerciseMap,
     previousBests,
     loading,
+    hasCachedData,
     error,
     refetch,
   } = useTodayData(dateStr, weekDays[0].dateStr, weekDays[5].dateStr)
@@ -445,13 +447,9 @@ export default function Today() {
     if (screenState === 'active') setScreenState('orientation')
   }
 
-  // ── Loading ──
-  if (loading) {
-    return (
-      <div className="fixed inset-0 bg-[#0a0a0a] flex items-center justify-center">
-        <span className="text-4xl font-black text-[#1a1a1a]">GX</span>
-      </div>
-    )
+  // ── Loading — show skeleton only when no cached data ──
+  if (loading && !hasCachedData) {
+    return <TodaySkeleton />
   }
 
   // ── Render ──

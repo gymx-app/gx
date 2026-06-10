@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { logger } from '../lib/logger'
+import * as idbCache from './idbCache'
 
 /**
  * Get all checklist logs for a user on a date.
@@ -24,6 +25,7 @@ export async function getChecklistLogs(userId, date) {
 
 /**
  * Upsert a checklist log entry (warmup, cooldown, LISS, finisher).
+ * Invalidates IDB cache for that day after successful write.
  * @param {string} userId
  * @param {object} logData - { date, item_key, completed, notes }
  * @returns {Promise<{ data: object|null, error: string|null }>}
@@ -38,6 +40,12 @@ export async function upsertChecklistLog(userId, logData) {
       .select()
       .single()
     if (error) throw error
+
+    // Invalidate day cache
+    if (logData.date) {
+      idbCache.invalidate('workout-data', `${userId}_${logData.date}`)
+    }
+
     return { data, error: null }
   } catch (err) {
     logger.error('upsertChecklistLog:', err)
@@ -68,6 +76,7 @@ export async function getWarmupLogs(userId, date) {
 
 /**
  * Upsert a warmup log entry.
+ * Invalidates IDB cache for that day after successful write.
  * @param {string} userId
  * @param {object} logData - { date, item_key, completed }
  * @returns {Promise<{ data: object|null, error: string|null }>}
@@ -82,6 +91,12 @@ export async function upsertWarmupLog(userId, logData) {
       .select()
       .single()
     if (error) throw error
+
+    // Invalidate day cache
+    if (logData.date) {
+      idbCache.invalidate('workout-data', `${userId}_${logData.date}`)
+    }
+
     return { data, error: null }
   } catch (err) {
     logger.error('upsertWarmupLog:', err)

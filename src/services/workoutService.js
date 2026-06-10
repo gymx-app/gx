@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { logger } from '../lib/logger'
+import * as idbCache from './idbCache'
 
 /**
  * Get exercise logs for a user on a specific date.
@@ -24,6 +25,7 @@ export async function getExerciseLogs(userId, date) {
 
 /**
  * Upsert an exercise log entry.
+ * Invalidates IDB cache for that day after successful write.
  * @param {string} userId
  * @param {object} logData
  * @returns {Promise<{ data: object|null, error: string|null }>}
@@ -38,6 +40,12 @@ export async function upsertExerciseLog(userId, logData) {
       .select()
       .single()
     if (error) throw error
+
+    // Invalidate day cache so next revalidation fetches fresh
+    if (logData.date) {
+      idbCache.invalidate('workout-data', `${userId}_${logData.date}`)
+    }
+
     return { data, error: null }
   } catch (err) {
     logger.error('upsertExerciseLog:', err)

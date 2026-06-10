@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { logger } from '../lib/logger'
+import * as idbCache from './idbCache'
 
 /**
  * Sign in with email + password.
@@ -20,10 +21,17 @@ export async function signIn(email, password) {
 
 /**
  * Sign out current user.
+ * Clears all personal data from IDB cache before signing out.
+ * @param {string} [userId] - If provided, clears user-specific cache
  * @returns {Promise<{ data: null, error: string|null }>}
  */
-export async function signOut() {
+export async function signOut(userId) {
   try {
+    // Clear personal data from device cache
+    if (userId) {
+      await idbCache.invalidateUserData(userId)
+    }
+
     const { error } = await supabase.auth.signOut()
     if (error) throw error
     return { data: null, error: null }
