@@ -2,13 +2,17 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import ProtectedRoute from './auth/ProtectedRoute'
 import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
+import Today from './pages/Today'
 
 function AppRoutes() {
   const { user, loading } = useAuth()
 
   if (loading) {
-    return <div className="min-h-screen bg-[var(--color-bg)]" />
+    return (
+      <div className="fixed inset-0 bg-[#0a0a0a] flex items-center justify-center">
+        <span className="text-4xl font-black text-[#1a1a1a]">GX</span>
+      </div>
+    )
   }
 
   return (
@@ -21,7 +25,7 @@ function AppRoutes() {
         path="/"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <Today />
           </ProtectedRoute>
         }
       />
@@ -31,7 +35,7 @@ function AppRoutes() {
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/gx">
       <AuthProvider>
         <AppRoutes />
       </AuthProvider>

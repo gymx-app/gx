@@ -44,7 +44,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col px-6">
+    <div className="fixed inset-0 bg-[#0a0a0a] flex flex-col px-6 overflow-y-auto">
 
       {/* Logo — upper third */}
       <div className="pt-16 pb-0">
