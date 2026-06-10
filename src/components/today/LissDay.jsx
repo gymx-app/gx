@@ -1,6 +1,9 @@
-import { useState, useEffect, useMemo } from 'react'
-import { supabase } from '../../lib/supabase'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { useAuth } from '../../auth/AuthContext'
+import { upsertChecklistLog } from '../../services/checklistService'
+import { supabase } from '../../lib/supabase'
+import { logger } from '../../lib/logger'
+import { Text, Button, Badge, SectionLabel, Toggle } from '../ui'
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
@@ -103,7 +106,7 @@ const EQUIPMENT_CONFIG = {
 const GYM_OPTIONS = ['treadmill', 'crosstrainer', 'bike', 'rowing', 'stairmaster']
 const TRAVEL_OPTIONS = ['walking', 'swimming']
 
-export default function LissDay({
+const LissDay = memo(function LissDay({
   workout,
   dateStr,
   phase,
@@ -116,17 +119,14 @@ export default function LissDay({
   const { user } = useAuth()
   const cooldown = workout.cd || []
 
-  // Equipment options based on travel mode
   const equipmentOptions = isTravelMode ? TRAVEL_OPTIONS : GYM_OPTIONS
   const defaultEquipment = isTravelMode ? 'walking' : 'treadmill'
 
-  // ── State ──
   const [selectedEquipment, setSelectedEquipment] = useState(defaultEquipment)
   const [inputValues, setInputValues] = useState({})
   const [isLogged, setIsLogged] = useState(false)
   const [previousLog, setPreviousLog] = useState(null)
 
-  // Reset equipment when travel mode changes
   useEffect(() => {
     if (isTravelMode && !TRAVEL_OPTIONS.includes(selectedEquipment)) {
       setSelectedEquipment('walking')
@@ -137,22 +137,16 @@ export default function LissDay({
     }
   }, [isTravelMode, selectedEquipment])
 
-  // Current equipment config
   const config = EQUIPMENT_CONFIG[selectedEquipment]
-
-  // Completed cooldown keys
   const completedKeys = new Set(checklistLogs.filter(l => l.completed).map(l => l.item_key))
 
-  // Date context
   const dateContext = useMemo(() => {
     const d = new Date(dateStr + 'T00:00:00')
     return `${d.getDate()} ${MONTHS[d.getMonth()]} · WEEK ${totalWeek || 1} · PHASE ${phase || 1}`
   }, [dateStr, totalWeek, phase])
 
-  // Does the time/duration input have a value?
   const hasDuration = !!(inputValues.duration || inputValues.laps || inputValues.distance)
 
-  // ── On mount: load existing log + previous ──
   useEffect(() => {
     const existing = checklistLogs.find(l => l.item_key === 'liss' && l.item_type === 'cardio')
     if (existing?.completed) {
@@ -165,7 +159,7 @@ export default function LissDay({
         const vals = { ...data }
         delete vals.equipment
         setInputValues(vals)
-      } catch {}
+      } catch { /* ignore parse errors */ }
     }
 
     async function fetchPrev() {
@@ -181,13 +175,12 @@ export default function LissDay({
         .limit(1)
 
       if (data?.[0]?.notes) {
-        try { setPreviousLog(JSON.parse(data[0].notes)) } catch {}
+        try { setPreviousLog(JSON.parse(data[0].notes)) } catch { /* ignore */ }
       }
     }
     fetchPrev()
   }, [checklistLogs, dateStr, user.id])
 
-  // ── Handlers ──
   function handleInputChange(name, value) {
     setInputValues(prev => ({ ...prev, [name]: value }))
   }
@@ -209,46 +202,41 @@ export default function LissDay({
       if (val) notes[name] = parseFloat(val)
     }
 
-    await supabase.from('checklist_logs').upsert({
-      user_id: user.id,
+    const { error } = await upsertChecklistLog(user.id, {
       date: dateStr,
       item_type: 'cardio',
       item_key: 'liss',
       completed: true,
       notes: JSON.stringify(notes),
-    }, { onConflict: 'user_id,date,item_key' })
-
+    })
+    if (error) logger.error('handleLog LISS:', error)
     onUpdate()
   }
 
   async function toggleCooldown(key) {
     const done = completedKeys.has(key)
-    await supabase.from('checklist_logs').upsert({
-      user_id: user.id,
+    const { error } = await upsertChecklistLog(user.id, {
       date: dateStr,
       item_type: 'cooldown',
       item_key: key,
       completed: !done,
-    }, { onConflict: 'user_id,date,item_key' })
+    })
+    if (error) logger.error('toggleCooldown:', error)
     onUpdate()
   }
 
-  // Previous log display — only if same equipment
   const showPrevious = previousLog && previousLog.equipment === selectedEquipment
   const prevConfig = showPrevious ? EQUIPMENT_CONFIG[previousLog.equipment] : null
 
   return (
     <div>
-
-      {/* ─── 1. WORKOUT HEADER ─── */}
+      {/* Workout header */}
       <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-[#444444]">
         {dateContext}
       </p>
 
       <div className="flex items-baseline justify-between mt-2">
-        <h1 className="text-4xl font-black tracking-[-0.04em] text-white leading-none">
-          {workout.title || 'LISS + RECOVERY'}
-        </h1>
+        <Text variant="pageTitle">{workout.title || 'LISS + RECOVERY'}</Text>
         {workout.dur && (
           <span className="text-[22px] font-black text-[#ff4520] tracking-tight shrink-0 ml-3">
             {workout.dur}&prime;
@@ -257,40 +245,27 @@ export default function LissDay({
       </div>
 
       {workout.sub && (
-        <p className="text-[13px] text-[#666666] mt-1.5">{workout.sub}</p>
+        <Text variant="bodyMuted" className="mt-1.5">{workout.sub}</Text>
       )}
 
       <div className="flex items-center gap-2 mt-3">
         {workout.tags?.map(tag => (
-          <span key={tag} className="bg-[#ff4520]/10 border border-[#ff4520]/20 px-2.5 py-1 text-[10px] font-bold tracking-widest uppercase text-[#ff4520]">
-            {tag}
-          </span>
+          <Badge key={tag} label={tag} variant="accent" />
         ))}
       </div>
 
-      {/* ─── TRAVEL TOGGLE ─── */}
+      {/* Travel toggle */}
       <div className="flex items-center justify-between mt-4 py-3 border-t border-b border-[#111111]">
         <div className="flex items-center gap-2">
           <span className="text-[14px]">✈</span>
-          <span className="text-[13px] text-[#666666]">Travelling?</span>
+          <Text variant="body" className="text-[#666666]">Travelling?</Text>
         </div>
-        <button
-          onClick={onToggleTravel}
-          className={`w-10 h-5 relative transition-colors duration-200 ${
-            isTravelMode ? 'bg-[#ff4520]' : 'bg-[#2a2a2a]'
-          }`}
-        >
-          <div className={`w-4 h-4 bg-white absolute top-0.5 transition-transform duration-200 ${
-            isTravelMode ? 'translate-x-5' : 'translate-x-0.5'
-          }`} />
-        </button>
+        <Toggle value={isTravelMode} onChange={onToggleTravel} />
       </div>
 
-      {/* ─── 2. EQUIPMENT SELECTOR ─── */}
+      {/* Equipment selector */}
       <div className="mt-5">
-        <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-[#555555] mb-2">
-          Equipment
-        </p>
+        <SectionLabel label="Equipment" className="mb-2" />
         <div className="flex flex-wrap gap-2">
           {equipmentOptions.map(key => {
             const eq = EQUIPMENT_CONFIG[key]
@@ -299,6 +274,7 @@ export default function LissDay({
               <button
                 key={key}
                 onClick={() => handleSelectEquipment(key)}
+                aria-pressed={isActive}
                 className={`flex items-center gap-1.5 px-3 h-9 text-[13px] font-medium transition-colors ${
                   isActive
                     ? 'bg-[#ff4520] text-white'
@@ -313,19 +289,15 @@ export default function LissDay({
         </div>
       </div>
 
-      {/* ─── 3. SESSION INSTRUCTIONS ─── */}
+      {/* Session instructions */}
       <div className="mt-5">
-        <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-[#555555] mb-3">
-          How to
-        </p>
+        <SectionLabel label="How to" className="mb-3" />
         {config.instructions.map((line, i) => (
-          <p key={i} className="text-[15px] text-white leading-[1.9]">
-            {line}
-          </p>
+          <p key={i} className="text-[15px] text-white leading-[1.9]">{line}</p>
         ))}
       </div>
 
-      {/* ─── 4. INPUT CARDS ─── */}
+      {/* Input cards */}
       <div className="flex gap-2 mt-6">
         {config.inputs.map(name => (
           <div
@@ -338,61 +310,55 @@ export default function LissDay({
             <input
               type="number"
               inputMode="decimal"
-              step={name === 'speed' || name === 'rpm' ? '0.1' : name === 'distance' ? '0.1' : '1'}
+              step={name === 'speed' || name === 'rpm' || name === 'distance' ? '0.1' : '1'}
               value={inputValues[name] || ''}
               onChange={e => handleInputChange(name, e.target.value)}
               readOnly={isLogged}
               className="w-full bg-transparent text-center text-[24px] font-black text-white placeholder-[#555555] focus:outline-none"
               placeholder={config.placeholders[name] || ''}
+              aria-label={`${name} value`}
             />
             <span className="text-[10px] text-[#444444] mt-1">{config.units[name]}</span>
           </div>
         ))}
       </div>
 
-      {/* ─── 5. LAST SESSION ROW ─── */}
+      {/* Last session row */}
       {showPrevious && prevConfig && (
-        <p className="text-[11px] text-[#444444] mt-3 text-center tracking-wide uppercase">
+        <Text variant="caption" className="mt-3 text-center tracking-wide uppercase">
           Last session
           {prevConfig.inputs.map(name => {
             const val = previousLog[name]
             return val != null ? ` · ${val}${prevConfig.units[name]}` : ''
           }).join('')}
-        </p>
+        </Text>
       )}
 
-      {/* ─── 6. LOG CARDIO BUTTON ─── */}
-      <button
-        onClick={handleLog}
-        disabled={isLogged}
-        className={`w-full mt-4 h-[56px] text-[13px] font-black tracking-wider uppercase transition-all ${
-          isLogged
-            ? 'bg-[#22c55e] text-white'
-            : hasDuration
-            ? 'bg-[#ff4520] text-white active:scale-[0.98]'
-            : 'bg-[#ff4520]/60 text-white/60'
-        }`}
-      >
-        {isLogged ? '✓ CARDIO LOGGED' : 'LOG CARDIO'}
-      </button>
+      {/* Log cardio button */}
+      <div className="mt-4">
+        <Button
+          variant={isLogged ? 'success' : 'primary'}
+          label={isLogged ? '✓ CARDIO LOGGED' : 'LOG CARDIO'}
+          onPress={handleLog}
+          disabled={isLogged || !hasDuration}
+        />
+      </div>
 
-      {/* Logged values summary */}
+      {/* Logged summary */}
       {isLogged && (
-        <p className="text-[12px] text-[#555555] text-center mt-2 font-medium">
+        <Text variant="caption" className="text-center mt-2 font-medium">
           {config.icon} {config.label}
           {config.inputs.map(name => {
             const val = inputValues[name]
             return val ? ` · ${val} ${config.units[name]}` : ''
           }).join('')}
-        </p>
+        </Text>
       )}
 
-      {/* ─── COOLDOWN ─── */}
+      {/* Cooldown */}
       {cooldown.length > 0 && (
         <div className="mt-6">
-          <p className="text-[9px] font-bold tracking-[0.15em] uppercase text-[#555555] mb-2">
-            Cooldown
-          </p>
+          <SectionLabel label="Cooldown" className="mb-2" />
           <div className="border border-[#1a1a1a]">
             {cooldown.map((item, idx) => {
               const key = `cd-${idx}`
@@ -404,6 +370,7 @@ export default function LissDay({
                     idx > 0 ? 'border-t border-[#111111]' : ''
                   }`}
                   onClick={() => toggleCooldown(key)}
+                  aria-label={`${item} — ${done ? 'completed' : 'not completed'}`}
                 >
                   <div className={`w-5 h-5 flex items-center justify-center shrink-0 transition-colors ${
                     done ? 'bg-[#22c55e] text-white' : 'border border-[#2a2a2a] text-transparent'
@@ -423,4 +390,6 @@ export default function LissDay({
       )}
     </div>
   )
-}
+})
+
+export default LissDay

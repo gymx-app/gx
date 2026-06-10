@@ -1,11 +1,13 @@
-import { useState } from 'react'
-import { supabase } from '../../lib/supabase'
+import { useState, memo } from 'react'
 import { useAuth } from '../../auth/AuthContext'
+import { upsertWarmupLog } from '../../services/checklistService'
+import { logger } from '../../lib/logger'
 import exerciseData from '../../data/exercises.json'
+import { SectionLabel, ProgressBar, Checkbox } from '../ui'
 
 const WARMUP_ITEMS = exerciseData.WARMUP_ITEMS
 
-export default function WarmupSection({ dateStr, phase, warmupLogs, onUpdate }) {
+const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, onUpdate }) {
   const { user } = useAuth()
   const completedKeys = new Set(warmupLogs.filter(l => l.completed).map(l => l.item_key))
   const completedCount = completedKeys.size
@@ -14,49 +16,50 @@ export default function WarmupSection({ dateStr, phase, warmupLogs, onUpdate }) 
 
   async function toggleItem(item) {
     const isCompleted = completedKeys.has(item.k)
-    await supabase.from('warmup_logs').upsert({
-      user_id: user.id,
+    const { error } = await upsertWarmupLog(user.id, {
       date: dateStr,
       phase,
       item_key: item.k,
       item_label: item.label,
       completed: !isCompleted,
-    }, { onConflict: 'user_id,date,item_key' })
+    })
+    if (error) logger.error('toggleWarmup:', error)
     onUpdate()
   }
 
   return (
-    <div className="mt-4">
-      <button
-        className="w-full flex justify-between items-center mb-2"
-        onClick={() => setCollapsed(!collapsed)}
-      >
-        <span className="text-[11px] font-semibold tracking-[0.08em] uppercase text-[#555555]">
-          Warmup Protocol
-        </span>
-        <div className="flex items-center gap-2">
-          {allDone ? (
-            <span className="text-[11px] font-semibold text-[#22c55e]">Done</span>
-          ) : (
-            <span className="text-[11px] text-[#444444]">
-              {completedCount}/{WARMUP_ITEMS.length}
-            </span>
-          )}
-          <span className={`text-[10px] text-[#333333] transition-transform duration-200 ${
-            collapsed ? '' : 'rotate-180'
-          }`}>
-            ▾
-          </span>
-        </div>
-      </button>
+    <div className="mt-5">
+      <SectionLabel
+        label="Warmup Protocol"
+        rightContent={
+          <div className="flex items-center gap-2">
+            {allDone ? (
+              <span className="text-[11px] font-semibold text-[#22c55e]">Done</span>
+            ) : (
+              <span className="text-[11px] text-[#444444]">
+                {completedCount}/{WARMUP_ITEMS.length}
+              </span>
+            )}
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              aria-label={collapsed ? 'Expand warmup' : 'Collapse warmup'}
+            >
+              <span className={`text-[10px] text-[#333333] transition-transform duration-200 inline-block ${
+                collapsed ? '' : 'rotate-180'
+              }`}>
+                ▾
+              </span>
+            </button>
+          </div>
+        }
+        className="mb-2"
+      />
 
-      {/* Progress bar */}
-      <div className="h-[2px] bg-[#1a1a1a] w-full mb-3">
-        <div
-          className="h-full bg-[#ff4520] transition-all duration-300"
-          style={{ width: `${(completedCount / WARMUP_ITEMS.length) * 100}%` }}
-        />
-      </div>
+      <ProgressBar
+        progress={(completedCount / WARMUP_ITEMS.length) * 100}
+        animated
+        className="mb-3"
+      />
 
       {!collapsed && (
         <div className="border border-[#1a1a1a]">
@@ -69,16 +72,9 @@ export default function WarmupSection({ dateStr, phase, warmupLogs, onUpdate }) 
                   idx > 0 ? 'border-t border-[#111111]' : ''
                 }`}
                 onClick={() => toggleItem(item)}
+                aria-label={`${item.label} — ${done ? 'completed' : 'not completed'}`}
               >
-                <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                  done ? 'bg-[#ff4520]' : 'border-2 border-[#2a2a2a]'
-                }`}>
-                  {done && (
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </div>
+                <Checkbox checked={done} onToggle={() => toggleItem(item)} />
                 <div className="flex-1 min-w-0">
                   <p className={`text-[13px] font-medium leading-tight ${done ? 'text-[#444444]' : 'text-white'}`}>
                     {item.label}
@@ -93,4 +89,6 @@ export default function WarmupSection({ dateStr, phase, warmupLogs, onUpdate }) 
       )}
     </div>
   )
-}
+})
+
+export default WarmupSection

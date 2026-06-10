@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, memo } from 'react'
+import { ProgressBar } from '../ui'
 
-export default function RestTimerHUD({ durationSec, exerciseName, onDismiss }) {
+const RestTimerHUD = memo(function RestTimerHUD({ durationSec, exerciseName, onDismiss }) {
   const [remaining, setRemaining] = useState(durationSec)
   const startRef = useRef(Date.now())
 
@@ -12,9 +13,7 @@ export default function RestTimerHUD({ durationSec, exerciseName, onDismiss }) {
 
       if (left === 0) {
         clearInterval(interval)
-        // Haptic feedback
         if (navigator.vibrate) navigator.vibrate([200, 100, 200])
-        // Auto-dismiss after 3s
         setTimeout(onDismiss, 3000)
       }
     }, 100)
@@ -30,13 +29,11 @@ export default function RestTimerHUD({ durationSec, exerciseName, onDismiss }) {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[55] bg-[#111111] border-t border-[#1a1a1a] safe-area-bottom">
-      {/* Progress bar */}
-      <div className="h-[3px] bg-[#1a1a1a] w-full">
-        <div
-          className={`h-full transition-all duration-200 ${isDone ? 'bg-[#22c55e]' : 'bg-[#ff4520]'}`}
-          style={{ width: `${progressPct}%` }}
-        />
-      </div>
+      <ProgressBar
+        progress={progressPct}
+        color={isDone ? 'success' : 'accent'}
+        height={3}
+      />
 
       <div className="flex items-center justify-between px-4 py-3">
         <div>
@@ -49,11 +46,14 @@ export default function RestTimerHUD({ durationSec, exerciseName, onDismiss }) {
         </div>
         <button
           onClick={onDismiss}
-          className="px-4 py-2 text-[12px] font-bold tracking-wider text-[#555555] active:text-white"
+          className="px-4 py-2 text-[12px] font-bold tracking-wider text-[#555555] active:text-white min-h-[44px]"
+          aria-label="Skip rest timer"
         >
           SKIP
         </button>
       </div>
     </div>
   )
-}
+})
+
+export default RestTimerHUD

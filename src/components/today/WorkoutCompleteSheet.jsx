@@ -1,7 +1,9 @@
-export default function WorkoutCompleteSheet({ workout, completedSets, onDismiss }) {
+import { memo } from 'react'
+import { Button, StatBlock, Text } from '../ui'
+
+const WorkoutCompleteSheet = memo(function WorkoutCompleteSheet({ workout, completedSets, onDismiss }) {
   const exercises = workout?.ex || []
 
-  // Count totals
   let totalSetsLogged = 0
   let totalVolume = 0
   for (const key of Object.keys(completedSets)) {
@@ -24,38 +26,31 @@ export default function WorkoutCompleteSheet({ workout, completedSets, onDismiss
           </svg>
         </div>
 
-        <h2 className="text-[22px] font-black text-center text-white tracking-tight">
-          WORKOUT COMPLETE
-        </h2>
-        <p className="text-[13px] text-[#555555] text-center mt-1">
-          {workout?.title}
-        </p>
+        <Text variant="sectionTitle" className="text-center">WORKOUT COMPLETE</Text>
+        <Text variant="bodyMuted" className="text-center mt-1">{workout?.title}</Text>
 
         {/* Stats */}
         <div className="flex justify-center gap-6 mt-5 pt-4 border-t border-[#1a1a1a]">
-          <div className="text-center">
-            <p className="text-[24px] font-black text-[#ff4520]">{totalSetsLogged}</p>
-            <p className="text-[10px] tracking-wider uppercase text-[#555555] mt-0.5">Sets</p>
-          </div>
-          <div className="text-center">
-            <p className="text-[24px] font-black text-[#ff4520]">
-              {totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume}
-            </p>
-            <p className="text-[10px] tracking-wider uppercase text-[#555555] mt-0.5">Volume kg</p>
-          </div>
-          <div className="text-center">
-            <p className="text-[24px] font-black text-[#ff4520]">{exercises.length}</p>
-            <p className="text-[10px] tracking-wider uppercase text-[#555555] mt-0.5">Exercises</p>
-          </div>
+          <StatBlock
+            value={totalSetsLogged}
+            label="Sets"
+          />
+          <StatBlock
+            value={totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume}
+            label="Volume kg"
+          />
+          <StatBlock
+            value={exercises.length}
+            label="Exercises"
+          />
         </div>
 
-        <button
-          onClick={onDismiss}
-          className="w-full mt-6 bg-[#ff4520] text-white py-3.5 text-[13px] font-black tracking-wider uppercase active:scale-[0.98] transition-transform"
-        >
-          DONE
-        </button>
+        <div className="mt-6">
+          <Button variant="primary" label="DONE" onPress={onDismiss} />
+        </div>
       </div>
     </div>
   )
-}
+})
+
+export default WorkoutCompleteSheet

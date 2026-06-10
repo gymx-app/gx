@@ -1,19 +1,15 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { useLoading } from '../hooks/useLoading'
-import { supabase } from '../lib/supabase'
+import { getProgrammeConfig, upsertProgrammeConfig } from '../services/programmeService'
+import { logger } from '../lib/logger'
+import { Button, Text } from '../components/ui'
 
 async function ensureProgrammeConfig(userId) {
-  const { data } = await supabase
-    .from('programme_config')
-    .select('id')
-    .eq('user_id', userId)
-    .single()
-
+  const { data } = await getProgrammeConfig(userId)
   if (!data) {
-    await supabase.from('programme_config').insert({
-      user_id: userId,
+    await upsertProgrammeConfig(userId, {
       start_date: new Date().toISOString().split('T')[0],
       phase_weeks: [4, 4, 5, 4, 999],
       min_active_days: 4,
@@ -21,7 +17,7 @@ async function ensureProgrammeConfig(userId) {
   }
 }
 
-export default function Login() {
+const Login = memo(function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
@@ -40,6 +36,7 @@ export default function Login() {
       await ensureProgrammeConfig(user.id)
       navigate('/', { replace: true })
     } catch (err) {
+      logger.error('Login error:', err)
       setError(err.message)
     } finally {
       setSubmitting(false)
@@ -49,8 +46,7 @@ export default function Login() {
 
   return (
     <div className="fixed inset-0 bg-[#0a0a0a] flex flex-col px-6 overflow-y-auto">
-
-      {/* Logo — upper third */}
+      {/* Logo */}
       <div className="pt-16 pb-0">
         <h1 className="text-4xl font-black tracking-[-0.04em] text-[#ff4520]">GX</h1>
         <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-[#444444] mt-1">
@@ -58,7 +54,7 @@ export default function Login() {
         </p>
       </div>
 
-      {/* Form — vertically centered in remaining space */}
+      {/* Form */}
       <div className="flex-1 flex flex-col justify-center gap-3">
         <input
           type="email"
@@ -67,6 +63,7 @@ export default function Login() {
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="email"
           required
+          aria-label="Email address"
           className="w-full h-[52px] bg-[#161616] border border-[#2a2a2a] rounded-none px-4 text-white text-[15px] placeholder:text-[#444444] focus:border-[#ff4520] focus:outline-none transition-colors"
         />
 
@@ -77,23 +74,28 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="current-password"
           required
+          aria-label="Password"
           className="w-full h-[52px] bg-[#161616] border border-[#2a2a2a] rounded-none px-4 text-white text-[15px] placeholder:text-[#444444] focus:border-[#ff4520] focus:outline-none transition-colors"
         />
 
         {error && (
-          <p className="text-[#ef4444] text-[13px] -mt-1">{error}</p>
+          <Text variant="body" className="text-[#ef4444] text-[13px] -mt-1" role="alert">{error}</Text>
         )}
 
-        <button
-          onClick={handleSignIn}
-          disabled={submitting}
-          className="w-full h-[52px] bg-[#ff4520] text-white font-semibold text-[15px] tracking-[-0.01em] rounded-none mt-2 active:scale-[0.98] transition-transform disabled:opacity-60"
-        >
-          {submitting ? 'Signing in...' : 'Sign In'}
-        </button>
+        <div className="mt-2">
+          <Button
+            variant="primary"
+            label={submitting ? 'Signing in...' : 'Sign In'}
+            onPress={handleSignIn}
+            disabled={!email || !password}
+            loading={submitting}
+          />
+        </div>
       </div>
 
       <div className="pb-12" />
     </div>
   )
-}
+})
+
+export default Login

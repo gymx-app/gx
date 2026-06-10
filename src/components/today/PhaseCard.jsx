@@ -1,4 +1,7 @@
-export default function PhaseCard({
+import { memo } from 'react'
+import { Card, ProgressBar, Text } from '../ui'
+
+const PhaseCard = memo(function PhaseCard({
   phase,
   weekInPhase,
   totalWeek,
@@ -20,23 +23,18 @@ export default function PhaseCard({
   const weekQualified = daysNeeded === 0
 
   return (
-    <div className="mx-4 mt-3 bg-[#111111] border border-[#1a1a1a] p-4">
+    <Card variant="default" padding="p-4" className="mx-4 mt-3">
       {/* Phase + progress */}
       <div className="flex items-baseline justify-between">
-        <h2 className="text-[22px] font-black tracking-[-0.03em] text-white">
-          PHASE {phase}
-        </h2>
+        <Text variant="sectionTitle">PHASE {phase}</Text>
         <span className="text-[12px] text-[#555555]">
           {isOngoing ? 'Ongoing' : `${weekInPhase} of ${totalWeeksInPhase} wks`}
         </span>
       </div>
 
       {!isOngoing && (
-        <div className="h-[3px] bg-[#1a1a1a] w-full mt-2 overflow-hidden">
-          <div
-            className="h-full bg-[#ff4520] transition-all duration-500"
-            style={{ width: `${progressPct}%` }}
-          />
+        <div className="mt-2">
+          <ProgressBar progress={progressPct} animated />
         </div>
       )}
 
@@ -45,6 +43,7 @@ export default function PhaseCard({
         <button
           onClick={onPrevWeek}
           disabled={!canGoBack}
+          aria-label="Previous week"
           className={`w-8 h-8 flex items-center justify-center text-[16px] ${
             canGoBack ? 'text-[#555555] active:text-white' : 'text-[#1a1a1a]'
           }`}
@@ -56,6 +55,7 @@ export default function PhaseCard({
         </span>
         <button
           onClick={onNextWeek}
+          aria-label="Next week"
           className="w-8 h-8 flex items-center justify-center text-[16px] text-[#555555] active:text-white"
         >
           ›
@@ -65,11 +65,13 @@ export default function PhaseCard({
       {/* Qualifying status */}
       <div className="mt-2 flex items-center gap-1.5">
         <div className={`w-1.5 h-1.5 rounded-full ${weekQualified ? 'bg-[#22c55e]' : 'bg-[#333333]'}`} />
-        <span className="text-[11px] text-[#444444]">
+        <Text variant="caption">
           {currentWeekActiveDays}/{minActiveDays} days
           {weekQualified ? ' — qualified' : ` — need ${daysNeeded} more`}
-        </span>
+        </Text>
       </div>
-    </div>
+    </Card>
   )
-}
+})
+
+export default PhaseCard

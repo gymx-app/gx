@@ -1,0 +1,102 @@
+import { supabase } from '../lib/supabase'
+import { logger } from '../lib/logger'
+
+/**
+ * Get exercise logs for a user on a specific date.
+ * @param {string} userId
+ * @param {string} date - YYYY-MM-DD
+ * @returns {Promise<{ data: Array|null, error: string|null }>}
+ */
+export async function getExerciseLogs(userId, date) {
+  try {
+    const { data, error } = await supabase
+      .from('exercise_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('date', date)
+    if (error) throw error
+    return { data: data || [], error: null }
+  } catch (err) {
+    logger.error('getExerciseLogs:', err)
+    return { data: null, error: 'Failed to load exercise logs' }
+  }
+}
+
+/**
+ * Upsert an exercise log entry.
+ * @param {string} userId
+ * @param {object} logData
+ * @returns {Promise<{ data: object|null, error: string|null }>}
+ */
+export async function upsertExerciseLog(userId, logData) {
+  try {
+    const { data, error } = await supabase
+      .from('exercise_logs')
+      .upsert({ user_id: userId, ...logData }, {
+        onConflict: 'user_id,date,exercise_id,set_number,is_mm_set',
+      })
+      .select()
+      .single()
+    if (error) throw error
+    return { data, error: null }
+  } catch (err) {
+    logger.error('upsertExerciseLog:', err)
+    return { data: null, error: 'Failed to save set. Tap to retry.' }
+  }
+}
+
+/**
+ * Get or create a workout session for a date.
+ * @param {string} userId
+ * @param {object} sessionData - { date, phase, day_of_week, workout_title }
+ * @returns {Promise<{ data: object|null, error: string|null }>}
+ */
+export async function upsertWorkoutSession(userId, sessionData) {
+  try {
+    const { data, error } = await supabase
+      .from('workout_sessions')
+      .upsert({ user_id: userId, ...sessionData }, {
+        onConflict: 'user_id,date,day_of_week',
+      })
+      .select('id')
+      .single()
+    if (error) throw error
+    return { data, error: null }
+  } catch (err) {
+    logger.error('upsertWorkoutSession:', err)
+    return { data: null, error: 'Failed to create session' }
+  }
+}
+
+/**
+ * Get previous bests for all exercises within a date range.
+ * @param {string} userId
+ * @param {string} fromDate - YYYY-MM-DD
+ * @param {string} beforeDate - YYYY-MM-DD (exclusive)
+ * @returns {Promise<{ data: object|null, error: string|null }>}
+ */
+export async function getPreviousBests(userId, fromDate, beforeDate) {
+  try {
+    const { data, error } = await supabase
+      .from('exercise_logs')
+      .select('exercise_name, weight_kg, reps, date')
+      .eq('user_id', userId)
+      .eq('completed', true)
+      .eq('is_mm_set', false)
+      .gte('date', fromDate)
+      .lt('date', beforeDate)
+      .order('date', { ascending: false })
+    if (error) throw error
+
+    const bests = {}
+    for (const log of (data || [])) {
+      if (!bests[log.exercise_name]) {
+        bests[log.exercise_name] = { weight_kg: log.weight_kg, reps: log.reps }
+      }
+    }
+    return { data: bests, error: null }
+  } catch (err) {
+    logger.error('getPreviousBests:', err)
+    return { data: null, error: 'Failed to load previous bests' }
+  }
+}

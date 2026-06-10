@@ -1,13 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import { LoadingProvider } from './hooks/useLoading'
+import { ToastProvider } from './hooks/useToast'
 import ProtectedRoute from './auth/ProtectedRoute'
-import Login from './pages/Login'
-import Today from './pages/Today'
+import ErrorBoundary from './components/ErrorBoundary'
 import SplashScreen from './components/SplashScreen'
 import LoadingBar from './components/LoadingBar'
 import PWAUpdatePrompt from './components/PWAUpdatePrompt'
+
+const Login = lazy(() => import('./pages/Login'))
+const Today = lazy(() => import('./pages/Today'))
 
 function AppRoutes() {
   const { user, loading } = useAuth()
@@ -35,6 +38,7 @@ function AppRoutes() {
     <>
       <LoadingBar />
       <PWAUpdatePrompt />
+      <Suspense fallback={null}>
       <Routes>
         <Route
           path="/login"
@@ -49,19 +53,24 @@ function AppRoutes() {
           }
         />
       </Routes>
+      </Suspense>
     </>
   )
 }
 
 function App() {
   return (
-    <BrowserRouter basename="/gx">
-      <AuthProvider>
-        <LoadingProvider>
-          <AppRoutes />
-        </LoadingProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter basename="/gx">
+        <AuthProvider>
+          <LoadingProvider>
+            <ToastProvider>
+              <AppRoutes />
+            </ToastProvider>
+          </LoadingProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }
 

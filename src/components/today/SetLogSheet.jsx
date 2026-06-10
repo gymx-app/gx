@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
-import { supabase } from '../../lib/supabase'
+import { useState, useEffect, useRef, memo } from 'react'
 import { useAuth } from '../../auth/AuthContext'
+import { upsertExerciseLog, upsertWorkoutSession } from '../../services/workoutService'
+import { logger } from '../../lib/logger'
+import { Button, SectionLabel } from '../ui'
 
-export default function SetLogSheet({
+const SetLogSheet = memo(function SetLogSheet({
   exercise,
   setNumber,
   totalSets,
@@ -26,7 +28,6 @@ export default function SetLogSheet({
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    // Focus weight field on open
     setTimeout(() => weightRef.current?.focus(), 100)
   }, [])
 
@@ -35,35 +36,27 @@ export default function SetLogSheet({
     setSaving(true)
 
     try {
-      // Ensure workout_session exists
       let sid = sessionId
       if (!sid) {
-        const { data: sess, error: sessErr } = await supabase
-          .from('workout_sessions')
-          .upsert({
-            user_id: user.id,
-            date: dateStr,
-            phase,
-            day_of_week: new Date(dateStr + 'T00:00:00')
-              .toLocaleDateString('en', { weekday: 'short' })
-              .toUpperCase()
-              .slice(0, 3),
-            workout_title: exercise.n,
-          }, { onConflict: 'user_id,date,day_of_week' })
-          .select('id')
-          .single()
+        const dayOfWeek = new Date(dateStr + 'T00:00:00')
+          .toLocaleDateString('en', { weekday: 'short' })
+          .toUpperCase()
+          .slice(0, 3)
 
-        if (sessErr) throw sessErr
+        const { data: sess, error: sessErr } = await upsertWorkoutSession(user.id, {
+          date: dateStr,
+          phase,
+          day_of_week: dayOfWeek,
+          workout_title: exercise.n,
+        })
+        if (sessErr) throw new Error(sessErr)
         sid = sess.id
       }
 
-      // Resolve exercise_id
       const exerciseId = exerciseMap[exercise.n]
       if (!exerciseId) throw new Error(`No exercise_id for "${exercise.n}"`)
 
-      // Upsert exercise_log
-      await supabase.from('exercise_logs').upsert({
-        user_id: user.id,
+      const { error: logErr } = await upsertExerciseLog(user.id, {
         session_id: sid,
         exercise_id: exerciseId,
         exercise_name: exercise.n,
@@ -76,23 +69,26 @@ export default function SetLogSheet({
         reps: parseInt(reps),
         rpe: rpe || null,
         completed: true,
-      }, { onConflict: 'user_id,date,exercise_id,set_number,is_mm_set' })
+      })
+      if (logErr) throw new Error(logErr)
 
       onLogged(sid)
     } catch (err) {
-      console.error('SetLogSheet error:', err)
+      logger.error('SetLogSheet error:', err)
       setSaving(false)
     }
   }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/70" onClick={onClose} aria-hidden="true" />
 
-      {/* Sheet */}
-      <div className="relative w-full max-w-[480px] bg-[#111111] border-t border-[#1a1a1a] px-5 pt-5 pb-8 animate-slide-up">
-        {/* Handle */}
+      <div
+        className="relative w-full max-w-[480px] bg-[#111111] border-t border-[#1a1a1a] px-5 pt-5 pb-8 animate-slide-up"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Log set ${setNumber} for ${exercise.n}`}
+      >
         <div className="w-8 h-1 bg-[#2a2a2a] rounded-full mx-auto mb-4" />
 
         {/* Header */}
@@ -104,7 +100,7 @@ export default function SetLogSheet({
         {/* Inputs */}
         <div className="flex gap-3 mb-4">
           <div className="flex-1">
-            <label className="text-[10px] tracking-wider uppercase text-[#444444] mb-1 block">Weight (kg)</label>
+            <SectionLabel label="Weight (kg)" className="mb-1" />
             <input
               ref={weightRef}
               type="number"
@@ -114,10 +110,11 @@ export default function SetLogSheet({
               onChange={e => setWeight(e.target.value)}
               className="w-full bg-[#0a0a0a] border border-[#1a1a1a] px-3 py-3 text-[18px] font-bold text-white text-center focus:border-[#ff4520] transition-colors"
               placeholder="0"
+              aria-label="Weight in kilograms"
             />
           </div>
           <div className="flex-1">
-            <label className="text-[10px] tracking-wider uppercase text-[#444444] mb-1 block">Reps</label>
+            <SectionLabel label="Reps" className="mb-1" />
             <input
               type="number"
               inputMode="numeric"
@@ -125,18 +122,21 @@ export default function SetLogSheet({
               onChange={e => setReps(e.target.value)}
               className="w-full bg-[#0a0a0a] border border-[#1a1a1a] px-3 py-3 text-[18px] font-bold text-white text-center focus:border-[#ff4520] transition-colors"
               placeholder="0"
+              aria-label="Number of reps"
             />
           </div>
         </div>
 
         {/* RPE selector */}
         <div className="mb-4">
-          <label className="text-[10px] tracking-wider uppercase text-[#444444] mb-2 block">RPE</label>
-          <div className="flex gap-2">
+          <SectionLabel label="RPE" className="mb-2" />
+          <div className="flex gap-2" role="radiogroup" aria-label="Rate of perceived exertion">
             {[6, 7, 8, 9, 10].map(val => (
               <button
                 key={val}
                 onClick={() => setRpe(rpe === val ? null : val)}
+                role="radio"
+                aria-checked={rpe === val}
                 className={`flex-1 py-2 text-[14px] font-bold transition-colors ${
                   rpe === val
                     ? 'bg-[#ff4520] text-white'
@@ -152,6 +152,7 @@ export default function SetLogSheet({
         {/* MM toggle */}
         <button
           onClick={() => setIsMM(!isMM)}
+          aria-pressed={isMM}
           className={`w-full py-2 text-[12px] font-semibold tracking-wider mb-5 border transition-colors ${
             isMM
               ? 'bg-[#ff4520]/10 border-[#ff4520] text-[#ff4520]'
@@ -162,14 +163,16 @@ export default function SetLogSheet({
         </button>
 
         {/* Log button */}
-        <button
-          onClick={handleLog}
-          disabled={!weight || !reps || saving}
-          className="w-full bg-[#ff4520] text-white py-4 text-[14px] font-black tracking-wider uppercase rounded-none active:scale-[0.98] transition-transform disabled:opacity-40"
-        >
-          {saving ? 'SAVING...' : 'LOG SET'}
-        </button>
+        <Button
+          variant="primary"
+          label={saving ? 'SAVING...' : 'LOG SET'}
+          onPress={handleLog}
+          disabled={!weight || !reps}
+          loading={saving}
+        />
       </div>
     </div>
   )
-}
+})
+
+export default SetLogSheet

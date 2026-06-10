@@ -102,7 +102,8 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr) {
 
       setLoading(false)
     } catch (err) {
-      console.error('useTodayData error:', err)
+      // Dev-only logging — silent in production
+      if (import.meta.env.DEV) console.error('[GX] useTodayData error:', err)
       setError(err.message)
       setLoading(false)
     }

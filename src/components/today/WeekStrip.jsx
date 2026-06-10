@@ -1,6 +1,7 @@
+import { memo } from 'react'
 import { getDayKey } from '../../utils/programme'
 
-export default function WeekStrip({
+const WeekStrip = memo(function WeekStrip({
   weekDays,
   selectedDateStr,
   completedDateStrs,
@@ -55,4 +56,6 @@ export default function WeekStrip({
       })}
     </div>
   )
-}
+})
+
+export default WeekStrip

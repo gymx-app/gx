@@ -1,7 +1,8 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, memo } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { useLoading } from '../hooks/useLoading'
 import { supabase } from '../lib/supabase'
+import { logger } from '../lib/logger'
 import {
   computePhaseAndWeek,
   getDayKey,
@@ -11,6 +12,7 @@ import {
   toDateStr,
 } from '../utils/programme'
 import { useTodayData } from '../hooks/useTodayData'
+import { Text, Button, Badge, SectionLabel, Toggle } from '../components/ui'
 
 import WeekStrip from '../components/today/WeekStrip'
 import PhaseCard from '../components/today/PhaseCard'
@@ -27,7 +29,7 @@ import WorkoutCompleteSheet from '../components/today/WorkoutCompleteSheet'
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
-function TopBar({ phase, totalWeek, syncStatus }) {
+const TopBar = memo(function TopBar({ phase, totalWeek, syncStatus }) {
   const now = new Date()
   const sync = syncStatus || 'synced'
   const dotColor = sync === 'synced' ? 'bg-[#22c55e]' : sync === 'saving' ? 'bg-[#f59e0b]' : 'bg-[#ef4444]'
@@ -37,9 +39,9 @@ function TopBar({ phase, totalWeek, syncStatus }) {
     <div className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-[#111111] safe-area-top">
       <div className="h-14 px-4 flex items-center justify-between">
         <span className="text-xl font-black text-[#ff4520] w-10">Gx</span>
-        <span className="text-[11px] tracking-widest uppercase text-[#555555]">
+        <Text variant="label" className="tracking-widest">
           {DAYS[now.getDay()]} {now.getDate()} {MONTHS[now.getMonth()]} · W{totalWeek} · P{phase}
-        </span>
+        </Text>
         <div className="flex items-center justify-end gap-1.5 min-h-[44px] min-w-[44px]">
           <div className={`w-1.5 h-1.5 rounded-full ${dotColor} ${sync === 'saving' ? 'animate-pulse' : ''}`} />
           <span className="text-[10px] tracking-widest uppercase text-[#444444]">
@@ -49,75 +51,132 @@ function TopBar({ phase, totalWeek, syncStatus }) {
       </div>
     </div>
   )
-}
+})
 
 // ───────────────────────────────────────────
 // Rest Day (inline — tiny)
 // ───────────────────────────────────────────
-function RestDay({ workout }) {
+const RestDay = memo(function RestDay({ workout }) {
   return (
     <div className="mt-4">
-      <h1 className="text-3xl font-black tracking-[-0.04em] text-[#222222]">{workout?.title || 'REST DAY'}</h1>
-      <p className="text-[13px] text-[#333333] mt-2">{workout?.sub || 'Recovery · Sleep · Meal Prep'}</p>
+      <Text variant="pageTitle" className="text-[#222222]">{workout?.title || 'REST DAY'}</Text>
+      <Text variant="bodyMuted" className="mt-2">{workout?.sub || 'Recovery · Sleep · Meal Prep'}</Text>
       <div className="mt-8 bg-[#111111] border border-[#1a1a1a] p-5 text-center">
         <p className="text-[40px]">😴</p>
-        <p className="text-[14px] text-[#444444] mt-2">Nothing to log today.</p>
-        <p className="text-[12px] text-[#333333] mt-1">Rest is part of the programme.</p>
+        <Text variant="body" className="text-[#444444] mt-2">Nothing to log today.</Text>
+        <Text variant="caption" className="mt-1">Rest is part of the programme.</Text>
       </div>
     </div>
   )
-}
+})
 
 // ───────────────────────────────────────────
 // Finisher block
 // ───────────────────────────────────────────
 function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }) {
   const { user } = useAuth()
-  const completedKeys = new Set(checklistLogs.filter(l => l.completed).map(l => l.item_key))
-  const finKey = 'fin-main'
-  const done = completedKeys.has(finKey)
+  const existing = checklistLogs.find(l => l.item_key === 'fin-main' && l.item_type === 'finisher')
+  const isLogged = existing?.completed || false
 
-  async function toggle() {
+  const [finInputs, setFinInputs] = useState(() => {
+    if (isLogged && existing?.notes) {
+      try { return JSON.parse(existing.notes) } catch { return {} }
+    }
+    return {}
+  })
+
+  const isCardio = fin.type === 'cardio'
+  const hasDuration = !!finInputs.duration
+
+  async function handleLogFinisher() {
+    if (isCardio && !hasDuration) return
+    if (navigator.vibrate) navigator.vibrate(50)
+
+    const notes = {}
+    if (isCardio) {
+      if (finInputs.incline) notes.incline = parseFloat(finInputs.incline)
+      if (finInputs.speed) notes.speed = parseFloat(finInputs.speed)
+      if (finInputs.duration) notes.duration = parseFloat(finInputs.duration)
+    }
+
     await supabase.from('checklist_logs').upsert({
       user_id: user.id,
       date: dateStr,
       item_type: 'finisher',
-      item_key: finKey,
-      completed: !done,
+      item_key: 'fin-main',
+      completed: true,
+      notes: JSON.stringify(notes),
     }, { onConflict: 'user_id,date,item_key' })
     onUpdate()
   }
 
   return (
-    <div className="mt-5">
-      <span className="text-[10px] font-semibold tracking-[0.08em] uppercase text-[#444444] block mb-2">
-        Finisher
-      </span>
-      <div className="bg-[#111111] border border-[#1a1a1a] p-4">
-        <h4 className="text-[14px] font-bold text-white">{fin.title}</h4>
-        {fin.desc && <p className="text-[12px] text-[#555555] mt-1">{fin.desc}</p>}
-        <div className="flex gap-3 mt-2">
-          {fin.dur && <span className="text-[11px] text-[#444444]">{fin.dur}</span>}
-          {fin.kcal && <span className="text-[11px] text-[#444444]">{fin.kcal}</span>}
+    <div className="mt-6">
+      <SectionLabel label="Finisher" className="mb-3" />
+
+      <h4 className="text-[16px] font-semibold text-white">{fin.title}</h4>
+      {fin.desc && <p className="text-[15px] text-white leading-[1.9] mt-1">{fin.desc}</p>}
+
+      {fin.rounds && fin.rounds.length > 0 && (
+        <div className="mt-2">
+          {fin.rounds.map((round, i) => (
+            <p key={i} className="text-[15px] text-white leading-[1.9]">{round}</p>
+          ))}
         </div>
-        {fin.rounds && fin.rounds.length > 0 && (
-          <div className="mt-3 border-t border-[#1a1a1a] pt-3">
-            {fin.rounds.map((round, i) => (
-              <p key={i} className="text-[12px] text-[#666666] mt-1">{round}</p>
-            ))}
-          </div>
-        )}
-        <button
-          onClick={toggle}
-          className={`mt-3 w-full py-2.5 text-[12px] font-bold tracking-wider uppercase transition-colors ${
-            done
-              ? 'bg-[#22c55e]/10 border border-[#22c55e] text-[#22c55e]'
-              : 'bg-[#1a1a1a] border border-[#2a2a2a] text-[#888888] active:bg-[#222222]'
-          }`}
-        >
-          {done ? 'DONE ✓' : 'MARK DONE'}
-        </button>
+      )}
+
+      <div className="flex items-center gap-2 mt-2">
+        {fin.dur && <span className="text-[12px] text-[#555555]">{fin.dur}</span>}
+        {fin.kcal && <><span className="text-[12px] text-[#333333]">·</span><span className="text-[12px] text-[#555555]">{fin.kcal}</span></>}
       </div>
+
+      {/* Cardio finisher: 3-input layout */}
+      {isCardio && (
+        <div className="flex gap-2 mt-4">
+          {[
+            { name: 'incline', unit: '%', placeholder: '7' },
+            { name: 'speed', unit: 'km/h', placeholder: '5.5' },
+            { name: 'duration', unit: 'min', placeholder: '20' },
+          ].map(({ name, unit, placeholder }) => (
+            <div
+              key={name}
+              className="flex-1 bg-[#111111] border border-[#2a2a2a] focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-colors"
+            >
+              <label className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#555555] mb-2">
+                {name.charAt(0).toUpperCase() + name.slice(1)}
+              </label>
+              <input
+                type="number"
+                inputMode="decimal"
+                step={name === 'speed' ? '0.1' : '1'}
+                value={finInputs[name] || ''}
+                onChange={e => setFinInputs(prev => ({ ...prev, [name]: e.target.value }))}
+                readOnly={isLogged}
+                className="w-full bg-transparent text-center text-[24px] font-black text-white placeholder-[#555555] focus:outline-none"
+                placeholder={placeholder}
+              />
+              <span className="text-[10px] text-[#444444] mt-1">{unit}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-4">
+        <Button
+          variant={isLogged ? 'success' : 'primary'}
+          label={isLogged ? '✓ FINISHER LOGGED' : 'LOG FINISHER'}
+          onPress={handleLogFinisher}
+          disabled={isLogged || (isCardio && !hasDuration)}
+        />
+      </div>
+
+      {isLogged && isCardio && (
+        <p className="text-[12px] text-[#555555] text-center mt-2 font-medium">
+          {finInputs.incline && `${finInputs.incline}%`}
+          {finInputs.speed && ` · ${finInputs.speed} km/h`}
+          {finInputs.duration && ` · ${finInputs.duration} min`}
+        </p>
+      )}
     </div>
   )
 }
@@ -142,10 +201,8 @@ function CooldownSection({ items, dateStr, checklistLogs, onUpdate }) {
   }
 
   return (
-    <div className="mt-5 mb-4">
-      <span className="text-[10px] font-semibold tracking-[0.08em] uppercase text-[#444444] block mb-2">
-        Cooldown
-      </span>
+    <div className="mt-6 mb-4">
+      <SectionLabel label="Cooldown" className="mb-2" />
       <div className="border border-[#1a1a1a]">
         {items.map((item, idx) => {
           const key = `cd-${idx}`
@@ -153,21 +210,19 @@ function CooldownSection({ items, dateStr, checklistLogs, onUpdate }) {
           return (
             <button
               key={key}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 text-left active:bg-[#1a1a1a] ${
+              className={`w-full flex items-center gap-3 px-3 py-3 text-left active:bg-[#1a1a1a] transition-colors ${
                 idx > 0 ? 'border-t border-[#111111]' : ''
               }`}
               onClick={() => toggle(key)}
             >
-              <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
-                done ? 'bg-[#22c55e]' : 'border border-[#2a2a2a]'
+              <div className={`w-5 h-5 flex items-center justify-center shrink-0 transition-colors ${
+                done ? 'bg-[#22c55e] text-white' : 'border border-[#2a2a2a] text-transparent'
               }`}>
-                {done && (
-                  <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
               </div>
-              <span className={`text-[13px] ${done ? 'text-[#444444]' : 'text-[#888888]'}`}>
+              <span className={`text-[13px] ${done ? 'text-[#555555] line-through' : 'text-[#999999]'}`}>
                 {item}
               </span>
             </button>
@@ -432,12 +487,12 @@ export default function Today() {
         <div className="px-4 pt-4">
           {/* Error */}
           {error && (
-            <button
-              onClick={syncRefetch}
-              className="w-full bg-[#1a1a1a] border border-[#ef4444] text-[#ef4444] text-[13px] px-4 py-2 mb-4 text-left"
-            >
-              Failed to load — tap to retry
-            </button>
+            <Button
+              variant="danger"
+              label="Failed to load — tap to retry"
+              onPress={syncRefetch}
+              className="mb-4 h-auto py-2 text-[13px]"
+            />
           )}
 
           {/* Rest day */}
@@ -460,29 +515,43 @@ export default function Today() {
           {/* Workout day */}
           {dayType === 'workout' && (
             <>
-              {/* Workout header */}
-              <div className="bg-[#111111] border border-[#1a1a1a] p-4">
-                <h1 className="text-3xl font-black tracking-[-0.04em]">{workout.title}</h1>
-                {workout.sub && (
-                  <p className="text-[13px] text-[#555555] mt-1">{workout.sub}</p>
+              {/* Workout header — LISS style, no card */}
+              <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-[#444444]">
+                {(() => {
+                  const d = new Date(dateStr + 'T00:00:00')
+                  return `${d.getDate()} ${MONTHS[d.getMonth()]} · WEEK ${totalWeek} · PHASE ${phase}`
+                })()}
+              </p>
+
+              <div className="flex items-baseline justify-between mt-2">
+                <h1 className="text-4xl font-black tracking-[-0.04em] text-white leading-none">
+                  {workout.title}
+                </h1>
+                {workout.dur && (
+                  <span className="text-[22px] font-black text-[#ff4520] tracking-tight shrink-0 ml-3">
+                    {workout.dur}&prime;
+                  </span>
                 )}
-                <div className="flex gap-2 mt-3">
-                  {workout.dur && (
-                    <span className="bg-[#0a0a0a] border border-[#1a1a1a] px-2.5 py-1 text-[10px] tracking-widest uppercase text-[#666666]">
-                      {workout.dur} MIN
-                    </span>
-                  )}
-                  {workout.kcal && (
-                    <span className="bg-[#0a0a0a] border border-[#1a1a1a] px-2.5 py-1 text-[10px] tracking-widest uppercase text-[#666666]">
-                      {workout.kcal} KCAL
-                    </span>
-                  )}
-                  {workout.tags?.map(tag => (
-                    <span key={tag} className="bg-[#0a0a0a] border border-[#1a1a1a] px-2.5 py-1 text-[10px] tracking-widest uppercase text-[#555555]">
-                      {tag}
-                    </span>
-                  ))}
+              </div>
+
+              {workout.sub && (
+                <p className="text-[13px] text-[#666666] mt-1.5">{workout.sub}</p>
+              )}
+
+              <div className="flex items-center gap-2 mt-3">
+                {workout.kcal && <Badge label={`${workout.kcal} KCAL`} variant="accent" />}
+                {workout.tags?.map(tag => (
+                  <Badge key={tag} label={tag} variant="accent" />
+                ))}
+              </div>
+
+              {/* Travel toggle */}
+              <div className="flex items-center justify-between mt-4 py-3 border-t border-b border-[#111111]">
+                <div className="flex items-center gap-2">
+                  <span className="text-[14px]">✈</span>
+                  <Text variant="body" className="text-[#666666]">Travelling?</Text>
                 </div>
+                <Toggle value={isTravelMode} onChange={() => setIsTravelMode(p => !p)} />
               </div>
 
               {/* Warmup */}
@@ -496,7 +565,10 @@ export default function Today() {
               )}
 
               {/* Exercises */}
-              <div className="mt-4 flex flex-col gap-2">
+              <div className="mt-5">
+                <SectionLabel label="Exercises" className="mb-2" />
+              </div>
+              <div className="flex flex-col gap-2">
                 {(workout.ex || []).map((ex, idx) => (
                   <ExerciseCard
                     key={`${ex.n}-${idx}`}
