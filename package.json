@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "sh scripts/swap-icons.sh",
     "build": "vite build",
+    "build:dev": "VITE_ENV=dev vite build",
+    "build:prod": "VITE_ENV=prod vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
