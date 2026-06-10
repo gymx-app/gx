@@ -8,7 +8,6 @@ import {
   getDayKey,
   getDayWorkout,
   getWeekDays,
-  getWeekNumber,
   toDateStr,
 } from '../utils/programme'
 import { useTodayData } from '../hooks/useTodayData'

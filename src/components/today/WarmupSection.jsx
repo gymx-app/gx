@@ -74,7 +74,7 @@ const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, 
                 onClick={() => toggleItem(item)}
                 aria-label={`${item.label} — ${done ? 'completed' : 'not completed'}`}
               >
-                <Checkbox checked={done} onToggle={() => toggleItem(item)} />
+                <Checkbox checked={done} />
                 <div className="flex-1 min-w-0">
                   <p className={`text-[13px] font-medium leading-tight ${done ? 'text-[#444444]' : 'text-white'}`}>
                     {item.label}

@@ -16,16 +16,32 @@ function Checkbox({ checked, onToggle, size = 22 }) {
     onToggle()
   }, [onToggle])
 
+  const cls = `shrink-0 flex items-center justify-center rounded-full transition-colors duration-150 ${
+    checked
+      ? 'bg-[#ff4520] border-[#ff4520] text-white'
+      : 'border-2 border-[#2a2a2a] text-transparent'
+  }`
+
+  // Display-only mode when no onToggle — parent handles interaction
+  if (!onToggle) {
+    return (
+      <div
+        role="checkbox"
+        aria-checked={checked}
+        className={cls}
+        style={{ width: size, height: size }}
+      >
+        {CHECK_SVG}
+      </div>
+    )
+  }
+
   return (
     <button
       onClick={handleToggle}
       role="checkbox"
       aria-checked={checked}
-      className={`shrink-0 flex items-center justify-center rounded-full transition-colors duration-150 ${
-        checked
-          ? 'bg-[#ff4520] border-[#ff4520] text-white'
-          : 'border-2 border-[#2a2a2a] text-transparent'
-      }`}
+      className={cls}
       style={{ width: size, height: size }}
     >
       {CHECK_SVG}
