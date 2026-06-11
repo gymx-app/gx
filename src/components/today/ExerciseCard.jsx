@@ -1,6 +1,6 @@
 import { useMemo, memo } from 'react'
 import exerciseData from '../../data/exercises.json'
-import { SectionLabel } from '../ui'
+import { SectionLabel, Badge } from '../ui'
 
 const EQ_NAMES = exerciseData.EQ_NAMES
 
@@ -52,9 +52,7 @@ const ExerciseCard = memo(function ExerciseCard({
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-[13px] text-[#555555]">{exercise.s} · {exercise.r} rest</span>
             {exercise.eq && exercise.eq.map(eq => (
-              <span key={eq} className="text-[10px] tracking-wider uppercase text-[#444444] bg-[#1a1a1a] px-1.5 py-0.5">
-                {EQ_NAMES[eq] || eq}
-              </span>
+              <Badge key={eq} label={EQ_NAMES[eq] || eq} variant="default" />
             ))}
           </div>
         </div>

@@ -11,7 +11,7 @@ import {
   toDateStr,
 } from '../utils/programme'
 import { useTodayData } from '../hooks/useTodayData'
-import { Text, Button, Badge, SectionLabel, Toggle } from '../components/ui'
+import { Text, Button, Badge, SectionLabel, Toggle, Checkbox } from '../components/ui'
 
 import WeekStrip from '../components/today/WeekStrip'
 import PhaseCard from '../components/today/PhaseCard'
@@ -171,11 +171,11 @@ function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }) {
       </div>
 
       {isLogged && isCardio && (
-        <p className="text-[12px] text-[#555555] text-center mt-2 font-medium">
+        <Text variant="caption" className="text-center mt-2 font-medium">
           {finInputs.incline && `${finInputs.incline}%`}
           {finInputs.speed && ` · ${finInputs.speed} km/h`}
           {finInputs.duration && ` · ${finInputs.duration} min`}
-        </p>
+        </Text>
       )}
     </div>
   )
@@ -214,6 +214,7 @@ function CooldownSection({ items, dateStr, checklistLogs, onUpdate }) {
                 idx > 0 ? 'border-t border-[#111111]' : ''
               }`}
               onClick={() => toggle(key)}
+              aria-label={`${item} — ${done ? 'completed' : 'not completed'}`}
             >
               <div className={`w-5 h-5 flex items-center justify-center shrink-0 transition-colors ${
                 done ? 'bg-[#22c55e] text-white' : 'border border-[#2a2a2a] text-transparent'
@@ -521,9 +522,7 @@ export default function Today() {
               </p>
 
               <div className="flex items-baseline justify-between mt-2">
-                <h1 className="text-4xl font-black tracking-[-0.04em] text-white leading-none">
-                  {workout.title}
-                </h1>
+                <Text variant="pageTitle">{workout.title}</Text>
                 {workout.dur && (
                   <span className="text-[22px] font-black text-[#ff4520] tracking-tight shrink-0 ml-3">
                     {workout.dur}&prime;
@@ -532,7 +531,7 @@ export default function Today() {
               </div>
 
               {workout.sub && (
-                <p className="text-[13px] text-[#666666] mt-1.5">{workout.sub}</p>
+                <Text variant="bodyMuted" className="mt-1.5">{workout.sub}</Text>
               )}
 
               <div className="flex items-center gap-2 mt-3">
@@ -605,10 +604,10 @@ export default function Today() {
           {/* No data */}
           {dayType === 'none' && (
             <div className="mt-8">
-              <h1 className="text-3xl font-black tracking-[-0.04em] text-[#222222]">NO DATA</h1>
-              <p className="text-[#333333] text-[13px] mt-2">
+              <Text variant="pageTitle" className="text-[#222222]">NO DATA</Text>
+              <Text variant="bodyMuted" className="mt-2">
                 No workout defined for this day in phase {phase}.
-              </p>
+              </Text>
             </div>
           )}
         </div>
