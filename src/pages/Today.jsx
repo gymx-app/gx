@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, memo } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { useLoading } from '../hooks/useLoading'
 import { supabase } from '../lib/supabase'
@@ -13,7 +13,6 @@ import {
 import { useTodayData } from '../hooks/useTodayData'
 import { Text, Button, Badge, SectionLabel, Toggle } from '../components/ui'
 
-import WeekStrip from '../components/today/WeekStrip'
 import PhaseCard from '../components/today/PhaseCard'
 import WarmupSection from '../components/today/WarmupSection'
 import ExerciseCard from '../components/today/ExerciseCard'
@@ -256,6 +255,11 @@ export default function Today() {
   const [completedSets, setCompletedSets] = useState({})
   const [isTravelMode, setIsTravelMode] = useState(false)
 
+  // ── Swipe navigation ──
+  const touchRef = useRef({ startX: 0, startY: 0 })
+  const [swipeAnim, setSwipeAnim] = useState(null) // 'left' | 'right' | null
+  const contentRef = useRef(null)
+
   // ── Computed dates ──
   const weekDays = useMemo(() => getWeekDays(weekOffset), [weekOffset])
   const selectedDay = useMemo(
@@ -464,6 +468,14 @@ export default function Today() {
     }
   }, [logs, displayExercises, dayType, screenState])
 
+  // ── Today date for comparisons ──
+  const todayDateStr = useMemo(() => {
+    const d = new Date()
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0')
+  }, [])
+
   // ── Handlers ──
   function handleSelectDay(dayLabel, dateStr, date) {
     setSelectedDayLabel(dayLabel)
@@ -484,10 +496,74 @@ export default function Today() {
     setScreenState('orientation')
   }
 
+  function handleGoToToday() {
+    setWeekOffset(0)
+    setSelectedDayLabel(getDayKey(new Date()))
+    setExpandedExercise(null)
+    setActiveSheet(null)
+    setScreenState('orientation')
+  }
+
   function handleTapSet(exercise, setNumber, totalSets, prevBest, existingLog, exerciseIndex, restSec) {
     setActiveSheet({ exercise, setNumber, totalSets, prevBest, existingLog, exerciseIndex, restSec })
     setScreenState('active')
   }
+
+  // ── Swipe day navigation ──
+  const DAY_SEQ = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+
+  function navigateDay(direction) {
+    const idx = DAY_SEQ.indexOf(selectedDayLabel)
+    if (idx === -1) return
+
+    if (direction === 'next') {
+      if (idx < 5) {
+        // Check if next day is in the future
+        const nextDay = weekDays[idx + 1]
+        if (nextDay && nextDay.dateStr > todayDateStr) return
+        setSelectedDayLabel(DAY_SEQ[idx + 1])
+      } else {
+        // On SAT → next week MON (only past weeks)
+        if (weekOffset >= 0) return
+        setWeekOffset(prev => prev + 1)
+        setSelectedDayLabel('MON')
+      }
+    } else {
+      if (idx > 0) {
+        setSelectedDayLabel(DAY_SEQ[idx - 1])
+      } else {
+        // On MON → previous week SAT
+        if (!canGoBack) return
+        setWeekOffset(prev => prev - 1)
+        setSelectedDayLabel('SAT')
+      }
+    }
+
+    setExpandedExercise(null)
+    setActiveSheet(null)
+    setScreenState('orientation')
+    setSwipeAnim(direction === 'next' ? 'left' : 'right')
+  }
+
+  function handleTouchStart(e) {
+    touchRef.current.startX = e.touches[0].clientX
+    touchRef.current.startY = e.touches[0].clientY
+  }
+
+  function handleTouchEnd(e) {
+    const dx = e.changedTouches[0].clientX - touchRef.current.startX
+    const dy = e.changedTouches[0].clientY - touchRef.current.startY
+    if (Math.abs(dx) > 50 && Math.abs(dy) < 30) {
+      navigateDay(dx < 0 ? 'next' : 'prev')
+    }
+  }
+
+  // Clear swipe animation after transition
+  useEffect(() => {
+    if (!swipeAnim) return
+    const t = setTimeout(() => setSwipeAnim(null), 150)
+    return () => clearTimeout(t)
+  }, [swipeAnim])
 
   const handleLogged = useCallback((sid) => {
     const restSec = activeSheet?.restSec || 60
@@ -524,8 +600,12 @@ export default function Today() {
     <div className="fixed inset-0 bg-[#0a0a0a] flex flex-col">
       <TopBar phase={phase} totalWeek={totalWeek} syncStatus={syncStatus} />
 
-      <div className="flex-1 overflow-y-auto scroll-offset pb-32">
-        {/* Phase card */}
+      <div
+        className="flex-1 overflow-y-auto scroll-offset pb-32"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Phase card + day pills */}
         <PhaseCard
           phase={phase}
           weekInPhase={phaseInfo.weekInPhase}
@@ -539,18 +619,25 @@ export default function Today() {
           canGoBack={canGoBack}
           programme={programme}
           phases={phases}
-        />
-
-        {/* Week strip */}
-        <WeekStrip
           weekDays={weekDays}
           selectedDateStr={dateStr}
           completedDateStrs={completedDateStrs}
           onSelectDay={handleSelectDay}
+          onGoToToday={handleGoToToday}
         />
 
-        {/* Content */}
-        <div className="px-4 pt-4">
+        {/* Content — with swipe slide animation */}
+        <div
+          ref={contentRef}
+          className="px-4 pt-4 transition-transform duration-150 ease-out"
+          style={{
+            transform: swipeAnim === 'left'
+              ? 'translateX(-8px)'
+              : swipeAnim === 'right'
+              ? 'translateX(8px)'
+              : 'translateX(0)',
+          }}
+        >
           {/* Error */}
           {error && (
             <Button
