@@ -421,13 +421,6 @@ export default function Today() {
     return count
   }, [sessions, weekDays])
 
-  // ── Can go back ──
-  const canGoBack = useMemo(() => {
-    if (!config?.start_date) return false
-    const startDate = new Date(config.start_date + 'T00:00:00')
-    return weekDays[0].date > startDate
-  }, [config, weekDays])
-
   // ── Pre-populate completedSets from exercise_logs ──
   useEffect(() => {
     const map = {}
@@ -485,7 +478,6 @@ export default function Today() {
   }
 
   function handlePrevWeek() {
-    console.log('[Gx] handlePrevWeek', { weekOffset, selectedDayLabel, canGoBack })
     const newOffset = weekOffset - 1
     setWeekOffset(newOffset)
     const newWeekDays = getWeekDays(newOffset)
@@ -493,12 +485,10 @@ export default function Today() {
     if (sameDay && sameDay.dateStr > todayDateStr) {
       setSelectedDayLabel('MON')
     }
-    console.log('[Gx] prevWeek → offset:', newOffset, 'days:', newWeekDays.map(d => d.dateStr))
     setScreenState('orientation')
   }
 
   function handleNextWeek() {
-    console.log('[Gx] handleNextWeek', { weekOffset, selectedDayLabel })
     const newOffset = weekOffset + 1
     setWeekOffset(newOffset)
     const newWeekDays = getWeekDays(newOffset)
@@ -506,7 +496,6 @@ export default function Today() {
     if (sameDay && sameDay.dateStr > todayDateStr) {
       setSelectedDayLabel('MON')
     }
-    console.log('[Gx] nextWeek → offset:', newOffset, 'days:', newWeekDays.map(d => d.dateStr))
     setScreenState('orientation')
   }
 
@@ -547,7 +536,6 @@ export default function Today() {
         setSelectedDayLabel(DAY_SEQ[idx - 1])
       } else {
         // On MON → previous week SAT
-        if (!canGoBack) return
         setWeekOffset(prev => prev - 1)
         setSelectedDayLabel('SAT')
       }
@@ -630,7 +618,6 @@ export default function Today() {
           weekOffset={weekOffset}
           onPrevWeek={handlePrevWeek}
           onNextWeek={handleNextWeek}
-          canGoBack={canGoBack}
           programme={programme}
           phases={phases}
           weekDays={weekDays}
