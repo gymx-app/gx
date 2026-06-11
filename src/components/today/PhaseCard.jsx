@@ -13,6 +13,8 @@ const PhaseCard = memo(function PhaseCard({
   weekOffset,
   onPrevWeek,
   onNextWeek,
+  canGoBack,
+  canGoForward,
   programme,
   phases,
   // Day pills props (moved from WeekStrip)
@@ -117,11 +119,14 @@ const PhaseCard = memo(function PhaseCard({
         )}
 
         <div className="flex items-center gap-2">
-          {/* Left arrow — always visible */}
+          {/* Left arrow */}
           <button
             onClick={onPrevWeek}
+            disabled={!canGoBack}
             aria-label="Previous week"
-            className="min-w-[32px] min-h-[52px] flex items-center justify-center text-[24px] font-light shrink-0 transition-opacity text-[#888888] active:opacity-50"
+            className={`min-w-[32px] min-h-[52px] flex items-center justify-center text-[24px] font-light shrink-0 transition-opacity ${
+              canGoBack ? 'text-[#888888] active:opacity-50' : 'text-[#222222]'
+            }`}
           >
             ‹
           </button>
@@ -194,14 +199,14 @@ const PhaseCard = memo(function PhaseCard({
             })}
           </div>
 
-          {/* Right arrow — hidden (not removed) when at current week */}
+          {/* Right arrow */}
           <button
             onClick={onNextWeek}
+            disabled={!canGoForward}
             aria-label="Next week"
             className={`min-w-[32px] min-h-[52px] flex items-center justify-center text-[24px] font-light shrink-0 transition-opacity ${
-              weekOffset < 0 ? 'text-[#888888] active:opacity-50' : 'invisible'
+              canGoForward ? 'text-[#888888] active:opacity-50' : 'text-[#222222]'
             }`}
-            disabled={weekOffset >= 0}
           >
             ›
           </button>

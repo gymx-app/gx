@@ -421,6 +421,20 @@ export default function Today() {
     return count
   }, [sessions, weekDays])
 
+  // ── Week navigation bounds ──
+  // Navigate back to the programme start week, forward up to current week
+  const canGoBack = useMemo(() => {
+    if (!config?.start_date) return false
+    const sd = new Date(config.start_date + 'T00:00:00')
+    const dow = sd.getDay()
+    const startMonday = new Date(sd)
+    startMonday.setDate(sd.getDate() - (dow === 0 ? 6 : dow - 1))
+    startMonday.setHours(0, 0, 0, 0)
+    return weekDays[0].date > startMonday
+  }, [config, weekDays])
+
+  const canGoForward = weekOffset < 0
+
   // ── Pre-populate completedSets from exercise_logs ──
   useEffect(() => {
     const map = {}
@@ -536,6 +550,7 @@ export default function Today() {
         setSelectedDayLabel(DAY_SEQ[idx - 1])
       } else {
         // On MON → previous week SAT
+        if (!canGoBack) return
         setWeekOffset(prev => prev - 1)
         setSelectedDayLabel('SAT')
       }
@@ -618,6 +633,8 @@ export default function Today() {
           weekOffset={weekOffset}
           onPrevWeek={handlePrevWeek}
           onNextWeek={handleNextWeek}
+          canGoBack={canGoBack}
+          canGoForward={canGoForward}
           programme={programme}
           phases={phases}
           weekDays={weekDays}
