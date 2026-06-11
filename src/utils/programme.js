@@ -24,7 +24,9 @@ function getMonday(date) {
  */
 export function toDateStr(d) {
   const dt = typeof d === 'string' ? new Date(d + 'T00:00:00') : d
-  return dt.toISOString().split('T')[0]
+  return dt.getFullYear() + '-' +
+    String(dt.getMonth() + 1).padStart(2, '0') + '-' +
+    String(dt.getDate()).padStart(2, '0')
 }
 
 /**

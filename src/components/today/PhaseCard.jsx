@@ -123,8 +123,8 @@ const PhaseCard = memo(function PhaseCard({
             onClick={onPrevWeek}
             disabled={!canGoBack}
             aria-label="Previous week"
-            className={`w-8 h-12 flex items-center justify-center text-[20px] shrink-0 ${
-              canGoBack ? 'text-[#444444] active:text-white' : 'text-[#1a1a1a]'
+            className={`min-w-[32px] min-h-[52px] flex items-center justify-center text-[24px] font-light shrink-0 transition-opacity ${
+              canGoBack ? 'text-[#888888] active:opacity-50' : 'invisible'
             }`}
           >
             ‹
@@ -198,12 +198,12 @@ const PhaseCard = memo(function PhaseCard({
             })}
           </div>
 
-          {/* Right arrow */}
+          {/* Right arrow — hidden (not removed) when at current week */}
           <button
             onClick={onNextWeek}
             aria-label="Next week"
-            className={`w-8 h-12 flex items-center justify-center text-[20px] shrink-0 ${
-              weekOffset < 0 ? 'text-[#444444] active:text-white' : 'text-[#1a1a1a]'
+            className={`min-w-[32px] min-h-[52px] flex items-center justify-center text-[24px] font-light shrink-0 transition-opacity ${
+              weekOffset < 0 ? 'text-[#888888] active:opacity-50' : 'invisible'
             }`}
             disabled={weekOffset >= 0}
           >
