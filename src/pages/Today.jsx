@@ -11,7 +11,7 @@ import {
   toDateStr,
 } from '../utils/programme'
 import { useTodayData } from '../hooks/useTodayData'
-import { Text, Button, Badge, SectionLabel, Toggle, Checkbox } from '../components/ui'
+import { Text, Button, Badge, SectionLabel, Toggle } from '../components/ui'
 
 import WeekStrip from '../components/today/WeekStrip'
 import PhaseCard from '../components/today/PhaseCard'

@@ -9,8 +9,30 @@ import SplashScreen from './components/SplashScreen'
 import LoadingBar from './components/LoadingBar'
 import PWAUpdatePrompt from './components/PWAUpdatePrompt'
 
-const Login = lazy(() => import('./pages/Login'))
-const Today = lazy(() => import('./pages/Today'))
+/**
+ * Lazy import with automatic retry + hard reload on chunk load failure.
+ * Handles stale service worker caching old chunk hashes after a new deploy.
+ */
+function lazyWithRetry(importFn) {
+  return lazy(() =>
+    importFn().catch(() => {
+      // Chunk failed — likely a stale SW cache. Force reload once.
+      const key = 'gx-chunk-reload'
+      const lastReload = sessionStorage.getItem(key)
+      const now = Date.now()
+      // Only auto-reload once per 30s to prevent infinite reload loops
+      if (!lastReload || now - Number(lastReload) > 30000) {
+        sessionStorage.setItem(key, String(now))
+        window.location.reload()
+      }
+      // If we already reloaded recently, surface the error
+      return importFn()
+    })
+  )
+}
+
+const Login = lazyWithRetry(() => import('./pages/Login'))
+const Today = lazyWithRetry(() => import('./pages/Today'))
 
 function AppRoutes() {
   const { user, loading } = useAuth()
