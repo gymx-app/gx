@@ -108,16 +108,31 @@ const TRAVEL_OPTIONS = ['walking', 'swimming']
 
 const LissDay = memo(function LissDay({
   workout,
+  dayData,
   dateStr,
   phase,
   totalWeek,
   checklistLogs,
+  cooldownItems: dbCooldownItems,
   isTravelMode,
   onToggleTravel,
   onUpdate,
 }) {
   const { user } = useAuth()
-  const cooldown = workout.cd || []
+
+  // Prefer DB cooldown items, fall back to JSON
+  const cooldown = useMemo(() => {
+    if (dbCooldownItems && dbCooldownItems.length > 0) {
+      return dbCooldownItems.map(ci => ci.label || ci.item_key)
+    }
+    return workout.cd || []
+  }, [dbCooldownItems, workout.cd])
+
+  // Prefer DB dayData for title/subtitle/duration/tags
+  const title = dayData?.title || workout.title || 'LISS + RECOVERY'
+  const subtitle = dayData?.subtitle || workout.sub
+  const duration = dayData?.duration_min ? String(dayData.duration_min) : workout.dur
+  const tags = dayData?.tags || workout.tags
 
   const equipmentOptions = isTravelMode ? TRAVEL_OPTIONS : GYM_OPTIONS
   const defaultEquipment = isTravelMode ? 'walking' : 'treadmill'
@@ -236,20 +251,20 @@ const LissDay = memo(function LissDay({
       </p>
 
       <div className="flex items-baseline justify-between mt-2">
-        <Text variant="pageTitle">{workout.title || 'LISS + RECOVERY'}</Text>
-        {workout.dur && (
+        <Text variant="pageTitle">{title}</Text>
+        {duration && (
           <span className="text-[22px] font-black text-[#ff4520] tracking-tight shrink-0 ml-3">
-            {workout.dur}&prime;
+            {duration}&prime;
           </span>
         )}
       </div>
 
-      {workout.sub && (
-        <Text variant="bodyMuted" className="mt-1.5">{workout.sub}</Text>
+      {subtitle && (
+        <Text variant="bodyMuted" className="mt-1.5">{subtitle}</Text>
       )}
 
       <div className="flex items-center gap-2 mt-3">
-        {workout.tags?.map(tag => (
+        {tags?.map(tag => (
           <Badge key={tag} label={tag} variant="accent" />
         ))}
       </div>

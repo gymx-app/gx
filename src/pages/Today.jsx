@@ -273,11 +273,17 @@ export default function Today() {
     checklistLogs,
     exerciseMap,
     previousBests,
+    programme,
+    phases,
+    dayData,
+    programmeExercises,
+    warmupItems,
+    cooldownItems,
     loading,
     hasCachedData,
     error,
     refetch,
-  } = useTodayData(dateStr, weekDays[0].dateStr, weekDays[5].dateStr)
+  } = useTodayData(dateStr, weekDays[0].dateStr, weekDays[5].dateStr, selectedDayLabel)
 
   // ── Sync status derived from data hook ──
   useEffect(() => {
@@ -312,14 +318,75 @@ export default function Today() {
   const totalWeek = phaseInfo.totalWeek
 
   // ── Workout for selected day ──
-  const workout = useMemo(() => getDayWorkout(phase, selectedDayLabel), [phase, selectedDayLabel])
+  // Prefer DB dayData; fall back to exercises.json
+  const workout = useMemo(() => {
+    const jsonWorkout = getDayWorkout(phase, selectedDayLabel)
+
+    if (dayData) {
+      // Merge DB dayData with JSON fallback for exercise list
+      return {
+        ...jsonWorkout,
+        title: dayData.title || jsonWorkout?.title,
+        sub: dayData.subtitle || jsonWorkout?.sub,
+        dur: dayData.duration_min ? String(dayData.duration_min) : jsonWorkout?.dur,
+        kcal: dayData.kcal_range || jsonWorkout?.kcal,
+        tags: dayData.tags || jsonWorkout?.tags,
+        workout_type: dayData.workout_type,
+        has_warmup: dayData.has_warmup,
+        // Keep JSON exercise data as fallback if no DB exercises yet
+        ex: jsonWorkout?.ex,
+        fin: jsonWorkout?.fin,
+        cd: jsonWorkout?.cd,
+        wu: jsonWorkout?.wu,
+        isRest: dayData.workout_type === 'rest',
+        isLiss: dayData.workout_type === 'liss',
+      }
+    }
+
+    return jsonWorkout
+  }, [phase, selectedDayLabel, dayData])
+
+  // ── Map DB programme exercises → ExerciseCard format ──
+  // Falls back to workout.ex (JSON) when no DB exercises seeded yet
+  const displayExercises = useMemo(() => {
+    if (programmeExercises && programmeExercises.length > 0) {
+      return programmeExercises.map(pe => ({
+        n: pe.exercises?.name || pe.exercise_name || 'Unknown',
+        s: pe.sets_reps || '3×12',
+        r: pe.rest || '60s',
+        note: pe.notes || null,
+        warn: pe.warn || null,
+        eq: pe.exercises?.equipment ? [pe.exercises.equipment] : [],
+        icon: pe.icon || null,
+        // Extra DB fields for future use
+        _bodyPart: pe.exercises?.body_part,
+        _targetMuscle: pe.exercises?.target_muscle,
+        _gifUrl: pe.exercises?.gif_url,
+      }))
+    }
+
+    if (import.meta.env.DEV && dayData?.workout_type === 'workout' && !programmeExercises) {
+      console.warn('[Gx] No programme_exercises for this day — using JSON fallback')
+    }
+
+    return workout?.ex || []
+  }, [programmeExercises, workout?.ex, dayData?.workout_type])
+
+  // ── Map DB cooldown items → CooldownSection format ──
+  // Falls back to workout.cd (JSON strings) when no DB cooldown items
+  const displayCooldownItems = useMemo(() => {
+    if (cooldownItems && cooldownItems.length > 0) {
+      return cooldownItems.map(ci => ci.label || ci.item_key)
+    }
+    return workout?.cd || []
+  }, [cooldownItems, workout?.cd])
 
   // Determine day type
   const dayType = workout?.isRest
     ? 'rest'
     : workout?.isLiss
     ? 'liss'
-    : workout?.ex
+    : workout?.ex || (dayData?.workout_type === 'workout')
     ? 'workout'
     : 'none'
 
@@ -375,20 +442,19 @@ export default function Today() {
 
   // ── Auto-expand first incomplete exercise ──
   useEffect(() => {
-    if (dayType !== 'workout' || !workout?.ex) return
-    const exercises = workout.ex
-    const firstIncomplete = exercises.findIndex((ex) => {
+    if (dayType !== 'workout' || displayExercises.length === 0) return
+    const firstIncomplete = displayExercises.findIndex((ex) => {
       const sets = parseInt(ex.s.split('×')[0])
       const logged = logs.filter(l => l.exercise_name === ex.n && !l.is_mm_set && l.completed)
       return logged.length < sets
     })
     setExpandedExercise(firstIncomplete >= 0 ? firstIncomplete : null)
-  }, [logs, workout, dayType])
+  }, [logs, displayExercises, dayType])
 
   // ── Check if all exercises complete ──
   useEffect(() => {
-    if (dayType !== 'workout' || !workout?.ex || screenState === 'complete') return
-    const allDone = workout.ex.every((ex) => {
+    if (dayType !== 'workout' || displayExercises.length === 0 || screenState === 'complete') return
+    const allDone = displayExercises.every((ex) => {
       const sets = parseInt(ex.s.split('×')[0])
       const logged = logs.filter(l => l.exercise_name === ex.n && !l.is_mm_set && l.completed)
       return logged.length >= sets
@@ -396,7 +462,7 @@ export default function Today() {
     if (allDone && logs.length > 0) {
       setScreenState('complete')
     }
-  }, [logs, workout, dayType, screenState])
+  }, [logs, displayExercises, dayType, screenState])
 
   // ── Handlers ──
   function handleSelectDay(dayLabel, dateStr, date) {
@@ -471,6 +537,8 @@ export default function Today() {
           onPrevWeek={handlePrevWeek}
           onNextWeek={handleNextWeek}
           canGoBack={canGoBack}
+          programme={programme}
+          phases={phases}
         />
 
         {/* Week strip */}
@@ -500,10 +568,12 @@ export default function Today() {
           {dayType === 'liss' && (
             <LissDay
               workout={workout}
+              dayData={dayData}
               dateStr={dateStr}
               phase={phase}
               totalWeek={totalWeek}
               checklistLogs={checklistLogs}
+              cooldownItems={cooldownItems}
               isTravelMode={isTravelMode}
               onToggleTravel={() => setIsTravelMode(p => !p)}
               onUpdate={syncRefetch}
@@ -551,11 +621,12 @@ export default function Today() {
               </div>
 
               {/* Warmup */}
-              {workout.wu && (
+              {(workout.wu || workout.has_warmup) && (
                 <WarmupSection
                   dateStr={dateStr}
                   phase={phase}
                   warmupLogs={warmupLogs}
+                  warmupItems={warmupItems}
                   onUpdate={syncRefetch}
                 />
               )}
@@ -565,7 +636,7 @@ export default function Today() {
                 <SectionLabel label="Exercises" className="mb-2" />
               </div>
               <div className="flex flex-col gap-2">
-                {(workout.ex || []).map((ex, idx) => (
+                {displayExercises.map((ex, idx) => (
                   <ExerciseCard
                     key={`${ex.n}-${idx}`}
                     exercise={ex}
@@ -590,9 +661,9 @@ export default function Today() {
               )}
 
               {/* Cooldown */}
-              {workout.cd && workout.cd.length > 0 && (
+              {displayCooldownItems.length > 0 && (
                 <CooldownSection
-                  items={workout.cd}
+                  items={displayCooldownItems}
                   dateStr={dateStr}
                   checklistLogs={checklistLogs}
                   onUpdate={syncRefetch}

@@ -1,17 +1,32 @@
-import { useState, memo } from 'react'
+import { useState, useMemo, memo } from 'react'
 import { useAuth } from '../../auth/AuthContext'
 import { upsertWarmupLog } from '../../services/checklistService'
 import { logger } from '../../lib/logger'
 import exerciseData from '../../data/exercises.json'
 import { SectionLabel, ProgressBar, Checkbox } from '../ui'
 
-const WARMUP_ITEMS = exerciseData.WARMUP_ITEMS
+const JSON_WARMUP_ITEMS = exerciseData.WARMUP_ITEMS
 
-const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, onUpdate }) {
+const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, warmupItems: dbWarmupItems, onUpdate }) {
   const { user } = useAuth()
+
+  // Use DB warmup items if available, fall back to exercises.json
+  const items = useMemo(() => {
+    if (dbWarmupItems && dbWarmupItems.length > 0) {
+      // Map DB format → component format
+      return dbWarmupItems.map(item => ({
+        k: item.item_key,
+        label: item.label,
+        detail: item.detail || '',
+        ic: item.icon || '',
+      }))
+    }
+    return JSON_WARMUP_ITEMS
+  }, [dbWarmupItems])
+
   const completedKeys = new Set(warmupLogs.filter(l => l.completed).map(l => l.item_key))
   const completedCount = completedKeys.size
-  const allDone = completedCount === WARMUP_ITEMS.length
+  const allDone = completedCount === items.length
   const [collapsed, setCollapsed] = useState(allDone)
 
   async function toggleItem(item) {
@@ -37,7 +52,7 @@ const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, 
               <span className="text-[11px] font-semibold text-[#22c55e]">Done</span>
             ) : (
               <span className="text-[11px] text-[#444444]">
-                {completedCount}/{WARMUP_ITEMS.length}
+                {completedCount}/{items.length}
               </span>
             )}
             <button
@@ -56,14 +71,14 @@ const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, 
       />
 
       <ProgressBar
-        progress={(completedCount / WARMUP_ITEMS.length) * 100}
+        progress={(completedCount / items.length) * 100}
         animated
         className="mb-3"
       />
 
       {!collapsed && (
         <div className="border border-[#1a1a1a]">
-          {WARMUP_ITEMS.map((item, idx) => {
+          {items.map((item, idx) => {
             const done = completedKeys.has(item.k)
             return (
               <button

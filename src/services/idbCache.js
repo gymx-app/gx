@@ -1,16 +1,32 @@
 import { logger } from '../lib/logger'
 
 const DB_NAME = 'gx-cache'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
-const STORES = ['workout-data', 'week-sessions', 'exercises', 'programme-config']
+const STORES = [
+  'workout-data',
+  'week-sessions',
+  'exercises',
+  'programme-config',
+  // Programme structure caches
+  'programme-context',
+  'programme-day',
+  'programme-exercises',
+  'warmup-items',
+  'cooldown-items',
+]
 
 /** TTL in milliseconds per store */
 const TTL = {
-  'workout-data': 5 * 60 * 1000,        // 5 minutes
-  'week-sessions': 10 * 60 * 1000,       // 10 minutes
-  'exercises': 7 * 24 * 60 * 60 * 1000,  // 7 days
-  'programme-config': 30 * 60 * 1000,    // 30 minutes
+  'workout-data': 5 * 60 * 1000,           // 5 minutes
+  'week-sessions': 10 * 60 * 1000,         // 10 minutes
+  'exercises': 7 * 24 * 60 * 60 * 1000,    // 7 days
+  'programme-config': 30 * 60 * 1000,      // 30 minutes
+  'programme-context': 30 * 60 * 1000,     // 30 minutes
+  'programme-day': 60 * 60 * 1000,         // 1 hour
+  'programme-exercises': 60 * 60 * 1000,   // 1 hour
+  'warmup-items': 60 * 60 * 1000,          // 1 hour
+  'cooldown-items': 60 * 60 * 1000,        // 1 hour
 }
 
 let dbPromise = null

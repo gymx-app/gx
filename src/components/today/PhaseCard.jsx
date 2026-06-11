@@ -12,8 +12,12 @@ const PhaseCard = memo(function PhaseCard({
   onPrevWeek,
   onNextWeek,
   canGoBack,
+  programme,
+  phases,
 }) {
-  const totalWeeksInPhase = phaseWeeks[phase - 1] || 4
+  // Use DB phase data if available, fall back to phaseWeeks array
+  const currentPhase = phases?.find(p => p.phase_number === phase)
+  const totalWeeksInPhase = currentPhase?.weeks_count || phaseWeeks[phase - 1] || 4
   const isOngoing = totalWeeksInPhase === 999
   const progressPct = isOngoing
     ? 100
@@ -22,11 +26,15 @@ const PhaseCard = memo(function PhaseCard({
   const daysNeeded = Math.max(0, minActiveDays - currentWeekActiveDays)
   const weekQualified = daysNeeded === 0
 
+  const phaseName = currentPhase?.name
+
   return (
     <Card variant="default" padding="p-4" className="mx-4 mt-3">
       {/* Phase + progress */}
       <div className="flex items-baseline justify-between">
-        <Text variant="sectionTitle">PHASE {phase}</Text>
+        <Text variant="sectionTitle">
+          PHASE {phase}{phaseName ? ` · ${phaseName}` : ''}
+        </Text>
         <span className="text-[12px] text-[#555555]">
           {isOngoing ? 'Ongoing' : `${weekInPhase} of ${totalWeeksInPhase} wks`}
         </span>

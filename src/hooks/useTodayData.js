@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { supabase } from '../lib/supabase'
 import { logger } from '../lib/logger'
-import { toDateStr } from '../utils/programme'
+import { toDateStr, computePhaseAndWeek } from '../utils/programme'
 import * as idbCache from '../services/idbCache'
+import * as programmeService from '../services/programmeService'
 
 /**
  * Cache key helpers — all scoped to userId.
@@ -13,13 +14,17 @@ const cacheKey = {
   sessions: (uid, weekStart) => `${uid}_${weekStart}`,
   exercises: () => 'global',
   config: (uid) => uid,
+  programmeDay: (phaseId, dow) => `${phaseId}_${dow}`,
+  programmeExercises: (dayId) => dayId,
+  warmupItems: (programmeId) => programmeId,
+  cooldownItems: (dayId) => dayId,
 }
 
 /**
- * Fetch all data for a single day from Supabase (no cache interaction).
+ * Fetch all log data for a single day from Supabase (no cache interaction).
  * Used for both main load and background prefetch.
  */
-async function fetchDayData(userId, dateStr) {
+async function fetchDayLogs(userId, dateStr) {
   const [logsRes, warmupRes, checklistRes] = await Promise.all([
     supabase.from('exercise_logs').select('*').eq('user_id', userId).eq('date', dateStr),
     supabase.from('warmup_logs').select('*').eq('user_id', userId).eq('date', dateStr),
@@ -46,10 +51,12 @@ async function fetchDayData(userId, dateStr) {
  * @param {string} dateStr - Selected date as YYYY-MM-DD
  * @param {string} weekStartStr - Monday of the displayed week
  * @param {string} weekEndStr - Saturday of the displayed week
+ * @param {string} selectedDayLabel - Day of week: 'MON', 'TUE', etc.
  */
-export function useTodayData(dateStr, weekStartStr, weekEndStr) {
+export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel) {
   const { user } = useAuth()
 
+  // Legacy config (programme_config table)
   const [config, setConfig] = useState(null)
   const [sessions, setSessions] = useState([])
   const [logs, setLogs] = useState([])
@@ -57,6 +64,15 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr) {
   const [checklistLogs, setChecklistLogs] = useState([])
   const [exerciseMap, setExerciseMap] = useState({})
   const [previousBests, setPreviousBests] = useState({})
+
+  // New programme data
+  const [programme, setProgramme] = useState(null)
+  const [phases, setPhases] = useState([])
+  const [dayData, setDayData] = useState(null)
+  const [programmeExercises, setProgrammeExercises] = useState(null)
+  const [warmupItems, setWarmupItems] = useState(null)
+  const [cooldownItems, setCooldownItems] = useState(null)
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -115,15 +131,16 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr) {
       const [
         cfgRes,
         sessRes,
-        dayData,
+        dayLogs,
         exRes,
         prevRes,
+        ctxRes,
       ] = await Promise.all([
         supabase.from('programme_config').select('*').eq('user_id', user.id).single(),
         supabase.from('workout_sessions')
           .select('id, date, day_of_week, phase, is_travel, completed_at')
           .eq('user_id', user.id),
-        fetchDayData(user.id, dateStr),
+        fetchDayLogs(user.id, dateStr),
         supabase.from('exercises').select('id, name'),
         supabase.from('exercise_logs')
           .select('exercise_name, weight_kg, reps, date')
@@ -133,15 +150,16 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr) {
           .gte('date', toDateStr(monthAgo))
           .lt('date', dateStr)
           .order('date', { ascending: false }),
+        programmeService.getFullProgrammeContext(user.id),
       ])
 
       if (cfgRes.error) throw cfgRes.error
 
       const freshConfig = cfgRes.data
       const freshSessions = sessRes.data || []
-      const freshLogs = dayData.logs
-      const freshWarmupLogs = dayData.warmupLogs
-      const freshChecklistLogs = dayData.checklistLogs
+      const freshLogs = dayLogs.logs
+      const freshWarmupLogs = dayLogs.warmupLogs
+      const freshChecklistLogs = dayLogs.checklistLogs
 
       // Build exercise map
       const freshExMap = {}
@@ -154,6 +172,82 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr) {
       for (const log of (prevRes.data || [])) {
         if (!freshBests[log.exercise_name]) {
           freshBests[log.exercise_name] = { weight_kg: log.weight_kg, reps: log.reps }
+        }
+      }
+
+      // Programme context
+      const freshProgramme = ctxRes.data?.programme || null
+      const freshPhases = ctxRes.data?.phases || []
+
+      // ── Fetch day-specific programme data ──
+      let freshDayData = null
+      let freshProgrammeExercises = null
+      let freshWarmupItems = null
+      let freshCooldownItems = null
+
+      if (freshProgramme && freshPhases.length > 0 && selectedDayLabel) {
+        // Find current phase using the same logic as computePhaseAndWeek
+        const phaseInfo = computePhaseAndWeek(freshSessions, {
+          start_date: freshConfig.start_date,
+          phase_weeks: freshConfig.phase_weeks,
+          min_active_days: freshConfig.min_active_days,
+        })
+        const currentPhase = freshPhases.find(p => p.phase_number === phaseInfo.phase)
+
+        if (currentPhase) {
+          // Check caches first for day data
+          const dayKey = cacheKey.programmeDay(currentPhase.id, selectedDayLabel)
+          const cachedDay = await idbCache.get('programme-day', dayKey)
+
+          if (cachedDay) {
+            freshDayData = cachedDay
+          } else {
+            const { data: dd } = await programmeService.getProgrammeDay(
+              currentPhase.id, selectedDayLabel
+            )
+            freshDayData = dd
+            if (dd) idbCache.set('programme-day', dayKey, dd)
+          }
+
+          // Parallel fetch for exercises, warmup, cooldown
+          if (freshDayData) {
+            const isWorkout = freshDayData.workout_type === 'workout'
+
+            const [exResult, wuResult, cdResult] = await Promise.all([
+              isWorkout
+                ? (async () => {
+                    const exKey = cacheKey.programmeExercises(freshDayData.id)
+                    const cached = await idbCache.get('programme-exercises', exKey)
+                    if (cached) return { data: cached }
+                    const res = await programmeService.getProgrammeDayExercises(freshDayData.id)
+                    if (res.data) idbCache.set('programme-exercises', exKey, res.data)
+                    return res
+                  })()
+                : { data: null },
+              (async () => {
+                const wuKey = cacheKey.warmupItems(freshProgramme.id)
+                const cached = await idbCache.get('warmup-items', wuKey)
+                if (cached) return { data: cached }
+                const res = await programmeService.getWarmupItems(freshProgramme.id)
+                if (res.data) idbCache.set('warmup-items', wuKey, res.data)
+                return res
+              })(),
+              isWorkout && freshDayData.id
+                ? (async () => {
+                    const cdKey = cacheKey.cooldownItems(freshDayData.id)
+                    const cached = await idbCache.get('cooldown-items', cdKey)
+                    if (cached) return { data: cached }
+                    const res = await programmeService.getCooldownItems(freshDayData.id)
+                    if (res.data) idbCache.set('cooldown-items', cdKey, res.data)
+                    return res
+                  })()
+                : { data: null },
+            ])
+
+            freshProgrammeExercises = exResult.data
+            freshWarmupItems = wuResult.data
+            freshCooldownItems = cdResult.data
+          }
         }
       }
 
@@ -180,6 +274,12 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr) {
         checklistLogs: freshChecklistLogs,
         exerciseMap: freshExMap,
         previousBests: freshBests,
+        programme: freshProgramme,
+        phases: freshPhases,
+        dayData: freshDayData,
+        programmeExercises: freshProgrammeExercises,
+        warmupItems: freshWarmupItems,
+        cooldownItems: freshCooldownItems,
       })
 
       if (freshSnapshot !== snapshotRef.current) {
@@ -191,6 +291,12 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr) {
         setChecklistLogs(freshChecklistLogs)
         setExerciseMap(freshExMap)
         setPreviousBests(freshBests)
+        setProgramme(freshProgramme)
+        setPhases(freshPhases)
+        setDayData(freshDayData)
+        setProgrammeExercises(freshProgrammeExercises)
+        setWarmupItems(freshWarmupItems)
+        setCooldownItems(freshCooldownItems)
       }
 
       setLoading(false)
@@ -200,7 +306,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr) {
       setError(err.message)
       setLoading(false)
     }
-  }, [user?.id, dateStr, weekStartStr])
+  }, [user?.id, dateStr, weekStartStr, selectedDayLabel])
 
   // ── STEP 5: Prefetch adjacent days ──
   const prefetchAdjacent = useCallback(async () => {
@@ -227,7 +333,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr) {
 
       // Fetch and cache — background only, no state updates
       try {
-        const dayData = await fetchDayData(user.id, d)
+        const dayLogs = await fetchDayLogs(user.id, d)
 
         // Fetch previous bests for that day too
         const monthAgo = new Date(d + 'T00:00:00')
@@ -249,7 +355,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr) {
           }
         }
 
-        await idbCache.set('workout-data', k, { ...dayData, previousBests: bests })
+        await idbCache.set('workout-data', k, { ...dayLogs, previousBests: bests })
         prefetchedRef.current.add(k)
       } catch {
         // Prefetch failure is non-fatal
@@ -303,6 +409,14 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr) {
     checklistLogs,
     exerciseMap,
     previousBests,
+    // New programme data
+    programme,
+    phases,
+    dayData,
+    programmeExercises,
+    warmupItems,
+    cooldownItems,
+    // State
     loading,
     hasCachedData,
     error,
