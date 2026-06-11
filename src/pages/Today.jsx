@@ -485,14 +485,24 @@ export default function Today() {
   }
 
   function handlePrevWeek() {
-    setWeekOffset(prev => prev - 1)
-    setSelectedDayLabel('MON')
+    const newOffset = weekOffset - 1
+    setWeekOffset(newOffset)
+    const newWeekDays = getWeekDays(newOffset)
+    const sameDay = newWeekDays.find(d => d.dayLabel === selectedDayLabel)
+    if (sameDay && sameDay.dateStr > todayDateStr) {
+      setSelectedDayLabel('MON')
+    }
     setScreenState('orientation')
   }
 
   function handleNextWeek() {
-    setWeekOffset(prev => prev + 1)
-    setSelectedDayLabel('MON')
+    const newOffset = weekOffset + 1
+    setWeekOffset(newOffset)
+    const newWeekDays = getWeekDays(newOffset)
+    const sameDay = newWeekDays.find(d => d.dayLabel === selectedDayLabel)
+    if (sameDay && sameDay.dateStr > todayDateStr) {
+      setSelectedDayLabel('MON')
+    }
     setScreenState('orientation')
   }
 
