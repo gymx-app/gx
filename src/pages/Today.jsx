@@ -485,6 +485,7 @@ export default function Today() {
   }
 
   function handlePrevWeek() {
+    console.log('[Gx] handlePrevWeek', { weekOffset, selectedDayLabel, canGoBack })
     const newOffset = weekOffset - 1
     setWeekOffset(newOffset)
     const newWeekDays = getWeekDays(newOffset)
@@ -492,10 +493,12 @@ export default function Today() {
     if (sameDay && sameDay.dateStr > todayDateStr) {
       setSelectedDayLabel('MON')
     }
+    console.log('[Gx] prevWeek → offset:', newOffset, 'days:', newWeekDays.map(d => d.dateStr))
     setScreenState('orientation')
   }
 
   function handleNextWeek() {
+    console.log('[Gx] handleNextWeek', { weekOffset, selectedDayLabel })
     const newOffset = weekOffset + 1
     setWeekOffset(newOffset)
     const newWeekDays = getWeekDays(newOffset)
@@ -503,6 +506,7 @@ export default function Today() {
     if (sameDay && sameDay.dateStr > todayDateStr) {
       setSelectedDayLabel('MON')
     }
+    console.log('[Gx] nextWeek → offset:', newOffset, 'days:', newWeekDays.map(d => d.dateStr))
     setScreenState('orientation')
   }
 
