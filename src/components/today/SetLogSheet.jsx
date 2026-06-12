@@ -3,6 +3,7 @@ import { useAuth } from '../../auth/AuthContext'
 import { upsertExerciseLog, upsertWorkoutSession } from '../../services/workoutService'
 import { logger } from '../../lib/logger'
 import { Button, SectionLabel } from '../ui'
+import { shadows, gradients } from '../../styles/tokens'
 
 const SetLogSheet = memo(function SetLogSheet({
   exercise,
@@ -84,12 +85,16 @@ const SetLogSheet = memo(function SetLogSheet({
       <div className="absolute inset-0 bg-black/70" onClick={onClose} aria-hidden="true" />
 
       <div
-        className="relative w-full max-w-[480px] bg-[#111111] border-t border-[#1a1a1a] px-5 pt-5 pb-8 animate-slide-up"
+        className="relative w-full max-w-[480px] border-t border-[#222222] px-5 pt-5 pb-8 animate-slide-up"
+        style={{ background: gradients.sheet, boxShadow: shadows.sheet }}
         role="dialog"
         aria-modal="true"
         aria-label={`Log set ${setNumber} for ${exercise.n}`}
       >
-        <div className="w-8 h-1 bg-[#2a2a2a] rounded-full mx-auto mb-4" />
+        <div
+          className="w-8 h-1 rounded-full mx-auto mb-4"
+          style={{ background: 'linear-gradient(90deg, transparent, #333333, transparent)' }}
+        />
 
         {/* Header */}
         <div className="flex justify-between items-baseline mb-5">
@@ -108,7 +113,8 @@ const SetLogSheet = memo(function SetLogSheet({
               step="0.5"
               value={weight}
               onChange={e => setWeight(e.target.value)}
-              className="w-full bg-[#0a0a0a] border border-[#1a1a1a] px-3 py-3 text-[18px] font-bold text-white text-center focus:border-[#ff4520] transition-colors"
+              className="w-full border border-[#222222] px-3 py-3 text-[18px] font-bold text-white text-center focus:border-[#ff4520] transition-all duration-150"
+              style={{ background: gradients.input, boxShadow: shadows.input }}
               placeholder="0"
               aria-label="Weight in kilograms"
             />
@@ -120,7 +126,8 @@ const SetLogSheet = memo(function SetLogSheet({
               inputMode="numeric"
               value={reps}
               onChange={e => setReps(e.target.value)}
-              className="w-full bg-[#0a0a0a] border border-[#1a1a1a] px-3 py-3 text-[18px] font-bold text-white text-center focus:border-[#ff4520] transition-colors"
+              className="w-full border border-[#222222] px-3 py-3 text-[18px] font-bold text-white text-center focus:border-[#ff4520] transition-all duration-150"
+              style={{ background: gradients.input, boxShadow: shadows.input }}
               placeholder="0"
               aria-label="Number of reps"
             />
@@ -137,11 +144,15 @@ const SetLogSheet = memo(function SetLogSheet({
                 onClick={() => setRpe(rpe === val ? null : val)}
                 role="radio"
                 aria-checked={rpe === val}
-                className={`flex-1 py-2 text-[14px] font-bold transition-colors ${
+                className={`flex-1 py-2 text-[14px] font-bold transition-all duration-150 ${
                   rpe === val
-                    ? 'bg-[#ff4520] text-white'
-                    : 'bg-[#0a0a0a] border border-[#1a1a1a] text-[#555555]'
+                    ? 'text-white'
+                    : 'border border-[#2a2a2a] text-[#555555]'
                 }`}
+                style={rpe === val
+                  ? { background: gradients.buttonAccent, boxShadow: shadows.buttonAccent }
+                  : { background: gradients.buttonSecondary, boxShadow: shadows.button }
+                }
               >
                 {val}
               </button>

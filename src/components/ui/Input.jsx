@@ -1,29 +1,17 @@
 import { memo, useRef, useEffect } from 'react'
 import SectionLabel from './SectionLabel'
+import { shadows, gradients } from '../../styles/tokens'
 
-const VARIANTS = {
-  field: 'h-[52px] w-full bg-[#161616] border border-[#2a2a2a] px-4 text-white text-[15px] placeholder:text-[#444444] focus:border-[#ff4520] focus:outline-none transition-colors',
+const VARIANT_CLASSES = {
+  field: 'h-[52px] w-full border border-[#222222] px-4 text-white text-[15px] placeholder:text-[#444444] focus:border-[#ff4520] focus:outline-none transition-all duration-150',
   large: 'text-[24px] font-black text-white text-center bg-transparent focus:outline-none w-full placeholder-[#555555]',
 }
 
-/**
- * Design-system input — field or large numeric variant.
- * @param {{
- *   variant?: 'field'|'large',
- *   value: string,
- *   onChange: (e: Event) => void,
- *   placeholder?: string,
- *   label?: string,
- *   unit?: string,
- *   type?: string,
- *   inputMode?: string,
- *   autoFocus?: boolean,
- *   readOnly?: boolean,
- *   step?: string,
- *   className?: string,
- *   id?: string,
- * }} props
- */
+const VARIANT_STYLES = {
+  field: { background: gradients.input, boxShadow: shadows.input },
+  large: {},
+}
+
 function Input({
   variant = 'field',
   value,
@@ -66,7 +54,8 @@ function Input({
         onChange={onChange}
         placeholder={placeholder}
         readOnly={readOnly}
-        className={VARIANTS[variant] || VARIANTS.field}
+        className={VARIANT_CLASSES[variant] || VARIANT_CLASSES.field}
+        style={VARIANT_STYLES[variant] || VARIANT_STYLES.field}
         aria-label={label}
       />
       {unit && (

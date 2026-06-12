@@ -45,7 +45,10 @@ const Login = memo(function Login() {
   }
 
   return (
-    <div className="fixed inset-0 bg-[#0a0a0a] flex flex-col px-6 overflow-y-auto">
+    <div
+      className="fixed inset-0 flex flex-col px-6 overflow-y-auto"
+      style={{ background: 'radial-gradient(ellipse at center, #111111 0%, #0a0a0a 70%)' }}
+    >
       {/* Logo */}
       <div className="pt-16 pb-0">
         <h1 className="text-4xl font-black tracking-[-0.04em] text-[#ff4520]">GX</h1>
@@ -64,7 +67,8 @@ const Login = memo(function Login() {
           autoComplete="email"
           required
           aria-label="Email address"
-          className="w-full h-[52px] bg-[#161616] border border-[#2a2a2a] rounded-none px-4 text-white text-[15px] placeholder:text-[#444444] focus:border-[#ff4520] focus:outline-none transition-colors"
+          className="w-full h-[52px] border border-[#222222] rounded-none px-4 text-white text-[15px] placeholder:text-[#444444] focus:border-[#ff4520] focus:outline-none transition-all duration-150"
+          style={{ background: 'linear-gradient(180deg, #191919 0%, #161616 100%)', boxShadow: '0 1px 0 rgba(255,255,255,0.03) inset, 0 1px 3px rgba(0,0,0,0.3)' }}
         />
 
         <input
@@ -75,7 +79,8 @@ const Login = memo(function Login() {
           autoComplete="current-password"
           required
           aria-label="Password"
-          className="w-full h-[52px] bg-[#161616] border border-[#2a2a2a] rounded-none px-4 text-white text-[15px] placeholder:text-[#444444] focus:border-[#ff4520] focus:outline-none transition-colors"
+          className="w-full h-[52px] border border-[#222222] rounded-none px-4 text-white text-[15px] placeholder:text-[#444444] focus:border-[#ff4520] focus:outline-none transition-all duration-150"
+          style={{ background: 'linear-gradient(180deg, #191919 0%, #161616 100%)', boxShadow: '0 1px 0 rgba(255,255,255,0.03) inset, 0 1px 3px rgba(0,0,0,0.3)' }}
         />
 
         {error && (

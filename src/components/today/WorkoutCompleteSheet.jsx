@@ -18,7 +18,13 @@ const WorkoutCompleteSheet = memo(function WorkoutCompleteSheet({ workout, compl
     <div className="fixed inset-0 z-[70] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/80" onClick={onDismiss} />
 
-      <div className="relative w-[calc(100%-32px)] max-w-[380px] bg-[#111111] border border-[#1a1a1a] p-6">
+      <div
+        className="relative w-[calc(100%-32px)] max-w-[380px] border border-[#222222] p-6"
+        style={{
+          background: 'linear-gradient(180deg, #141414 0%, #111111 100%)',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.04) inset',
+        }}
+      >
         {/* Big check */}
         <div className="w-16 h-16 rounded-full bg-[#22c55e]/10 flex items-center justify-center mx-auto mb-4">
           <svg className="w-8 h-8 text-[#22c55e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

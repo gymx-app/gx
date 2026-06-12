@@ -1,4 +1,5 @@
 import { memo, useCallback } from 'react'
+import { shadows, gradients } from '../../styles/tokens'
 
 const CHECK_SVG = (
   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -6,30 +7,36 @@ const CHECK_SVG = (
   </svg>
 )
 
-/**
- * Circular checkbox with haptic feedback.
- * @param {{ checked: boolean, onToggle: () => void, size?: number }} props
- */
+const UNCHECKED_STYLE = {
+  background: gradients.input,
+  boxShadow: shadows.input,
+}
+
+const CHECKED_STYLE = {
+  background: 'linear-gradient(180deg, #ff5533 0%, #ff4520 100%)',
+  boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 2px 6px rgba(255,69,32,0.3)',
+}
+
 function Checkbox({ checked, onToggle, size = 22 }) {
   const handleToggle = useCallback(() => {
     if (navigator.vibrate) navigator.vibrate(30)
     onToggle()
   }, [onToggle])
 
-  const cls = `shrink-0 flex items-center justify-center rounded-full transition-colors duration-150 ${
+  const cls = `shrink-0 flex items-center justify-center rounded-full transition-all duration-150 ${
     checked
-      ? 'bg-[#ff4520] border-[#ff4520] text-white'
-      : 'border-2 border-[#2a2a2a] text-transparent'
+      ? 'text-white'
+      : 'border-[1.5px] border-[#2a2a2a] text-transparent'
   }`
+  const style = checked ? CHECKED_STYLE : UNCHECKED_STYLE
 
-  // Display-only mode when no onToggle — parent handles interaction
   if (!onToggle) {
     return (
       <div
         role="checkbox"
         aria-checked={checked}
         className={cls}
-        style={{ width: size, height: size }}
+        style={{ ...style, width: size, height: size }}
       >
         {CHECK_SVG}
       </div>
@@ -42,7 +49,7 @@ function Checkbox({ checked, onToggle, size = 22 }) {
       role="checkbox"
       aria-checked={checked}
       className={cls}
-      style={{ width: size, height: size }}
+      style={{ ...style, width: size, height: size }}
     >
       {CHECK_SVG}
     </button>

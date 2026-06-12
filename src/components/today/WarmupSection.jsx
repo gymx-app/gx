@@ -4,6 +4,7 @@ import { upsertWarmupLog } from '../../services/checklistService'
 import { logger } from '../../lib/logger'
 import exerciseData from '../../data/exercises.json'
 import { SectionLabel, ProgressBar, Checkbox } from '../ui'
+import { shadows, gradients } from '../../styles/tokens'
 
 const JSON_WARMUP_ITEMS = exerciseData.WARMUP_ITEMS
 
@@ -77,13 +78,13 @@ const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, 
       />
 
       {!collapsed && (
-        <div className="border border-[#1a1a1a]">
+        <div className="border border-[#1a1a1a]" style={{ background: gradients.card, boxShadow: shadows.card }}>
           {items.map((item, idx) => {
             const done = completedKeys.has(item.k)
             return (
               <button
                 key={item.k}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left active:bg-[#1a1a1a] transition-colors ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left active:bg-[#1c1c1c] transition-colors duration-100 ${
                   idx > 0 ? 'border-t border-[#111111]' : ''
                 }`}
                 onClick={() => toggleItem(item)}

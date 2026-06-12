@@ -1,6 +1,7 @@
 import { useMemo, memo } from 'react'
 import exerciseData from '../../data/exercises.json'
 import { SectionLabel, Badge } from '../ui'
+import { shadows, gradients } from '../../styles/tokens'
 
 const EQ_NAMES = exerciseData.EQ_NAMES
 
@@ -37,7 +38,15 @@ const ExerciseCard = memo(function ExerciseCard({
     : 'border-l-[#2a2a2a]'
 
   return (
-    <div className={`bg-[#111111] border border-[#1a1a1a] border-l-2 ${borderColor} transition-colors`}>
+    <div
+      className={`border border-[#1a1a1a] border-l-2 ${borderColor} transition-all duration-150`}
+      style={allDone
+        ? { background: '#0d0d0d', opacity: 0.6 }
+        : completedCount > 0
+        ? { background: gradients.cardElevated, boxShadow: shadows.card }
+        : { background: gradients.card, boxShadow: shadows.card }
+      }
+    >
       {/* Header */}
       <button
         className="w-full flex items-center justify-between px-3 min-h-[52px] text-left active:bg-[#ffffff05]"
@@ -107,7 +116,7 @@ const ExerciseCard = memo(function ExerciseCard({
               return (
                 <button
                   key={setNum}
-                  className={`w-full flex items-center justify-between px-3 min-h-[52px] text-left active:bg-[#ffffff05] transition-colors ${
+                  className={`w-full flex items-center justify-between px-3 min-h-[52px] text-left active:bg-[#1c1c1c] transition-colors duration-100 ${
                     i > 0 ? 'border-t border-[#0d0d0d]' : ''
                   }`}
                   onClick={() => onTapSet(exercise, setNum, totalSets, previousBest, log, exerciseIndex, restSec)}

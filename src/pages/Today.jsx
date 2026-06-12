@@ -139,7 +139,11 @@ function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }) {
           ].map(({ name, unit, placeholder }) => (
             <div
               key={name}
-              className="flex-1 bg-[#111111] border border-[#2a2a2a] focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-colors"
+              className="flex-1 border border-[#222222] focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-all duration-150"
+              style={{
+                background: 'linear-gradient(180deg, #191919 0%, #161616 100%)',
+                boxShadow: '0 1px 0 rgba(255,255,255,0.03) inset, 0 1px 3px rgba(0,0,0,0.3)',
+              }}
             >
               <label className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#555555] mb-2">
                 {name.charAt(0).toUpperCase() + name.slice(1)}
@@ -202,14 +206,20 @@ function CooldownSection({ items, dateStr, checklistLogs, onUpdate }) {
   return (
     <div className="mt-6 mb-4">
       <SectionLabel label="Cooldown" className="mb-2" />
-      <div className="border border-[#1a1a1a]">
+      <div
+        className="border border-[#1a1a1a]"
+        style={{
+          background: 'linear-gradient(180deg, #141414 0%, #111111 100%)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.03) inset',
+        }}
+      >
         {items.map((item, idx) => {
           const key = `cd-${idx}`
           const done = completedKeys.has(key)
           return (
             <button
               key={key}
-              className={`w-full flex items-center gap-3 px-3 py-3 text-left active:bg-[#1a1a1a] transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-3 text-left active:bg-[#1c1c1c] transition-colors duration-100 ${
                 idx > 0 ? 'border-t border-[#111111]' : ''
               }`}
               onClick={() => toggle(key)}

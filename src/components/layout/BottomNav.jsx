@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { shadows, gradients } from '../../styles/tokens'
 
 const TABS = [
   { label: 'TODAY', path: '/' },
@@ -14,8 +15,12 @@ const BottomNav = memo(function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0a] border-t border-[#1a1a1a]"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#1a1a1a]"
+      style={{
+        background: gradients.nav,
+        boxShadow: shadows.nav,
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
     >
       <div className="h-16 flex justify-around items-center">
         {TABS.map(({ label, path }) => {

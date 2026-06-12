@@ -1,5 +1,6 @@
 import { useMemo, memo } from 'react'
 import { getDayWorkout } from '../../utils/programme'
+import { shadows, gradients } from '../../styles/tokens'
 
 const LISS_TYPES = new Set(['liss'])
 
@@ -61,7 +62,10 @@ const PhaseCard = memo(function PhaseCard({
   return (
     <>
       {/* ── Row 1 + Row 2: Phase card ── */}
-      <div className="bg-[#111111] border border-[#1a1a1a] mx-4 mt-3 px-4 py-3">
+      <div
+        className="border border-[#222222] mx-4 mt-3 px-4 py-3"
+        style={{ background: gradients.cardElevated, boxShadow: shadows.cardElevated }}
+      >
         {/* Row 1 — Phase identity */}
         <div className="flex justify-between items-start">
           <div className="min-w-0 flex-1">
@@ -95,10 +99,17 @@ const PhaseCard = memo(function PhaseCard({
               </span>
             )}
           </div>
-          <div className="w-full h-[2px] bg-[#1a1a1a] mt-1">
+          <div
+            className="w-full h-[2px] mt-1"
+            style={{ background: '#1a1a1a', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)' }}
+          >
             <div
-              className="h-full bg-[#ff4520] transition-all duration-300"
-              style={{ width: `${qualifyPct}%` }}
+              className="h-full transition-all duration-300"
+              style={{
+                width: `${qualifyPct}%`,
+                background: 'linear-gradient(90deg, #ff4520, #ff6640)',
+                boxShadow: '0 0 6px rgba(255,69,32,0.4)',
+              }}
             />
           </div>
         </div>

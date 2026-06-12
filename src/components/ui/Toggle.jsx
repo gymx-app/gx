@@ -1,9 +1,5 @@
 import { memo } from 'react'
 
-/**
- * Pill-shaped toggle switch.
- * @param {{ value: boolean, onChange: () => void, disabled?: boolean }} props
- */
 function Toggle({ value, onChange, disabled = false }) {
   return (
     <button
@@ -11,14 +7,25 @@ function Toggle({ value, onChange, disabled = false }) {
       aria-checked={value}
       onClick={disabled ? undefined : onChange}
       disabled={disabled}
-      className={`w-10 h-6 relative transition-colors duration-150 rounded-full ${
-        value ? 'bg-[#ff4520]' : 'bg-[#2a2a2a]'
-      } ${disabled ? 'opacity-40' : ''}`}
+      className={`w-10 h-6 relative transition-all duration-150 rounded-full ${
+        disabled ? 'opacity-40' : ''
+      }`}
+      style={value ? {
+        background: 'linear-gradient(180deg, #ff5533 0%, #ff4520 100%)',
+        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), 0 0 8px rgba(255,69,32,0.2)',
+      } : {
+        background: 'linear-gradient(180deg, #1a1a1a 0%, #161616 100%)',
+        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.5)',
+      }}
     >
       <div
-        className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow transition-transform duration-150 ${
+        className={`w-5 h-5 rounded-full absolute top-0.5 transition-transform duration-150 ${
           value ? 'translate-x-[18px]' : 'translate-x-0.5'
         }`}
+        style={{
+          background: 'linear-gradient(180deg, #ffffff 0%, #f0f0f0 100%)',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
+        }}
       />
     </button>
   )
