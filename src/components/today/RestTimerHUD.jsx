@@ -29,10 +29,11 @@ const RestTimerHUD = memo(function RestTimerHUD({ durationSec, exerciseName, onD
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-[55] border-t border-[#222222] safe-area-bottom"
+      className="fixed bottom-0 left-0 right-0 z-[55] border-t border-[#222222]"
       style={{
         background: 'linear-gradient(180deg, #141414 0%, #111111 100%)',
         boxShadow: '0 -4px 20px rgba(0,0,0,0.7)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
       <ProgressBar

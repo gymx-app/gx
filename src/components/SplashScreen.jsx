@@ -43,7 +43,10 @@ export default function SplashScreen() {
       />
 
       {/* Loading indicator + status message */}
-      <div className="absolute bottom-16 left-0 right-0 flex flex-col items-center gap-4">
+      <div
+        className="absolute left-0 right-0 flex flex-col items-center gap-4"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 48px)' }}
+      >
         {/* Circular spinner */}
         <div
           className="w-8 h-8 rounded-full"

@@ -628,7 +628,7 @@ export default function Today() {
       <TopBar phase={phase} totalWeek={totalWeek} syncStatus={syncStatus} />
 
       <div
-        className="flex-1 overflow-y-auto scroll-offset pb-32"
+        className="flex-1 overflow-y-auto scroll-offset content-bottom-clearance"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >

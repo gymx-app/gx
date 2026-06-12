@@ -14,6 +14,12 @@
   --color-text-muted: #444444;
   --color-success: #22c55e;
   --color-error: #ef4444;
+
+  --sat: env(safe-area-inset-top);
+  --sar: env(safe-area-inset-right);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+  --nav-height: 64px;
 }
 
 * {
@@ -62,8 +68,7 @@ input, textarea, select {
 
 /* Safe area insets — 44px fallback for iOS PWA where env() may not resolve */
 .safe-area-top {
-  padding-top: 44px;
-  padding-top: env(safe-area-inset-top, 44px);
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .safe-area-bottom {
@@ -73,9 +78,12 @@ input, textarea, select {
 /*
  * Scroll offset: clears the fixed top bar.
  * TopBar = safe-area-inset-top + 56px (h-14 content).
- * Fallback 44px for safe-area on iOS PWA.
  */
 .scroll-offset {
-  padding-top: calc(44px + 56px);
-  padding-top: calc(env(safe-area-inset-top, 44px) + 56px);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 56px);
+}
+
+/* Content bottom clearance: nav bar + safe area bottom */
+.content-bottom-clearance {
+  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 8px);
 }

@@ -85,8 +85,8 @@ const SetLogSheet = memo(function SetLogSheet({
       <div className="absolute inset-0 bg-black/70" onClick={onClose} aria-hidden="true" />
 
       <div
-        className="relative w-full max-w-[480px] border-t border-[#222222] px-5 pt-5 pb-8 animate-slide-up"
-        style={{ background: gradients.sheet, boxShadow: shadows.sheet }}
+        className="relative w-full max-w-[480px] border-t border-[#222222] px-5 pt-5 animate-slide-up"
+        style={{ background: gradients.sheet, boxShadow: shadows.sheet, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
         role="dialog"
         aria-modal="true"
         aria-label={`Log set ${setNumber} for ${exercise.n}`}

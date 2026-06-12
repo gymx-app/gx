@@ -9,7 +9,7 @@ export default function Program() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto scroll-offset pb-32">
+      <div className="flex-1 overflow-y-auto scroll-offset content-bottom-clearance">
         <div className="mt-32 text-center">
           <p className="text-[11px] tracking-[0.08em] uppercase text-[#333333]">PROGRAM</p>
           <p className="text-[13px] text-[#222222] mt-2">Coming soon</p>

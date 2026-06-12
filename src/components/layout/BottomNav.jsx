@@ -19,7 +19,8 @@ const BottomNav = memo(function BottomNav() {
       style={{
         background: gradients.nav,
         boxShadow: shadows.nav,
-        paddingBottom: 'env(safe-area-inset-bottom)',
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+        minHeight: 'calc(64px + env(safe-area-inset-bottom, 0px))',
       }}
     >
       <div className="h-16 flex justify-around items-center">

@@ -23,7 +23,10 @@ export default function PWAUpdatePrompt() {
     <>
       {/* Update banner */}
       {needRefresh && (
-        <div className="fixed bottom-0 left-0 right-0 z-[90] bg-[#111111] border-t border-[#2a2a2a] px-4 py-3 flex justify-between items-center safe-area-bottom">
+        <div
+          className="fixed bottom-0 left-0 right-0 z-[90] bg-[#111111] border-t border-[#2a2a2a] px-4 py-3 flex justify-between items-center"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
+        >
           <span className="text-[13px] text-white">Update available</span>
           <button
             onClick={() => updateServiceWorker(true)}
