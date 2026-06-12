@@ -35,8 +35,8 @@ const TopBar = memo(function TopBar({ phase, totalWeek, syncStatus }) {
   const labelText = sync === 'synced' ? 'SYNCED' : sync === 'saving' ? 'SAVING' : 'OFFLINE'
 
   return (
-    <div className="bg-[#0a0a0a] border-b border-[#111111] flex-shrink-0 safe-area-top">
-      <div className="h-14 px-4 flex items-center justify-between">
+    <div className="bg-[#080808] border-b border-[#141414] flex-shrink-0 safe-area-top">
+      <div className="h-14 px-5 flex items-center justify-between">
         <span className="text-xl font-black text-[#ff4520] w-10">Gx</span>
         <Text variant="label" className="tracking-widest">
           {DAYS[now.getDay()]} {now.getDate()} {MONTHS[now.getMonth()]} · W{totalWeek} · P{phase}
@@ -206,21 +206,15 @@ function CooldownSection({ items, dateStr, checklistLogs, onUpdate }) {
   return (
     <div className="mt-6 mb-4">
       <SectionLabel label="Cooldown" className="mb-2" />
-      <div
-        className="border border-[#1a1a1a]"
-        style={{
-          background: 'linear-gradient(180deg, #141414 0%, #111111 100%)',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.03) inset',
-        }}
-      >
+      <div className="border border-[#1e1e1e] bg-[#0e0e0e]">
         {items.map((item, idx) => {
           const key = `cd-${idx}`
           const done = completedKeys.has(key)
           return (
             <button
               key={key}
-              className={`w-full flex items-center gap-3 px-3 py-3 text-left active:bg-[#1c1c1c] transition-colors duration-100 ${
-                idx > 0 ? 'border-t border-[#111111]' : ''
+              className={`w-full flex items-center gap-3 px-4 py-3 text-left active:bg-[#161616] transition-colors duration-120 ${
+                idx > 0 ? 'border-t border-[#141414]' : ''
               }`}
               onClick={() => toggle(key)}
               aria-label={`${item} — ${done ? 'completed' : 'not completed'}`}
@@ -657,7 +651,7 @@ export default function Today() {
         {/* Content — with swipe slide animation */}
         <div
           ref={contentRef}
-          className="px-4 pt-4 transition-transform duration-150 ease-out"
+          className="px-5 pt-7 transition-transform duration-150 ease-out"
           style={{
             transform: swipeAnim === 'left'
               ? 'translateX(-8px)'
@@ -698,39 +692,46 @@ export default function Today() {
           {/* Workout day */}
           {dayType === 'workout' && (
             <>
-              {/* Workout header — LISS style, no card */}
-              <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-[#444444]">
+              {/* Workout header */}
+              <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-[#333333]">
                 {(() => {
                   const d = new Date(dateStr + 'T00:00:00')
                   return `${d.getDate()} ${MONTHS[d.getMonth()]} · WEEK ${totalWeek} · PHASE ${phase}`
                 })()}
               </p>
 
-              <div className="flex items-baseline justify-between mt-2">
+              <div className="flex items-baseline justify-between mt-1">
                 <Text variant="pageTitle">{workout.title}</Text>
                 {workout.dur && (
-                  <span className="text-[22px] font-black text-[#ff4520] tracking-tight shrink-0 ml-3">
+                  <span className="text-[28px] font-extrabold text-white tracking-tight shrink-0 ml-3">
                     {workout.dur}&prime;
                   </span>
                 )}
               </div>
 
               {workout.sub && (
-                <Text variant="bodyMuted" className="mt-1.5">{workout.sub}</Text>
+                <Text variant="bodyMuted" className="mt-1">{workout.sub}</Text>
               )}
 
               <div className="flex items-center gap-2 mt-3">
-                {workout.kcal && <Badge label={`${workout.kcal} KCAL`} variant="accent" />}
+                {workout.kcal && (
+                  <span className="text-[12px] font-medium tracking-[0.02em] text-[#555555]">
+                    {workout.kcal} kcal
+                  </span>
+                )}
+                {workout.kcal && workout.tags?.length > 0 && (
+                  <span className="text-[12px] text-[#2a2a2a]">·</span>
+                )}
                 {workout.tags?.map(tag => (
-                  <Badge key={tag} label={tag} variant="accent" />
+                  <Badge key={tag} label={tag} variant="elevated" />
                 ))}
               </div>
 
               {/* Travel toggle */}
-              <div className="flex items-center justify-between mt-4 py-3 border-t border-b border-[#111111]">
+              <div className="flex items-center justify-between mt-5 py-3 px-4 bg-[#111111] border border-[#1a1a1a]">
                 <div className="flex items-center gap-2">
                   <span className="text-[14px]">✈</span>
-                  <Text variant="body" className="text-[#666666]">Travelling?</Text>
+                  <span className="text-[15px] text-[#666666] tracking-[-0.01em]">Travelling?</span>
                 </div>
                 <Toggle value={isTravelMode} onChange={() => setIsTravelMode(p => !p)} />
               </div>
@@ -747,10 +748,10 @@ export default function Today() {
               )}
 
               {/* Exercises */}
-              <div className="mt-5">
+              <div className="mt-7">
                 <SectionLabel label="Exercises" className="mb-2" />
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5">
                 {displayExercises.map((ex, idx) => (
                   <ExerciseCard
                     key={`${ex.n}-${idx}`}

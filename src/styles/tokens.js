@@ -1,37 +1,31 @@
 /** Design tokens — single source of truth for all visual values. */
 
 export const colors = {
-  // Page backgrounds — dead flat
-  bg: '#0a0a0a',
-  bgSubtle: '#0d0d0d',
+  bg: '#080808',
+  bgSubtle: '#0e0e0e',
 
-  // Elevation levels — z-axis depth
-  elevation0: '#0a0a0a',
-  elevation1: '#111111',
-  elevation2: '#161616',
-  elevation3: '#1c1c1c',
+  elevation0: '#080808',
+  elevation1: '#141414',
+  elevation2: '#1a1a1a',
+  elevation3: '#1e1e1e',
   elevation4: '#222222',
   elevation5: '#2a2a2a',
 
-  // Borders per elevation
-  borderSubtle: '#111111',
-  borderDefault: '#1a1a1a',
-  borderElevated: '#222222',
+  borderSubtle: '#181818',
+  borderDefault: '#202020',
+  borderElevated: '#2a2a2a',
   borderFocus: '#ff4520',
 
-  // Text
   textPrimary: '#ffffff',
   textSecondary: '#888888',
-  textMuted: '#555555',
-  textDim: '#333333',
-  textGhost: '#1a1a1a',
+  textMuted: '#666666',
+  textDim: '#444444',
+  textGhost: '#333333',
 
-  // Accent
   accent: '#ff4520',
   accentHover: '#e03a1a',
   accentMuted: 'rgba(255,69,32,0.12)',
 
-  // Status
   success: '#22c55e',
   successMuted: 'rgba(34,197,94,0.12)',
   warning: '#f59e0b',
@@ -52,25 +46,27 @@ export const gradients = {
   buttonAccent: 'linear-gradient(180deg, #ff5533 0%, #ff4520 100%)',
   buttonSecondary: 'linear-gradient(180deg, #1e1e1e 0%, #161616 100%)',
   buttonSuccess: 'linear-gradient(180deg, #25d366 0%, #22c55e 100%)',
-  card: 'linear-gradient(180deg, #141414 0%, #111111 100%)',
-  cardElevated: 'linear-gradient(180deg, #1a1a1a 0%, #161616 100%)',
+  card: 'linear-gradient(180deg, #161616 0%, #141414 100%)',
+  cardElevated: 'linear-gradient(180deg, #1c1c1c 0%, #1a1a1a 100%)',
   sheet: 'linear-gradient(180deg, #141414 0%, #111111 100%)',
   nav: 'linear-gradient(180deg, #131313 0%, #0f0f0f 100%)',
-  input: 'linear-gradient(180deg, #191919 0%, #161616 100%)',
+  input: 'linear-gradient(180deg, #1e1e1e 0%, #1a1a1a 100%)',
 }
 
 export const typography = {
-  pageTitle: 'text-4xl font-black tracking-[-0.04em] text-white leading-none',
-  sectionTitle: 'text-2xl font-black tracking-[-0.03em] text-white',
-  label: 'text-[11px] tracking-[0.08em] uppercase text-[#555555] font-medium',
-  body: 'text-[15px] text-white leading-relaxed',
-  bodyMuted: 'text-[15px] text-[#888888] leading-relaxed',
-  caption: 'text-[13px] text-[#555555]',
+  pageTitle: 'text-[56px] font-black tracking-[-0.05em] text-white leading-[0.9]',
+  sectionTitle: 'text-[36px] font-extrabold tracking-[-0.04em] text-white leading-none',
+  cardTitle: 'text-[20px] font-bold tracking-[-0.03em] text-white',
+  body: 'text-[15px] text-white leading-relaxed tracking-[-0.01em]',
+  bodyMuted: 'text-[15px] text-[#666666] leading-relaxed tracking-[-0.01em]',
+  caption: 'text-[12px] font-medium tracking-[0.02em] text-[#555555]',
+  label: 'text-[11px] font-semibold tracking-[0.08em] uppercase text-[#444444]',
+  micro: 'text-[10px] font-semibold tracking-[0.1em] uppercase text-[#333333]',
   stat: 'text-[40px] font-black tracking-[-0.04em] text-white leading-none',
 }
 
 export const spacing = {
-  pagePadding: 'px-4',
-  sectionGap: 'mt-6',
+  pagePadding: 'px-5',
+  sectionGap: 'mt-7',
   cardPadding: 'p-4',
 }

@@ -78,14 +78,14 @@ const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, 
       />
 
       {!collapsed && (
-        <div className="border border-[#1a1a1a]" style={{ background: gradients.card, boxShadow: shadows.card }}>
+        <div className="border border-[#1e1e1e] bg-[#0e0e0e]">
           {items.map((item, idx) => {
             const done = completedKeys.has(item.k)
             return (
               <button
                 key={item.k}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left active:bg-[#1c1c1c] transition-colors duration-100 ${
-                  idx > 0 ? 'border-t border-[#111111]' : ''
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-left active:bg-[#161616] transition-colors duration-120 ${
+                  idx > 0 ? 'border-t border-[#141414]' : ''
                 }`}
                 onClick={() => toggleItem(item)}
                 aria-label={`${item.label} — ${done ? 'completed' : 'not completed'}`}

@@ -17,7 +17,7 @@ const CHECKED_STYLE = {
   boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 2px 6px rgba(255,69,32,0.3)',
 }
 
-function Checkbox({ checked, onToggle, size = 22 }) {
+function Checkbox({ checked, onToggle, size = 24 }) {
   const handleToggle = useCallback(() => {
     if (navigator.vibrate) navigator.vibrate(30)
     onToggle()
@@ -26,7 +26,7 @@ function Checkbox({ checked, onToggle, size = 22 }) {
   const cls = `shrink-0 flex items-center justify-center rounded-full transition-all duration-150 ${
     checked
       ? 'text-white'
-      : 'border-[1.5px] border-[#2a2a2a] text-transparent'
+      : 'border-2 border-[#333333] text-transparent'
   }`
   const style = checked ? CHECKED_STYLE : UNCHECKED_STYLE
 

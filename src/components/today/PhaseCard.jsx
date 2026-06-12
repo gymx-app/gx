@@ -18,14 +18,12 @@ const PhaseCard = memo(function PhaseCard({
   canGoForward,
   programme,
   phases,
-  // Day pills props (moved from WeekStrip)
   weekDays,
   selectedDateStr,
   completedDateStrs,
   onSelectDay,
   onGoToToday,
 }) {
-  // Use DB phase data if available, fall back to phaseWeeks array
   const currentPhase = phases?.find(p => p.phase_number === phase)
   const totalWeeksInPhase = currentPhase?.weeks_count || phaseWeeks[phase - 1] || 4
   const isOngoing = totalWeeksInPhase === 999
@@ -38,7 +36,6 @@ const PhaseCard = memo(function PhaseCard({
   const weekQualified = daysNeeded === 0
   const qualifyPct = Math.min(100, (currentWeekActiveDays / minActiveDays) * 100)
 
-  // Today's date string for comparison
   const todayDateStr = useMemo(() => {
     const d = new Date()
     return d.getFullYear() + '-' +
@@ -46,7 +43,6 @@ const PhaseCard = memo(function PhaseCard({
       String(d.getDate()).padStart(2, '0')
   }, [])
 
-  // Determine LISS days from workout schedule
   const lissLabels = useMemo(() => {
     const set = new Set()
     const labels = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
@@ -61,18 +57,17 @@ const PhaseCard = memo(function PhaseCard({
 
   return (
     <>
-      {/* ── Row 1 + Row 2: Phase card ── */}
+      {/* Phase card */}
       <div
-        className="border border-[#222222] mx-4 mt-3 px-4 py-3"
+        className="border border-[#202020] mx-5 mt-3 px-4 py-3"
         style={{ background: gradients.cardElevated, boxShadow: shadows.cardElevated }}
       >
-        {/* Row 1 — Phase identity */}
         <div className="flex justify-between items-start">
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] tracking-[0.08em] uppercase text-[#ff4520] font-semibold">
+            <p className="text-[10px] tracking-[0.1em] uppercase text-[#444444] font-semibold">
               PHASE {phase} OF {totalPhases}
             </p>
-            <p className="text-[17px] font-black tracking-[-0.03em] text-white mt-0.5">
+            <p className="text-[20px] font-bold tracking-[-0.03em] text-white mt-0.5">
               {phaseName.toUpperCase() || `PHASE ${phase}`}
             </p>
             {phaseGoal && (
@@ -83,46 +78,41 @@ const PhaseCard = memo(function PhaseCard({
           </div>
         </div>
 
-        {/* Row 2 — Phase week progress */}
+        {/* Progress bar */}
         <div className="mt-3">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] text-[#555555] tracking-wide">
+            <span className="text-[10px] font-semibold tracking-[0.1em] uppercase text-[#444444]">
               {isOngoing ? 'ONGOING' : `WK ${weekInPhase} OF ${totalWeeksInPhase}`}
             </span>
             {weekQualified ? (
-              <span className="text-[11px] text-[#22c55e] font-semibold">
+              <span className="text-[10px] text-[#22c55e] font-semibold tracking-[0.08em] uppercase">
                 ✓ WEEK QUALIFIES
               </span>
             ) : (
-              <span className="text-[11px] text-[#555555]">
-                {currentWeekActiveDays}/{minActiveDays} days · need {daysNeeded} more
+              <span className="text-[10px] font-semibold tracking-[0.1em] uppercase text-[#444444]">
+                {currentWeekActiveDays}/{minActiveDays} DAYS
               </span>
             )}
           </div>
-          <div
-            className="w-full h-[2px] mt-1"
-            style={{ background: '#1a1a1a', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)' }}
-          >
+          <div className="w-full h-[3px] mt-1 bg-[#1a1a1a] relative">
             <div
-              className="h-full transition-all duration-300"
+              className="h-full transition-all duration-300 absolute inset-y-0 left-0"
               style={{
                 width: `${qualifyPct}%`,
-                background: 'linear-gradient(90deg, #ff4520, #ff6640)',
-                boxShadow: '0 0 6px rgba(255,69,32,0.4)',
+                background: '#ff4520',
               }}
             />
           </div>
         </div>
       </div>
 
-      {/* ── Row 3: Day pills with week navigation ── */}
-      <div className="mx-4 mt-3">
-        {/* TODAY pill — when viewing a past/future week */}
+      {/* Day pills with week navigation */}
+      <div className="mx-5 mt-3">
         {showTodayPill && (
           <div className="flex justify-end mb-2">
             <button
               onClick={onGoToToday}
-              className="text-[10px] tracking-[0.08em] uppercase bg-[#ff4520]/10 border border-[#ff4520]/20 text-[#ff4520] px-3 h-6 flex items-center font-semibold active:bg-[#ff4520]/20 transition-colors"
+              className="text-[10px] tracking-[0.08em] uppercase bg-[#ff4520]/10 border border-[#ff4520]/20 text-[#ff4520] px-3 h-6 flex items-center font-semibold active:bg-[#ff4520]/20 transition-colors duration-120"
             >
               TODAY
             </button>
@@ -130,19 +120,17 @@ const PhaseCard = memo(function PhaseCard({
         )}
 
         <div className="flex items-center gap-2">
-          {/* Left arrow */}
           <button
             onClick={onPrevWeek}
             disabled={!canGoBack}
             aria-label="Previous week"
-            className={`min-w-[32px] min-h-[52px] flex items-center justify-center text-[24px] font-light shrink-0 transition-opacity ${
+            className={`min-w-[32px] min-h-[56px] flex items-center justify-center text-[24px] font-light shrink-0 transition-opacity duration-120 ${
               canGoBack ? 'text-[#888888] active:opacity-50' : 'text-[#222222]'
             }`}
           >
             ‹
           </button>
 
-          {/* Day pills */}
           <div className="flex-1 flex justify-between">
             {weekDays.map(({ dayLabel, date, dateStr: dayDateStr }) => {
               const isSelected = dayDateStr === selectedDateStr
@@ -153,69 +141,65 @@ const PhaseCard = memo(function PhaseCard({
               const isLissDay = lissLabels.has(dayLabel)
               const dayNum = date.getDate()
 
-              // Status symbol
-              let statusChar = '·'
-              let statusColor = 'text-[#1a1a1a]' // future default
+              let statusEl = null
+              let labelColor = 'text-[#333333]'
+              let dateColor = 'text-[#333333]'
+
               if (isToday && !isCompleted) {
-                statusChar = '·'
-                statusColor = 'text-[#ff4520]'
+                labelColor = 'text-[#ff4520]'
+                dateColor = 'text-white font-black'
+                statusEl = <div className="w-5 h-[2px] bg-[#ff4520] mt-0.5" />
+              } else if (isToday && isCompleted) {
+                labelColor = 'text-[#ff4520]'
+                dateColor = 'text-white font-black'
+                statusEl = <span className="text-[11px] font-bold text-[#22c55e] leading-none mt-0.5">✓</span>
               } else if (isCompleted && isLissDay) {
-                statusChar = '~'
-                statusColor = 'text-[#3b82f6]'
+                labelColor = 'text-[#333333]'
+                dateColor = 'text-[#444444]'
+                statusEl = <span className="text-[13px] text-[#3b82f6] leading-none mt-0.5">∼</span>
               } else if (isCompleted) {
-                statusChar = '✓'
-                statusColor = 'text-[#22c55e]'
+                labelColor = 'text-[#333333]'
+                dateColor = 'text-[#444444]'
+                statusEl = <span className="text-[11px] font-bold text-[#22c55e] leading-none mt-0.5">✓</span>
               } else if (isPast) {
-                statusChar = '–'
-                statusColor = 'text-[#333333]'
+                labelColor = 'text-[#222222]'
+                dateColor = 'text-[#2a2a2a]'
+                statusEl = <span className="text-[11px] text-[#2a2a2a] leading-none mt-0.5">–</span>
+              } else if (isFuture) {
+                labelColor = 'text-[#181818]'
+                dateColor = 'text-[#1e1e1e]'
               }
 
-              // Day label color
-              const labelColor = isToday
-                ? 'text-[#ff4520]'
-                : isSelected
-                ? 'text-[#888888]'
-                : 'text-[#333333]'
-
-              // Date color
-              const dateColor = isToday
-                ? 'text-white font-black'
-                : isSelected
-                ? 'text-white'
-                : 'text-[#333333]'
+              if (isSelected && !isToday) {
+                labelColor = 'text-[#888888]'
+                dateColor = 'text-white'
+              }
 
               return (
                 <button
                   key={dayLabel}
-                  className="flex-1 flex flex-col items-center gap-0.5 py-1 min-h-[52px]"
+                  className="flex-1 flex flex-col items-center gap-0.5 py-1 min-h-[56px] active:scale-[0.92] transition-transform duration-[80ms]"
                   onClick={() => onSelectDay(dayLabel, dayDateStr, date)}
                   aria-label={`${dayLabel} ${dayNum}${isToday ? ' (today)' : ''}${isCompleted ? ' completed' : ''}`}
                   aria-pressed={isSelected}
                 >
-                  <span className={`text-[10px] tracking-[0.06em] uppercase font-semibold ${labelColor}`}>
+                  <span className={`text-[9px] tracking-[0.1em] uppercase font-semibold ${labelColor}`}>
                     {dayLabel}
                   </span>
-                  <span className={`text-[16px] font-bold ${dateColor}`}>
+                  <span className={`text-[20px] font-bold ${dateColor}`}>
                     {dayNum}
                   </span>
-                  {/* Today underline */}
-                  {isToday && (
-                    <div className="w-4 h-[2px] bg-[#ff4520] -mt-0.5" />
-                  )}
-                  <span className={`text-[${isToday && !isCompleted ? '13' : '11'}px] leading-none ${statusColor}`}>
-                    {statusChar}
-                  </span>
+                  {statusEl}
                 </button>
               )
             })}
           </div>
 
-          {/* Right arrow */}
           <button
             onClick={onNextWeek}
             disabled={!canGoForward}
             aria-label="Next week"
-            className={`min-w-[32px] min-h-[52px] flex items-center justify-center text-[24px] font-light shrink-0 transition-opacity ${
+            className={`min-w-[32px] min-h-[56px] flex items-center justify-center text-[24px] font-light shrink-0 transition-opacity duration-120 ${
               canGoForward ? 'text-[#888888] active:opacity-50' : 'text-[#222222]'
             }`}
           >

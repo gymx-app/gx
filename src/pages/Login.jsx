@@ -47,7 +47,7 @@ const Login = memo(function Login() {
   return (
     <div
       className="flex flex-col px-6 overflow-y-auto"
-      style={{ background: 'radial-gradient(ellipse at center, #111111 0%, #0a0a0a 70%)', height: '100dvh' }}
+      style={{ background: 'radial-gradient(ellipse at center, #111111 0%, #080808 70%)', height: '100dvh' }}
     >
       {/* Logo */}
       <div className="pt-16 pb-0">

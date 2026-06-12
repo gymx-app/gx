@@ -33,7 +33,7 @@ html, body {
 }
 
 body {
-  background-color: #0a0a0a;
+  background-color: #080808;
   background-image: radial-gradient(ellipse at 50% 0%, rgba(255,69,32,0.03) 0%, transparent 60%);
   color: #ffffff;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display',
@@ -71,7 +71,7 @@ input, textarea, select {
   to { transform: translateY(0); }
 }
 .animate-slide-up {
-  animation: slide-up 0.25s ease-out;
+  animation: slide-up 0.24s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 /* Safe area insets */

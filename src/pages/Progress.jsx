@@ -1,7 +1,7 @@
 export default function Progress() {
   return (
     <>
-      <div className="bg-[#0a0a0a] border-b border-[#111111] flex-shrink-0 safe-area-top">
+      <div className="bg-[#080808] border-b border-[#141414] flex-shrink-0 safe-area-top">
         <div className="h-14 px-4 flex items-center justify-between">
           <span className="text-xl font-black text-[#ff4520] w-10">Gx</span>
           <span className="text-[11px] tracking-[0.12em] uppercase text-[#555555] font-medium">PROGRESS</span>

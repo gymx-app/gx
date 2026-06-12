@@ -9,7 +9,7 @@ const TodaySkeleton = memo(function TodaySkeleton() {
   return (
     <>
       {/* TopBar skeleton */}
-      <div className="bg-[#0a0a0a] border-b border-[#111111] flex-shrink-0 safe-area-top">
+      <div className="bg-[#080808] border-b border-[#111111] flex-shrink-0 safe-area-top">
         <div className="h-14 px-4 flex items-center justify-between">
           <Skeleton width={32} height={24} />
           <Skeleton width={160} height={12} />
