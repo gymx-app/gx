@@ -5,6 +5,7 @@ import { useLoading } from '../hooks/useLoading'
 import { getProgrammeConfig, upsertProgrammeConfig } from '../services/programmeService'
 import { logger } from '../lib/logger'
 import { Button, Text } from '../components/ui'
+import { colors, radius } from '../styles/tokens'
 
 async function ensureProgrammeConfig(userId) {
   const { data } = await getProgrammeConfig(userId)
@@ -47,12 +48,14 @@ const Login = memo(function Login() {
   return (
     <div
       className="flex flex-col px-6 overflow-y-auto"
-      style={{ background: 'radial-gradient(ellipse at center, #111111 0%, #080808 70%)', height: '100dvh' }}
+      style={{ background: colors.bg, height: '100dvh' }}
     >
       {/* Logo */}
       <div className="pt-16 pb-0">
-        <h1 className="text-4xl font-black tracking-[-0.04em] text-[#ff4520]">GX</h1>
-        <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-[#444444] mt-1">
+        <h1 className="font-['Bebas_Neue'] text-[36px] tracking-[6px] text-[#f0ede8] uppercase">
+          G<span className="text-[#ff4520]">x</span>
+        </h1>
+        <p className="text-[11px] font-medium tracking-[3px] uppercase text-[#666666] mt-1">
           Built for Discipline
         </p>
       </div>
@@ -67,8 +70,8 @@ const Login = memo(function Login() {
           autoComplete="email"
           required
           aria-label="Email address"
-          className="w-full h-[52px] border border-[#222222] rounded-none px-4 text-white text-[15px] placeholder:text-[#444444] focus:border-[#ff4520] focus:outline-none transition-all duration-150"
-          style={{ background: 'linear-gradient(180deg, #191919 0%, #161616 100%)', boxShadow: '0 1px 0 rgba(255,255,255,0.03) inset, 0 1px 3px rgba(0,0,0,0.3)' }}
+          className="w-full h-[52px] px-[14px] text-[#f0ede8] text-[16px] font-['DM_Sans'] placeholder:text-[#444444] focus:border-[#ff4520] transition-all duration-150"
+          style={{ background: colors.surface2, border: `1.5px solid ${colors.border}`, borderRadius: radius.input }}
         />
 
         <input
@@ -79,8 +82,8 @@ const Login = memo(function Login() {
           autoComplete="current-password"
           required
           aria-label="Password"
-          className="w-full h-[52px] border border-[#222222] rounded-none px-4 text-white text-[15px] placeholder:text-[#444444] focus:border-[#ff4520] focus:outline-none transition-all duration-150"
-          style={{ background: 'linear-gradient(180deg, #191919 0%, #161616 100%)', boxShadow: '0 1px 0 rgba(255,255,255,0.03) inset, 0 1px 3px rgba(0,0,0,0.3)' }}
+          className="w-full h-[52px] px-[14px] text-[#f0ede8] text-[16px] font-['DM_Sans'] placeholder:text-[#444444] focus:border-[#ff4520] transition-all duration-150"
+          style={{ background: colors.surface2, border: `1.5px solid ${colors.border}`, borderRadius: radius.input }}
         />
 
         {error && (

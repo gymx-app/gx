@@ -1,72 +1,88 @@
-/** Design tokens — single source of truth for all visual values. */
+/** Design tokens — ported from gymtracker's design system. */
 
 export const colors = {
-  bg: '#080808',
+  bg: '#0a0a0a',
   bgSubtle: '#0e0e0e',
 
-  elevation0: '#080808',
-  elevation1: '#141414',
-  elevation2: '#1a1a1a',
-  elevation3: '#1e1e1e',
-  elevation4: '#222222',
-  elevation5: '#2a2a2a',
+  surface: '#141414',
+  surface2: '#1c1c1c',
+  surface3: '#242424',
 
-  borderSubtle: '#181818',
-  borderDefault: '#202020',
-  borderElevated: '#2a2a2a',
+  border: '#2a2a2a',
+  borderSubtle: '#1c1c1c',
   borderFocus: '#ff4520',
 
-  textPrimary: '#ffffff',
-  textSecondary: '#888888',
-  textMuted: '#666666',
-  textDim: '#444444',
-  textGhost: '#333333',
+  text: '#f0ede8',
+  muted: '#666666',
+  dim: '#666666',
 
   accent: '#ff4520',
-  accentHover: '#e03a1a',
   accentMuted: 'rgba(255,69,32,0.12)',
 
   success: '#22c55e',
-  successMuted: 'rgba(34,197,94,0.12)',
+  successMuted: 'rgba(34,197,94,0.15)',
   warning: '#f59e0b',
   error: '#ef4444',
+
+  orange: '#ff8c00',
+  blue: '#3b82f6',
+  purple: '#a855f7',
+  yellow: '#fbbf24',
+  cyan: '#06b6d4',
+  gold: '#f59e0b',
 }
 
 export const shadows = {
-  card: '0 1px 3px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.03) inset',
-  cardElevated: '0 4px 12px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.05) inset',
-  sheet: '0 -4px 24px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.04) inset',
-  button: '0 1px 0 rgba(255,255,255,0.08) inset, 0 2px 4px rgba(0,0,0,0.3)',
-  buttonAccent: '0 1px 0 rgba(255,255,255,0.15) inset, 0 2px 8px rgba(255,69,32,0.3)',
-  input: '0 1px 0 rgba(255,255,255,0.03) inset, 0 1px 3px rgba(0,0,0,0.3)',
-  nav: '0 -1px 0 rgba(255,255,255,0.04)',
+  card: 'none',
+  cardElevated: 'none',
+  sheet: 'none',
+  button: 'none',
+  buttonAccent: 'none',
+  input: 'none',
+  nav: 'none',
+  restTimer: '0 4px 20px rgba(0,0,0,0.4)',
+  toggle: '0 1px 3px rgba(0,0,0,0.35)',
 }
 
 export const gradients = {
-  buttonAccent: 'linear-gradient(180deg, #ff5533 0%, #ff4520 100%)',
-  buttonSecondary: 'linear-gradient(180deg, #1e1e1e 0%, #161616 100%)',
-  buttonSuccess: 'linear-gradient(180deg, #25d366 0%, #22c55e 100%)',
-  card: 'linear-gradient(180deg, #161616 0%, #141414 100%)',
-  cardElevated: 'linear-gradient(180deg, #1c1c1c 0%, #1a1a1a 100%)',
-  sheet: 'linear-gradient(180deg, #141414 0%, #111111 100%)',
-  nav: 'linear-gradient(180deg, #131313 0%, #0f0f0f 100%)',
-  input: 'linear-gradient(180deg, #1e1e1e 0%, #1a1a1a 100%)',
+  buttonAccent: '#ff4520',
+  buttonSecondary: '#242424',
+  buttonSuccess: '#22c55e',
+  card: '#141414',
+  cardElevated: '#1c1c1c',
+  sheet: '#141414',
+  nav: '#141414',
+  input: '#1c1c1c',
+}
+
+export const radius = {
+  card: '16px',
+  cardLg: '20px',
+  settings: '14px',
+  button: '12px',
+  buttonSm: '11px',
+  input: '10px',
+  pill: '8px',
+  chip: '10px',
+  tag: '4px',
+  checkbox: '5px',
+  sheet: '20px 20px 0 0',
 }
 
 export const typography = {
-  pageTitle: 'text-[56px] font-black tracking-[-0.05em] text-white leading-[0.9]',
-  sectionTitle: 'text-[36px] font-extrabold tracking-[-0.04em] text-white leading-none',
-  cardTitle: 'text-[20px] font-bold tracking-[-0.03em] text-white',
-  body: 'text-[15px] text-white leading-relaxed tracking-[-0.01em]',
-  bodyMuted: 'text-[15px] text-[#666666] leading-relaxed tracking-[-0.01em]',
-  caption: 'text-[12px] font-medium tracking-[0.02em] text-[#555555]',
-  label: 'text-[11px] font-semibold tracking-[0.08em] uppercase text-[#444444]',
-  micro: 'text-[10px] font-semibold tracking-[0.1em] uppercase text-[#333333]',
-  stat: 'text-[40px] font-black tracking-[-0.04em] text-white leading-none',
+  pageTitle: "font-['Bebas_Neue'] text-[32px] tracking-[2px] text-[#f0ede8] leading-none",
+  sectionTitle: "font-['Bebas_Neue'] text-[24px] tracking-[2px] text-[#f0ede8] leading-none",
+  cardTitle: "font-['Bebas_Neue'] text-[20px] tracking-[1.5px] text-[#f0ede8]",
+  body: "text-[14px] text-[#f0ede8] leading-relaxed",
+  bodyMuted: "text-[13px] text-[#666666] leading-relaxed",
+  caption: "text-[12px] text-[#666666]",
+  label: "text-[10px] font-bold tracking-[2px] uppercase text-[#666666]",
+  micro: "text-[9px] font-bold tracking-[0.5px] uppercase text-[#666666]",
+  stat: "font-['Bebas_Neue'] text-[26px] text-[#f0ede8] leading-none",
 }
 
 export const spacing = {
-  pagePadding: 'px-5',
-  sectionGap: 'mt-7',
+  pagePadding: 'px-4',
+  sectionGap: 'mt-3',
   cardPadding: 'p-4',
 }

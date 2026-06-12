@@ -4,6 +4,7 @@ import { upsertChecklistLog } from '../../services/checklistService'
 import { supabase } from '../../lib/supabase'
 import { logger } from '../../lib/logger'
 import { Text, Button, Badge, SectionLabel, Toggle } from '../ui'
+import { colors, radius } from '../../styles/tokens'
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
@@ -246,34 +247,38 @@ const LissDay = memo(function LissDay({
   return (
     <div>
       {/* Workout header */}
-      <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-[#444444]">
+      <p className="text-[11px] text-[#666666] uppercase tracking-[2px] mb-1">
         {dateContext}
       </p>
 
-      <div className="flex items-baseline justify-between mt-2">
+      <div className="flex items-baseline justify-between">
         <Text variant="pageTitle">{title}</Text>
         {duration && (
-          <span className="text-[22px] font-black text-[#ff4520] tracking-tight shrink-0 ml-3">
+          <span className="font-['Bebas_Neue'] text-[20px] text-[#ff4520] shrink-0 ml-3">
             {duration}&prime;
           </span>
         )}
       </div>
 
       {subtitle && (
-        <Text variant="bodyMuted" className="mt-1.5">{subtitle}</Text>
+        <Text variant="bodyMuted" className="mt-0.5">{subtitle}</Text>
       )}
 
-      <div className="flex items-center gap-2 mt-3">
+      <div className="flex items-center gap-2 mt-2">
         {tags?.map(tag => (
-          <Badge key={tag} label={tag} variant="accent" />
+          <Badge key={tag} label={tag} />
         ))}
       </div>
 
       {/* Travel toggle */}
-      <div className="flex items-center justify-between mt-4 py-3 border-t border-b border-[#111111]">
-        <div className="flex items-center gap-2">
-          <span className="text-[14px]">✈</span>
-          <Text variant="body" className="text-[#666666]">Travelling?</Text>
+      <div
+        className="flex items-center justify-between mt-3 py-[14px] px-[14px] cursor-pointer active:scale-[0.98] transition-transform duration-150"
+        style={{ background: 'rgba(6,182,212,0.06)', border: '1.5px solid rgba(6,182,212,0.2)', borderRadius: '14px' }}
+        onClick={onToggleTravel}
+      >
+        <div className="flex-1 min-w-0">
+          <span className="text-[13px] font-bold text-[#06b6d4] tracking-[0.3px]">✈ Travel Mode</span>
+          <p className="text-[11px] text-[#666666] mt-0.5">Swap gym gear for bodyweight</p>
         </div>
         <Toggle value={isTravelMode} onChange={onToggleTravel} />
       </div>
@@ -290,11 +295,14 @@ const LissDay = memo(function LissDay({
                 key={key}
                 onClick={() => handleSelectEquipment(key)}
                 aria-pressed={isActive}
-                className={`flex items-center gap-1.5 px-3 h-9 text-[13px] font-medium transition-colors ${
-                  isActive
-                    ? 'bg-[#ff4520] text-white'
-                    : 'bg-[#111111] border border-[#2a2a2a] text-[#888888] active:bg-[#1a1a1a]'
-                }`}
+                className="flex items-center gap-1.5 px-3 h-9 text-[13px] font-medium transition-all duration-150"
+                style={{
+                  borderRadius: radius.pill,
+                  ...(isActive
+                    ? { background: colors.accent, color: '#fff', border: 'none' }
+                    : { background: colors.surface, border: `1.5px solid ${colors.border}`, color: '#666666' }
+                  ),
+                }}
               >
                 <span className="text-[14px]">{eq.icon}</span>
                 <span>{eq.label}</span>
@@ -317,7 +325,8 @@ const LissDay = memo(function LissDay({
         {config.inputs.map(name => (
           <div
             key={name}
-            className="flex-1 bg-[#111111] border border-[#2a2a2a] focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-colors"
+            className="flex-1 focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-colors"
+            style={{ background: colors.surface2, border: `1.5px solid ${colors.border}`, borderRadius: radius.input }}
           >
             <label className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#555555] mb-2">
               {name.charAt(0).toUpperCase() + name.slice(1)}
@@ -329,7 +338,7 @@ const LissDay = memo(function LissDay({
               value={inputValues[name] || ''}
               onChange={e => handleInputChange(name, e.target.value)}
               readOnly={isLogged}
-              className="w-full bg-transparent text-center text-[24px] font-black text-white placeholder-[#555555] focus:outline-none"
+              className="w-full bg-transparent text-center text-[24px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] placeholder-[#555555] focus:outline-none"
               placeholder={config.placeholders[name] || ''}
               aria-label={`${name} value`}
             />
@@ -374,27 +383,27 @@ const LissDay = memo(function LissDay({
       {cooldown.length > 0 && (
         <div className="mt-6">
           <SectionLabel label="Cooldown" className="mb-2" />
-          <div className="border border-[#1a1a1a]">
+          <div className="overflow-hidden" style={{ background: 'rgba(6,182,212,0.05)', border: '1px solid rgba(6,182,212,0.18)', borderRadius: radius.button }}>
             {cooldown.map((item, idx) => {
               const key = `cd-${idx}`
               const done = completedKeys.has(key)
               return (
                 <button
                   key={key}
-                  className={`w-full flex items-center gap-3 px-3 py-3 text-left active:bg-[#1a1a1a] transition-colors ${
-                    idx > 0 ? 'border-t border-[#111111]' : ''
+                  className={`w-full flex items-center gap-3 px-[14px] py-3 text-left transition-colors ${
+                    idx > 0 ? 'border-t border-[rgba(6,182,212,0.08)]' : ''
                   }`}
                   onClick={() => toggleCooldown(key)}
                   aria-label={`${item} — ${done ? 'completed' : 'not completed'}`}
                 >
-                  <div className={`w-5 h-5 flex items-center justify-center shrink-0 transition-colors ${
-                    done ? 'bg-[#22c55e] text-white' : 'border border-[#2a2a2a] text-transparent'
-                  }`}>
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <div className={`w-5 h-5 rounded-[5px] flex items-center justify-center shrink-0 transition-all duration-150 ${
+                    done ? 'bg-[#22c55e] border-[#22c55e] text-black' : 'text-transparent'
+                  }`} style={done ? {} : { border: '1.5px solid #666666' }}>
+                    <svg className="w-[11px] h-[11px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <span className={`text-[13px] ${done ? 'text-[#555555] line-through' : 'text-[#999999]'}`}>
+                  <span className={`text-[13px] ${done ? 'text-[#666666] line-through opacity-40' : 'text-[#aaaaaa]'}`}>
                     {item}
                   </span>
                 </button>

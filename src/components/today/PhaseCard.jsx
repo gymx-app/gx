@@ -1,8 +1,16 @@
 import { useMemo, memo } from 'react'
 import { getDayWorkout } from '../../utils/programme'
-import { shadows, gradients } from '../../styles/tokens'
+import { colors, radius } from '../../styles/tokens'
 
 const LISS_TYPES = new Set(['liss'])
+
+const PHASE_COLORS = {
+  1: '#ff4520',
+  2: '#ff8c00',
+  3: '#22c55e',
+  4: '#3b82f6',
+  5: '#a855f7',
+}
 
 const PhaseCard = memo(function PhaseCard({
   phase,
@@ -35,6 +43,7 @@ const PhaseCard = memo(function PhaseCard({
   const daysNeeded = Math.max(0, minActiveDays - currentWeekActiveDays)
   const weekQualified = daysNeeded === 0
   const qualifyPct = Math.min(100, (currentWeekActiveDays / minActiveDays) * 100)
+  const phaseColor = PHASE_COLORS[phase] || colors.accent
 
   const todayDateStr = useMemo(() => {
     const d = new Date()
@@ -57,154 +66,175 @@ const PhaseCard = memo(function PhaseCard({
 
   return (
     <>
-      {/* Phase card */}
+      {/* Phase banner */}
       <div
-        className="border border-[#202020] mx-5 mt-3 px-4 py-3"
-        style={{ background: gradients.cardElevated, boxShadow: shadows.cardElevated }}
+        className="mx-4 mt-3 overflow-hidden"
+        style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.settings }}
       >
-        <div className="flex justify-between items-start">
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] tracking-[0.1em] uppercase text-[#444444] font-semibold">
-              PHASE {phase} OF {totalPhases}
-            </p>
-            <p className="text-[20px] font-bold tracking-[-0.03em] text-white mt-0.5">
-              {phaseName.toUpperCase() || `PHASE ${phase}`}
-            </p>
-            {phaseGoal && (
-              <p className="text-[12px] text-[#555555] mt-0.5 truncate">
-                {phaseGoal}
-              </p>
-            )}
-          </div>
+        {/* Phase header */}
+        <div className="px-[14px] py-3 flex justify-between items-center">
+          <span className="text-[11px] font-bold tracking-[1.5px] uppercase" style={{ color: phaseColor }}>
+            {phaseName.toUpperCase() || `PHASE ${phase}`}
+          </span>
+          <span className="text-[11px] text-[#666666]">
+            {isOngoing ? 'ONGOING' : `WK ${weekInPhase} / ${totalWeeksInPhase}`}
+          </span>
         </div>
 
         {/* Progress bar */}
-        <div className="mt-3">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-semibold tracking-[0.1em] uppercase text-[#444444]">
-              {isOngoing ? 'ONGOING' : `WK ${weekInPhase} OF ${totalWeeksInPhase}`}
-            </span>
+        <div className="h-[4px] bg-[#2a2a2a] mx-[14px]">
+          <div
+            className="h-full rounded-[2px] transition-all duration-600"
+            style={{ width: `${qualifyPct}%`, background: phaseColor }}
+          />
+        </div>
+
+        {/* Day dots */}
+        <div className="flex gap-[6px] px-[14px] py-[10px] items-center">
+          {weekDays.map(({ dayLabel, date, dateStr: dayDateStr }) => {
+            const isToday = dayDateStr === todayDateStr
+            const isCompleted = completedDateStrs.has(dayDateStr)
+            const isPast = dayDateStr < todayDateStr
+            const isFuture = dayDateStr > todayDateStr
+            const isLissDay = lissLabels.has(dayLabel)
+
+            let dotStyle = {}
+            let dotCls = 'flex-1 h-[32px] rounded-[8px] flex flex-col items-center justify-center gap-[2px] text-[8px] font-bold tracking-[0.5px] transition-all duration-200'
+
+            if (isCompleted) {
+              dotStyle = { background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)', color: '#22c55e' }
+            } else if (isPast) {
+              dotStyle = { background: 'rgba(255,69,32,0.08)', border: '1px solid rgba(255,69,32,0.2)', color: '#ff4520' }
+            } else if (isFuture) {
+              dotStyle = { background: colors.surface2, border: `1px solid ${colors.border}`, color: '#666666', opacity: 0.5 }
+            } else {
+              dotStyle = { background: colors.surface2, border: `1px solid ${colors.border}`, color: '#f0ede8' }
+            }
+
+            if (isToday) dotStyle.borderWidth = '2px'
+
+            return (
+              <div key={dayLabel} className={dotCls} style={dotStyle}>
+                {isCompleted ? (
+                  <span className="text-[10px] leading-none">✓</span>
+                ) : (
+                  <span>{dayLabel.slice(0, 1)}</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="px-[14px] pb-[10px] flex justify-between items-center">
+          <span className="text-[12px] text-[#666666]">
             {weekQualified ? (
-              <span className="text-[10px] text-[#22c55e] font-semibold tracking-[0.08em] uppercase">
-                ✓ WEEK QUALIFIES
-              </span>
+              <><strong className="text-[#f0ede8]">{currentWeekActiveDays}/{minActiveDays}</strong> days — qualified</>
             ) : (
-              <span className="text-[10px] font-semibold tracking-[0.1em] uppercase text-[#444444]">
-                {currentWeekActiveDays}/{minActiveDays} DAYS
-              </span>
+              <><strong className="text-[#f0ede8]">{currentWeekActiveDays}/{minActiveDays}</strong> days — {daysNeeded} more needed</>
             )}
-          </div>
-          <div className="w-full h-[3px] mt-1 bg-[#1a1a1a] relative">
-            <div
-              className="h-full transition-all duration-300 absolute inset-y-0 left-0"
-              style={{
-                width: `${qualifyPct}%`,
-                background: '#ff4520',
-              }}
-            />
-          </div>
+          </span>
+          {weekQualified && (
+            <span className="text-[11px] font-bold tracking-[0.5px] text-[#22c55e]">✓</span>
+          )}
         </div>
       </div>
 
       {/* Day pills with week navigation */}
-      <div className="mx-5 mt-3">
-        {showTodayPill && (
-          <div className="flex justify-end mb-2">
-            <button
-              onClick={onGoToToday}
-              className="text-[10px] tracking-[0.08em] uppercase bg-[#ff4520]/10 border border-[#ff4520]/20 text-[#ff4520] px-3 h-6 flex items-center font-semibold active:bg-[#ff4520]/20 transition-colors duration-120"
-            >
-              TODAY
-            </button>
-          </div>
-        )}
-
-        <div className="flex items-center gap-2">
+      <div className="mx-4 mt-3">
+        {/* Week nav + today button */}
+        <div className="flex items-center justify-between pb-[6px] gap-2">
           <button
             onClick={onPrevWeek}
             disabled={!canGoBack}
             aria-label="Previous week"
-            className={`min-w-[32px] min-h-[56px] flex items-center justify-center text-[24px] font-light shrink-0 transition-opacity duration-120 ${
-              canGoBack ? 'text-[#888888] active:opacity-50' : 'text-[#222222]'
+            className={`px-[10px] py-1 text-[13px] rounded-[8px] transition-all duration-150 ${
+              canGoBack ? 'bg-[#141414] border border-[#2a2a2a] text-[#f0ede8] active:bg-[#242424]' : 'text-[#2a2a2a]'
             }`}
           >
             ‹
           </button>
 
-          <div className="flex-1 flex justify-between">
-            {weekDays.map(({ dayLabel, date, dateStr: dayDateStr }) => {
-              const isSelected = dayDateStr === selectedDateStr
-              const isToday = dayDateStr === todayDateStr
-              const isCompleted = completedDateStrs.has(dayDateStr)
-              const isPast = dayDateStr < todayDateStr
-              const isFuture = dayDateStr > todayDateStr
-              const isLissDay = lissLabels.has(dayLabel)
-              const dayNum = date.getDate()
+          <span className="text-[12px] font-semibold text-[#666666] flex-1 text-center tracking-[0.03em]">
+            WEEK {totalWeek}
+          </span>
 
-              let statusEl = null
-              let labelColor = 'text-[#333333]'
-              let dateColor = 'text-[#333333]'
-
-              if (isToday && !isCompleted) {
-                labelColor = 'text-[#ff4520]'
-                dateColor = 'text-white font-black'
-                statusEl = <div className="w-5 h-[2px] bg-[#ff4520] mt-0.5" />
-              } else if (isToday && isCompleted) {
-                labelColor = 'text-[#ff4520]'
-                dateColor = 'text-white font-black'
-                statusEl = <span className="text-[11px] font-bold text-[#22c55e] leading-none mt-0.5">✓</span>
-              } else if (isCompleted && isLissDay) {
-                labelColor = 'text-[#333333]'
-                dateColor = 'text-[#444444]'
-                statusEl = <span className="text-[13px] text-[#3b82f6] leading-none mt-0.5">∼</span>
-              } else if (isCompleted) {
-                labelColor = 'text-[#333333]'
-                dateColor = 'text-[#444444]'
-                statusEl = <span className="text-[11px] font-bold text-[#22c55e] leading-none mt-0.5">✓</span>
-              } else if (isPast) {
-                labelColor = 'text-[#222222]'
-                dateColor = 'text-[#2a2a2a]'
-                statusEl = <span className="text-[11px] text-[#2a2a2a] leading-none mt-0.5">–</span>
-              } else if (isFuture) {
-                labelColor = 'text-[#181818]'
-                dateColor = 'text-[#1e1e1e]'
-              }
-
-              if (isSelected && !isToday) {
-                labelColor = 'text-[#888888]'
-                dateColor = 'text-white'
-              }
-
-              return (
-                <button
-                  key={dayLabel}
-                  className="flex-1 flex flex-col items-center gap-0.5 py-1 min-h-[56px] active:scale-[0.92] transition-transform duration-[80ms]"
-                  onClick={() => onSelectDay(dayLabel, dayDateStr, date)}
-                  aria-label={`${dayLabel} ${dayNum}${isToday ? ' (today)' : ''}${isCompleted ? ' completed' : ''}`}
-                  aria-pressed={isSelected}
-                >
-                  <span className={`text-[9px] tracking-[0.1em] uppercase font-semibold ${labelColor}`}>
-                    {dayLabel}
-                  </span>
-                  <span className={`text-[20px] font-bold ${dateColor}`}>
-                    {dayNum}
-                  </span>
-                  {statusEl}
-                </button>
-              )
-            })}
-          </div>
+          {showTodayPill && (
+            <button
+              onClick={onGoToToday}
+              className="text-[12px] font-semibold text-[#ff4520] px-[6px] py-[2px] rounded-[6px]"
+            >
+              Today
+            </button>
+          )}
 
           <button
             onClick={onNextWeek}
             disabled={!canGoForward}
             aria-label="Next week"
-            className={`min-w-[32px] min-h-[56px] flex items-center justify-center text-[24px] font-light shrink-0 transition-opacity duration-120 ${
-              canGoForward ? 'text-[#888888] active:opacity-50' : 'text-[#222222]'
+            className={`px-[10px] py-1 text-[13px] rounded-[8px] transition-all duration-150 ${
+              canGoForward ? 'bg-[#141414] border border-[#2a2a2a] text-[#f0ede8] active:bg-[#242424]' : 'text-[#2a2a2a]'
             }`}
           >
             ›
           </button>
+        </div>
+
+        {/* Day pills */}
+        <div className="flex gap-[6px] overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          {weekDays.map(({ dayLabel, date, dateStr: dayDateStr }) => {
+            const isSelected = dayDateStr === selectedDateStr
+            const isToday = dayDateStr === todayDateStr
+            const isCompleted = completedDateStrs.has(dayDateStr)
+            const isPast = dayDateStr < todayDateStr
+            const isFuture = dayDateStr > todayDateStr
+            const isLissDay = lissLabels.has(dayLabel)
+            const dayNum = date.getDate()
+
+            let dotColor = colors.border
+            let dayColor = '#666666'
+            let numColor = '#f0ede8'
+
+            if (isCompleted) {
+              dotColor = '#22c55e'
+              dayColor = isLissDay ? '#666666' : '#22c55e'
+            } else if (isPast && !isCompleted) {
+              dotColor = colors.border
+              dayColor = '#666666'
+              numColor = '#666666'
+            } else if (isFuture) {
+              dayColor = '#666666'
+              numColor = '#666666'
+            }
+
+            if (isToday && !isCompleted) {
+              dayColor = '#ff4520'
+              dotColor = '#ff4520'
+            }
+
+            return (
+              <button
+                key={dayLabel}
+                className={`flex-1 flex flex-col items-center gap-[3px] py-2 px-[10px] rounded-[12px] min-w-[44px] shrink-0 transition-all duration-150 active:scale-[0.93] ${
+                  isSelected
+                    ? 'bg-[#242424] border-[#ff4520]'
+                    : 'bg-[#141414] border-[#2a2a2a]'
+                }`}
+                style={{ border: `1.5px solid ${isSelected ? '#ff4520' : '#2a2a2a'}` }}
+                onClick={() => onSelectDay(dayLabel, dayDateStr, date)}
+                aria-label={`${dayLabel} ${dayNum}${isToday ? ' (today)' : ''}${isCompleted ? ' completed' : ''}`}
+                aria-pressed={isSelected}
+              >
+                <span className="text-[9px] font-semibold" style={{ color: dayColor }}>
+                  {dayLabel}
+                </span>
+                <span className="font-['Bebas_Neue'] text-[18px] leading-none" style={{ color: numColor }}>
+                  {dayNum}
+                </span>
+                <div className="w-[5px] h-[5px] rounded-full" style={{ background: dotColor }} />
+              </button>
+            )
+          })}
         </div>
       </div>
     </>

@@ -35,17 +35,14 @@ const TopBar = memo(function TopBar({ phase, totalWeek, syncStatus }) {
   const labelText = sync === 'synced' ? 'SYNCED' : sync === 'saving' ? 'SAVING' : 'OFFLINE'
 
   return (
-    <div className="bg-[#080808] border-b border-[#141414] flex-shrink-0 safe-area-top">
-      <div className="h-14 px-5 flex items-center justify-between">
-        <span className="text-xl font-black text-[#ff4520] w-10">Gx</span>
-        <Text variant="label" className="tracking-widest">
+    <div className="bg-[#141414] border-b border-[#2a2a2a] flex-shrink-0 safe-area-top" style={{ zIndex: 10 }}>
+      <div className="h-[52px] px-4 flex items-center justify-between">
+        <span className="font-['Bebas_Neue'] text-[20px] tracking-[2px] text-[#f0ede8]">G<span className="text-[#ff4520]">x</span></span>
+        <Text variant="label">
           {DAYS[now.getDay()]} {now.getDate()} {MONTHS[now.getMonth()]} · W{totalWeek} · P{phase}
         </Text>
         <div className="flex items-center justify-end gap-1.5 min-h-[44px] min-w-[44px]">
-          <div className={`w-1.5 h-1.5 rounded-full ${dotColor} ${sync === 'saving' ? 'animate-pulse' : ''}`} />
-          <span className="text-[10px] tracking-widest uppercase text-[#444444]">
-            {labelText}
-          </span>
+          <div className={`w-2 h-2 rounded-full ${dotColor} ${sync === 'saving' ? 'animate-pulse' : ''}`} style={{ transition: 'background .3s' }} />
         </div>
       </div>
     </div>
@@ -58,12 +55,13 @@ const TopBar = memo(function TopBar({ phase, totalWeek, syncStatus }) {
 const RestDay = memo(function RestDay({ workout }) {
   return (
     <div className="mt-4">
-      <Text variant="pageTitle" className="text-[#222222]">{workout?.title || 'REST DAY'}</Text>
+      <Text variant="pageTitle" className="text-[#666666]">{workout?.title || 'REST DAY'}</Text>
       <Text variant="bodyMuted" className="mt-2">{workout?.sub || 'Recovery · Sleep · Meal Prep'}</Text>
-      <div className="mt-8 bg-[#111111] border border-[#1a1a1a] p-5 text-center">
-        <p className="text-[40px]">😴</p>
-        <Text variant="body" className="text-[#444444] mt-2">Nothing to log today.</Text>
-        <Text variant="caption" className="mt-1">Rest is part of the programme.</Text>
+      <div className="mt-4 p-8 text-center" style={{ background: '#141414', border: '1px solid #2a2a2a', borderRadius: '16px' }}>
+        <p className="text-[48px] mb-3">😴</p>
+        <h2 className="font-['Bebas_Neue'] text-[26px] tracking-[2px] text-[#f0ede8] mb-2">REST DAY</h2>
+        <Text variant="bodyMuted">Nothing to log today.</Text>
+        <Text variant="caption" className="mt-1 max-w-[260px] mx-auto leading-[1.6]">Rest is part of the programme.</Text>
       </div>
     </div>
   )
@@ -113,20 +111,20 @@ function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }) {
     <div className="mt-6">
       <SectionLabel label="Finisher" className="mb-3" />
 
-      <h4 className="text-[16px] font-semibold text-white">{fin.title}</h4>
-      {fin.desc && <p className="text-[15px] text-white leading-[1.9] mt-1">{fin.desc}</p>}
+      <h4 className="font-['Bebas_Neue'] text-[18px] tracking-[1.5px] text-[#ff4520] mb-[5px]">{fin.title}</h4>
+      {fin.desc && <p className="text-[13px] text-[#aaaaaa] leading-[1.6] mt-1">{fin.desc}</p>}
 
       {fin.rounds && fin.rounds.length > 0 && (
         <div className="mt-2">
           {fin.rounds.map((round, i) => (
-            <p key={i} className="text-[15px] text-white leading-[1.9]">{round}</p>
+            <p key={i} className="text-[13px] text-[#aaaaaa] leading-[1.6]">{round}</p>
           ))}
         </div>
       )}
 
       <div className="flex items-center gap-2 mt-2">
-        {fin.dur && <span className="text-[12px] text-[#555555]">{fin.dur}</span>}
-        {fin.kcal && <><span className="text-[12px] text-[#333333]">·</span><span className="text-[12px] text-[#555555]">{fin.kcal}</span></>}
+        {fin.dur && <span className="text-[12px] text-[#666666]">{fin.dur}</span>}
+        {fin.kcal && <><span className="text-[12px] text-[#666666]">·</span><span className="text-[12px] text-[#666666]">{fin.kcal}</span></>}
       </div>
 
       {/* Cardio finisher: 3-input layout */}
@@ -139,13 +137,10 @@ function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }) {
           ].map(({ name, unit, placeholder }) => (
             <div
               key={name}
-              className="flex-1 border border-[#222222] focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-all duration-150"
-              style={{
-                background: 'linear-gradient(180deg, #191919 0%, #161616 100%)',
-                boxShadow: '0 1px 0 rgba(255,255,255,0.03) inset, 0 1px 3px rgba(0,0,0,0.3)',
-              }}
+              className="flex-1 focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-all duration-150"
+              style={{ background: '#1c1c1c', border: '1.5px solid #2a2a2a', borderRadius: '10px' }}
             >
-              <label className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#555555] mb-2">
+              <label className="text-[9px] font-bold tracking-[1px] uppercase text-[#666666] mb-2">
                 {name.charAt(0).toUpperCase() + name.slice(1)}
               </label>
               <input
@@ -155,10 +150,10 @@ function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }) {
                 value={finInputs[name] || ''}
                 onChange={e => setFinInputs(prev => ({ ...prev, [name]: e.target.value }))}
                 readOnly={isLogged}
-                className="w-full bg-transparent text-center text-[24px] font-black text-white placeholder-[#555555] focus:outline-none"
+                className="w-full bg-transparent text-center text-[24px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] placeholder-[#555555] focus:outline-none"
                 placeholder={placeholder}
               />
-              <span className="text-[10px] text-[#444444] mt-1">{unit}</span>
+              <span className="text-[10px] text-[#666666] mt-1">{unit}</span>
             </div>
           ))}
         </div>
@@ -206,27 +201,27 @@ function CooldownSection({ items, dateStr, checklistLogs, onUpdate }) {
   return (
     <div className="mt-6 mb-4">
       <SectionLabel label="Cooldown" className="mb-2" />
-      <div className="border border-[#1e1e1e] bg-[#0e0e0e]">
+      <div className="overflow-hidden" style={{ background: 'rgba(6,182,212,0.05)', border: '1px solid rgba(6,182,212,0.18)', borderRadius: '12px' }}>
         {items.map((item, idx) => {
           const key = `cd-${idx}`
           const done = completedKeys.has(key)
           return (
             <button
               key={key}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-left active:bg-[#161616] transition-colors duration-120 ${
-                idx > 0 ? 'border-t border-[#141414]' : ''
+              className={`w-full flex items-center gap-3 px-[14px] py-3 text-left transition-colors duration-150 ${
+                idx > 0 ? 'border-t border-[rgba(6,182,212,0.08)]' : ''
               }`}
               onClick={() => toggle(key)}
               aria-label={`${item} — ${done ? 'completed' : 'not completed'}`}
             >
-              <div className={`w-5 h-5 flex items-center justify-center shrink-0 transition-colors ${
-                done ? 'bg-[#22c55e] text-white' : 'border border-[#2a2a2a] text-transparent'
-              }`}>
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <div className={`w-5 h-5 rounded-[5px] flex items-center justify-center shrink-0 transition-all duration-150 ${
+                done ? 'bg-[#22c55e] text-black' : 'text-transparent'
+              }`} style={done ? {} : { border: '1.5px solid #666666' }}>
+                <svg className="w-[11px] h-[11px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <span className={`text-[13px] ${done ? 'text-[#555555] line-through' : 'text-[#999999]'}`}>
+              <span className={`text-[13px] ${done ? 'text-[#666666] line-through opacity-40' : 'text-[#aaaaaa]'}`}>
                 {item}
               </span>
             </button>
@@ -651,7 +646,7 @@ export default function Today() {
         {/* Content — with swipe slide animation */}
         <div
           ref={contentRef}
-          className="px-5 pt-7 transition-transform duration-150 ease-out"
+          className="px-4 pt-5 transition-transform duration-150 ease-out"
           style={{
             transform: swipeAnim === 'left'
               ? 'translateX(-8px)'
@@ -693,45 +688,46 @@ export default function Today() {
           {dayType === 'workout' && (
             <>
               {/* Workout header */}
-              <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-[#333333]">
+              <p className="text-[11px] text-[#666666] uppercase tracking-[2px] mb-1">
                 {(() => {
                   const d = new Date(dateStr + 'T00:00:00')
                   return `${d.getDate()} ${MONTHS[d.getMonth()]} · WEEK ${totalWeek} · PHASE ${phase}`
                 })()}
               </p>
 
-              <div className="flex items-baseline justify-between mt-1">
+              <div className="flex items-baseline justify-between">
                 <Text variant="pageTitle">{workout.title}</Text>
                 {workout.dur && (
-                  <span className="text-[28px] font-extrabold text-white tracking-tight shrink-0 ml-3">
+                  <span className="font-['Bebas_Neue'] text-[20px] text-[#ff4520] shrink-0 ml-3">
                     {workout.dur}&prime;
                   </span>
                 )}
               </div>
 
               {workout.sub && (
-                <Text variant="bodyMuted" className="mt-1">{workout.sub}</Text>
+                <Text variant="bodyMuted" className="mt-0.5">{workout.sub}</Text>
               )}
 
-              <div className="flex items-center gap-2 mt-3">
+              <div className="flex items-center gap-2 mt-2">
                 {workout.kcal && (
-                  <span className="text-[12px] font-medium tracking-[0.02em] text-[#555555]">
+                  <span className="text-[11px] text-[#666666]">
                     {workout.kcal} kcal
                   </span>
                 )}
-                {workout.kcal && workout.tags?.length > 0 && (
-                  <span className="text-[12px] text-[#2a2a2a]">·</span>
-                )}
                 {workout.tags?.map(tag => (
-                  <Badge key={tag} label={tag} variant="elevated" />
+                  <Badge key={tag} label={tag} />
                 ))}
               </div>
 
               {/* Travel toggle */}
-              <div className="flex items-center justify-between mt-5 py-3 px-4 bg-[#111111] border border-[#1a1a1a]">
-                <div className="flex items-center gap-2">
-                  <span className="text-[14px]">✈</span>
-                  <span className="text-[15px] text-[#666666] tracking-[-0.01em]">Travelling?</span>
+              <div
+                className="flex items-center justify-between mt-3 py-[14px] px-[14px] cursor-pointer active:scale-[0.98] transition-transform duration-150"
+                style={{ background: 'rgba(6,182,212,0.06)', border: '1.5px solid rgba(6,182,212,0.2)', borderRadius: '14px' }}
+                onClick={() => setIsTravelMode(p => !p)}
+              >
+                <div className="flex-1 min-w-0">
+                  <span className="text-[13px] font-bold text-[#06b6d4] tracking-[0.3px]">✈ Travel Mode</span>
+                  <p className="text-[11px] text-[#666666] mt-0.5">Swap gym gear for bodyweight</p>
                 </div>
                 <Toggle value={isTravelMode} onChange={() => setIsTravelMode(p => !p)} />
               </div>
@@ -748,10 +744,10 @@ export default function Today() {
               )}
 
               {/* Exercises */}
-              <div className="mt-7">
+              <div className="mt-4">
                 <SectionLabel label="Exercises" className="mb-2" />
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-3">
                 {displayExercises.map((ex, idx) => (
                   <ExerciseCard
                     key={`${ex.n}-${idx}`}

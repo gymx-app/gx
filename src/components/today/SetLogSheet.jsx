@@ -3,7 +3,7 @@ import { useAuth } from '../../auth/AuthContext'
 import { upsertExerciseLog, upsertWorkoutSession } from '../../services/workoutService'
 import { logger } from '../../lib/logger'
 import { Button, SectionLabel } from '../ui'
-import { shadows, gradients } from '../../styles/tokens'
+import { colors, radius } from '../../styles/tokens'
 
 const SetLogSheet = memo(function SetLogSheet({
   exercise,
@@ -80,32 +80,48 @@ const SetLogSheet = memo(function SetLogSheet({
     }
   }
 
+  const RPE_COLORS = {
+    10: '#ff4520',
+    9: '#ff8c00',
+    8: '#fbbf24',
+    7: '#22c55e',
+    6: '#06b6d4',
+  }
+
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/70" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 bg-black/85" onClick={onClose} aria-hidden="true" />
 
       <div
-        className="relative w-full max-w-[480px] border-t border-[#222222] px-5 pt-5 animate-slide-up"
-        style={{ background: gradients.sheet, boxShadow: shadows.sheet, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+        className="relative w-full max-w-[480px] px-5 pt-5 animate-slide-up"
+        style={{
+          background: colors.surface,
+          borderRadius: radius.sheet,
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 40px)',
+        }}
         role="dialog"
         aria-modal="true"
         aria-label={`Log set ${setNumber} for ${exercise.n}`}
       >
-        <div
-          className="w-8 h-1 rounded-full mx-auto mb-4"
-          style={{ background: 'linear-gradient(90deg, transparent, #333333, transparent)' }}
-        />
+        <div className="w-10 h-1 rounded-[2px] mx-auto mb-4" style={{ background: colors.border }} />
 
         {/* Header */}
         <div className="flex justify-between items-baseline mb-5">
-          <h3 className="text-[16px] font-bold text-white">{exercise.n}</h3>
-          <span className="text-[12px] text-[#555555]">Set {setNumber} of {totalSets}</span>
+          <h3 className="font-['Bebas_Neue'] text-[22px] tracking-[1.5px] text-[#f0ede8]">{exercise.n}</h3>
+          <span className="text-[12px] text-[#666666]">Set {setNumber} of {totalSets}</span>
         </div>
 
+        {/* Previous best */}
+        {previousBest && (
+          <div className="mb-4 text-[11px] text-[#666666] text-center min-h-[16px]">
+            Previous: <span className="text-[#22c55e] font-semibold">{previousBest.weight_kg}kg × {previousBest.reps}</span>
+          </div>
+        )}
+
         {/* Inputs */}
-        <div className="flex gap-3 mb-4">
-          <div className="flex-1">
-            <SectionLabel label="Weight (kg)" className="mb-1" />
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <SectionLabel label="Weight (kg)" className="mb-[6px]" />
             <input
               ref={weightRef}
               type="number"
@@ -113,21 +129,29 @@ const SetLogSheet = memo(function SetLogSheet({
               step="0.5"
               value={weight}
               onChange={e => setWeight(e.target.value)}
-              className="w-full border border-[#222222] px-3 py-3 text-[18px] font-bold text-white text-center focus:border-[#ff4520] transition-all duration-150"
-              style={{ background: gradients.input, boxShadow: shadows.input }}
+              className="w-full px-[14px] py-3 text-[18px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] text-center transition-all duration-150"
+              style={{
+                background: colors.surface2,
+                border: `1.5px solid ${colors.border}`,
+                borderRadius: radius.input,
+              }}
               placeholder="0"
               aria-label="Weight in kilograms"
             />
           </div>
-          <div className="flex-1">
-            <SectionLabel label="Reps" className="mb-1" />
+          <div>
+            <SectionLabel label="Reps" className="mb-[6px]" />
             <input
               type="number"
               inputMode="numeric"
               value={reps}
               onChange={e => setReps(e.target.value)}
-              className="w-full border border-[#222222] px-3 py-3 text-[18px] font-bold text-white text-center focus:border-[#ff4520] transition-all duration-150"
-              style={{ background: gradients.input, boxShadow: shadows.input }}
+              className="w-full px-[14px] py-3 text-[18px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] text-center transition-all duration-150"
+              style={{
+                background: colors.surface2,
+                border: `1.5px solid ${colors.border}`,
+                borderRadius: radius.input,
+              }}
               placeholder="0"
               aria-label="Number of reps"
             />
@@ -137,26 +161,32 @@ const SetLogSheet = memo(function SetLogSheet({
         {/* RPE selector */}
         <div className="mb-4">
           <SectionLabel label="RPE" className="mb-2" />
-          <div className="flex gap-2" role="radiogroup" aria-label="Rate of perceived exertion">
-            {[6, 7, 8, 9, 10].map(val => (
-              <button
-                key={val}
-                onClick={() => setRpe(rpe === val ? null : val)}
-                role="radio"
-                aria-checked={rpe === val}
-                className={`flex-1 py-2 text-[14px] font-bold transition-all duration-150 ${
-                  rpe === val
-                    ? 'text-white'
-                    : 'border border-[#2a2a2a] text-[#555555]'
-                }`}
-                style={rpe === val
-                  ? { background: gradients.buttonAccent, boxShadow: shadows.buttonAccent }
-                  : { background: gradients.buttonSecondary, boxShadow: shadows.button }
-                }
-              >
-                {val}
-              </button>
-            ))}
+          <div className="grid grid-cols-5 gap-[7px]" role="radiogroup" aria-label="Rate of perceived exertion">
+            {[6, 7, 8, 9, 10].map(val => {
+              const rpeColor = RPE_COLORS[val]
+              const isActive = rpe === val
+              return (
+                <button
+                  key={val}
+                  onClick={() => setRpe(rpe === val ? null : val)}
+                  role="radio"
+                  aria-checked={isActive}
+                  className="flex flex-col items-center gap-1 py-[14px] px-1 transition-all duration-150 active:scale-[0.93]"
+                  style={{
+                    borderRadius: radius.button,
+                    border: `1.5px solid ${isActive ? rpeColor : colors.border}`,
+                    background: isActive ? `${rpeColor}20` : colors.surface2,
+                  }}
+                >
+                  <span className="font-['Bebas_Neue'] text-[22px] tracking-[0.5px] leading-none" style={{ color: rpeColor }}>
+                    {val}
+                  </span>
+                  <span className="text-[9px] font-bold tracking-[0.5px] leading-none" style={{ color: rpeColor }}>
+                    RPE
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -164,11 +194,13 @@ const SetLogSheet = memo(function SetLogSheet({
         <button
           onClick={() => setIsMM(!isMM)}
           aria-pressed={isMM}
-          className={`w-full py-2 text-[12px] font-semibold tracking-wider mb-5 border transition-colors ${
-            isMM
-              ? 'bg-[#ff4520]/10 border-[#ff4520] text-[#ff4520]'
-              : 'bg-transparent border-[#1a1a1a] text-[#444444]'
-          }`}
+          className="w-full py-2 text-[12px] font-semibold tracking-wider mb-5 transition-colors"
+          style={{
+            borderRadius: radius.buttonSm,
+            border: `1.5px solid ${isMM ? colors.accent : colors.border}`,
+            background: isMM ? 'rgba(255,69,32,0.1)' : 'transparent',
+            color: isMM ? colors.accent : '#666666',
+          }}
         >
           {isMM ? 'MIND-MUSCLE SET ✓' : 'MIND-MUSCLE SET'}
         </button>

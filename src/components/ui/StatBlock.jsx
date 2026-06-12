@@ -7,11 +7,11 @@ import { memo } from 'react'
 function StatBlock({ value, label, unit }) {
   return (
     <div className="text-center">
-      <p className="text-[24px] font-black text-[#ff4520]">
+      <p className="font-['Bebas_Neue'] text-[26px] text-[#f0ede8] leading-none">
         {value}
-        {unit && <span className="text-[16px] text-[#555555] ml-1">{unit}</span>}
+        {unit && <span className="text-[16px] text-[#666666] ml-1">{unit}</span>}
       </p>
-      <p className="text-[10px] tracking-wider uppercase text-[#555555] mt-0.5">{label}</p>
+      <p className="text-[11px] text-[#666666] mt-[2px]">{label}</p>
     </div>
   )
 }

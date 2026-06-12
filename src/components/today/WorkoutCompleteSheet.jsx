@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { Button, StatBlock, Text } from '../ui'
+import { colors, radius } from '../../styles/tokens'
 
 const WorkoutCompleteSheet = memo(function WorkoutCompleteSheet({ workout, completedSets, onDismiss }) {
   const exercises = workout?.ex || []
@@ -19,10 +20,11 @@ const WorkoutCompleteSheet = memo(function WorkoutCompleteSheet({ workout, compl
       <div className="absolute inset-0 bg-black/80" onClick={onDismiss} />
 
       <div
-        className="relative w-[calc(100%-32px)] max-w-[380px] border border-[#222222] p-6"
+        className="relative w-[calc(100%-32px)] max-w-[380px] p-6"
         style={{
-          background: 'linear-gradient(180deg, #141414 0%, #111111 100%)',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.04) inset',
+          background: colors.surface,
+          border: `1px solid ${colors.border}`,
+          borderRadius: radius.card,
         }}
       >
         {/* Big check */}
@@ -36,7 +38,7 @@ const WorkoutCompleteSheet = memo(function WorkoutCompleteSheet({ workout, compl
         <Text variant="bodyMuted" className="text-center mt-1">{workout?.title}</Text>
 
         {/* Stats */}
-        <div className="flex justify-center gap-6 mt-5 pt-4 border-t border-[#1a1a1a]">
+        <div className="flex justify-center gap-6 mt-5 pt-4 border-t border-[#2a2a2a]">
           <StatBlock
             value={totalSetsLogged}
             label="Sets"

@@ -1,14 +1,10 @@
 import { memo } from 'react'
 
-/**
- * Consistent section label used across all screens.
- * @param {{ label: string, rightContent?: React.ReactNode, className?: string }} props
- */
 function SectionLabel({ label, rightContent, className = '' }) {
   if (rightContent) {
     return (
       <div className={`flex justify-between items-center ${className}`}>
-        <span className="text-[11px] tracking-[0.08em] uppercase text-[#555555] font-medium">
+        <span className="text-[10px] font-bold tracking-[2px] uppercase text-[#666666]">
           {label}
         </span>
         {rightContent}
@@ -17,7 +13,7 @@ function SectionLabel({ label, rightContent, className = '' }) {
   }
 
   return (
-    <span className={`text-[11px] tracking-[0.08em] uppercase text-[#555555] font-medium block ${className}`}>
+    <span className={`text-[10px] font-bold tracking-[2px] uppercase text-[#666666] block ${className}`}>
       {label}
     </span>
   )

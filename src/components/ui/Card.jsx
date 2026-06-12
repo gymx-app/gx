@@ -1,26 +1,26 @@
 import { memo } from 'react'
-import { shadows, gradients } from '../../styles/tokens'
+import { colors, radius } from '../../styles/tokens'
 
 const VARIANTS = {
   default: {
-    cls: 'border border-[#1a1a1a]',
-    style: { background: gradients.card, boxShadow: shadows.card },
+    cls: '',
+    style: { background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.card },
   },
   elevated: {
-    cls: 'border border-[#222222]',
-    style: { background: gradients.cardElevated, boxShadow: shadows.cardElevated },
+    cls: '',
+    style: { background: colors.surface2, border: `1px solid ${colors.border}`, borderRadius: radius.card },
   },
   accentLeft: {
-    cls: 'border border-[#1a1a1a] border-l-[3px] border-l-[#ff4520]',
-    style: { background: gradients.card, boxShadow: shadows.card },
+    cls: '',
+    style: { background: colors.surface, border: `1px solid ${colors.border}`, borderLeft: `3px solid ${colors.accent}`, borderRadius: radius.card },
   },
   successLeft: {
-    cls: 'border border-[#1a1a1a] border-l-[3px] border-l-[#22c55e]',
-    style: { background: gradients.card, boxShadow: shadows.card },
+    cls: '',
+    style: { background: colors.surface, border: `1px solid ${colors.border}`, borderLeft: `3px solid ${colors.success}`, borderRadius: radius.card },
   },
   transparent: {
-    cls: 'bg-transparent border border-[#1a1a1a]',
-    style: {},
+    cls: '',
+    style: { background: 'transparent', border: `1px solid ${colors.border}`, borderRadius: radius.card },
   },
 }
 

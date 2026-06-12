@@ -14,14 +14,12 @@ export default function SplashScreen() {
   const [msgIndex, setMsgIndex] = useState(0)
   const intervalRef = useRef(null)
 
-  // PWA update detection
   const {
     needRefresh: [needRefresh],
   } = useRegisterSW()
 
-  // Cycle status messages every 600ms
   useEffect(() => {
-    if (needRefresh) return // Don't cycle when updating
+    if (needRefresh) return
 
     intervalRef.current = setInterval(() => {
       setMsgIndex(prev => (prev + 1) % MESSAGES.length)
@@ -34,7 +32,7 @@ export default function SplashScreen() {
 
   return (
     <div className="fixed inset-0 z-[100]">
-      {/* Splash image — covers entire screen */}
+      {/* Splash image */}
       <img
         src={`${import.meta.env.BASE_URL}splash.png`}
         alt=""
@@ -42,28 +40,25 @@ export default function SplashScreen() {
         draggable={false}
       />
 
-      {/* Loading indicator + status message */}
+      {/* Loading indicator */}
       <div
         className="absolute left-0 right-0 flex flex-col items-center gap-4"
         style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 48px)' }}
       >
-        {/* Circular spinner */}
         <div
-          className="w-8 h-8 rounded-full"
+          className="w-9 h-9 rounded-full"
           style={{
-            border: '2px solid #2a2a2a',
-            borderTop: '2px solid #ff4520',
-            animation: 'gx-spin 800ms linear infinite',
+            border: '2.5px solid #1c1c1c',
+            borderTopColor: '#ff4520',
+            animation: 'gx-spin 700ms linear infinite',
           }}
         />
 
-        {/* Status message */}
-        <p className="text-[11px] tracking-[0.12em] uppercase text-[#555555] font-medium text-center">
+        <p className="text-[11px] tracking-[3px] uppercase text-[#666666] font-medium text-center font-['DM_Sans']">
           {statusText}
         </p>
       </div>
 
-      {/* Keyframes for spinner */}
       <style>{`
         @keyframes gx-spin {
           0% { transform: rotate(0deg); }

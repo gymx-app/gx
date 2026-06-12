@@ -1,9 +1,18 @@
 import { useMemo, memo } from 'react'
 import exerciseData from '../../data/exercises.json'
 import { SectionLabel, Badge } from '../ui'
-import { shadows, gradients } from '../../styles/tokens'
+import { colors, radius } from '../../styles/tokens'
 
 const EQ_NAMES = exerciseData.EQ_NAMES
+
+const EQ_COLORS = {
+  BB: { bg: 'rgba(251,191,36,0.12)', color: '#fbbf24' },
+  DB: { bg: 'rgba(6,182,212,0.12)', color: '#06b6d4' },
+  KB: { bg: 'rgba(168,85,247,0.12)', color: '#c084fc' },
+  BW: { bg: 'rgba(156,163,175,0.12)', color: '#9ca3af' },
+  CABLE: { bg: 'rgba(59,130,246,0.12)', color: '#60a5fa' },
+  MACH: { bg: 'rgba(100,116,139,0.12)', color: '#94a3b8' },
+}
 
 const ExerciseCard = memo(function ExerciseCard({
   exercise,
@@ -31,60 +40,80 @@ const ExerciseCard = memo(function ExerciseCard({
   const completedCount = Object.keys(setMap).length
   const allDone = completedCount >= totalSets
 
-  let cardStyle, borderCls
+  let cardStyle
   if (allDone) {
-    cardStyle = { background: '#0e0e0e', opacity: 0.5 }
-    borderCls = 'border border-[#181818] border-l-[3px] border-l-[#22c55e]'
+    cardStyle = {
+      background: colors.surface,
+      border: `1px solid ${colors.border}`,
+      borderRadius: radius.card,
+      opacity: 0.5,
+    }
   } else if (completedCount > 0) {
-    cardStyle = { background: gradients.cardElevated, boxShadow: shadows.card }
-    borderCls = 'border border-[#222222] border-l-[3px] border-l-[#ff4520]'
+    cardStyle = {
+      background: colors.surface,
+      border: `1px solid ${colors.border}`,
+      borderRadius: radius.card,
+    }
   } else {
-    cardStyle = { background: gradients.card, boxShadow: shadows.card }
-    borderCls = 'border border-[#1e1e1e] border-l-[3px] border-l-transparent'
+    cardStyle = {
+      background: colors.surface,
+      border: `1px solid ${colors.border}`,
+      borderRadius: radius.card,
+    }
   }
 
   return (
-    <div
-      className={`${borderCls} transition-all duration-150`}
-      style={cardStyle}
-    >
+    <div className="overflow-hidden transition-all duration-150" style={cardStyle}>
       {/* Header */}
       <button
-        className="w-full flex items-center justify-between px-4 min-h-[56px] text-left active:bg-[#ffffff05] transition-colors duration-120"
+        className="w-full flex items-center gap-[10px] px-4 py-[11px] text-left active:bg-[#1c1c1c] transition-colors duration-150"
         onClick={onToggleExpand}
         aria-expanded={isExpanded}
         aria-label={`${exercise.n} — ${completedCount} of ${totalSets} sets done`}
       >
-        <div className="flex-1 min-w-0 py-3.5">
-          <h3 className={`text-[17px] font-semibold tracking-[-0.01em] ${allDone ? 'text-[#555555]' : 'text-white'}`}>
+        {/* Exercise icon placeholder */}
+        <div className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center text-[17px] shrink-0 bg-[#1c1c1c]">
+          {exercise.icon || '💪'}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <h3 className={`text-[14px] font-semibold truncate ${allDone ? 'text-[#666666] line-through' : 'text-[#f0ede8]'}`}>
             {exercise.n}
           </h3>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[12px] text-[#555555]">{exercise.s} · {exercise.r} rest</span>
-            {exercise.eq && exercise.eq.map(eq => (
-              <Badge key={eq} label={EQ_NAMES[eq] || eq} variant="default" />
-            ))}
+          <div className="flex items-center gap-1 mt-[1px]">
+            <span className="text-[12px] text-[#666666]">{exercise.s} · {exercise.r} rest</span>
           </div>
+          {exercise.eq && exercise.eq.length > 0 && (
+            <div className="flex gap-[3px] mt-1 flex-wrap">
+              {exercise.eq.map(eq => {
+                const eqColor = EQ_COLORS[eq?.toUpperCase()] || EQ_COLORS.BW
+                return (
+                  <span
+                    key={eq}
+                    className="text-[9px] font-bold tracking-[0.3px] uppercase px-[5px] py-[2px] rounded-[4px]"
+                    style={{ background: eqColor.bg, color: eqColor.color }}
+                  >
+                    {EQ_NAMES[eq] || eq}
+                  </span>
+                )
+              })}
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-3 shrink-0 ml-2">
-          <span className="text-[12px] text-[#444444] font-medium">
-            {completedCount}/{totalSets}
-          </span>
-          <span className={`text-[14px] transition-colors duration-120 ${
-            isExpanded ? 'text-[#555555]' : 'text-[#333333]'
-          }`}>
-            {isExpanded ? '−' : '+'}
-          </span>
-        </div>
+
+        <span className={`text-[12px] shrink-0 transition-transform duration-200 ${
+          isExpanded ? 'rotate-180' : ''
+        } ${allDone ? 'text-[#666666] opacity-40' : 'text-[#666666]'}`}>
+          ▾
+        </span>
       </button>
 
       {/* Expanded content */}
       {isExpanded && (
-        <div className="border-t border-[#1a1a1a]">
+        <div className="border-t border-[#2a2a2a]">
           {exercise.note && (
             <div className="px-4 pt-3 pb-2">
-              <SectionLabel label="Coaching" className="mb-2" />
-              <p className="text-[15px] text-white leading-relaxed tracking-[-0.01em]">
+              <p className="text-[13px] text-[#aaaaaa] leading-[1.6]">
                 {exercise.note}
               </p>
             </div>
@@ -92,60 +121,59 @@ const ExerciseCard = memo(function ExerciseCard({
 
           {exercise.warn && (
             <div className="px-4 py-2">
-              <p className="text-[13px] text-[#ff4520] leading-relaxed" role="alert">
-                ⚠ {exercise.warn}
+              <p className="text-[12px] text-[#ff8c00] leading-relaxed bg-[rgba(255,140,0,0.08)] border-l-[3px] border-l-[#ff8c00] px-[10px] py-[6px] rounded-r-[6px]" role="alert">
+                {exercise.warn}
               </p>
             </div>
           )}
 
           {previousBest && (
-            <div className="px-4 py-2 border-t border-[#1a1a1a] flex items-center gap-1.5">
-              <span className="text-[10px] text-[#333333] uppercase tracking-[0.1em] font-semibold">Prev best</span>
-              <span className="text-[12px] text-[#555555] font-medium">
+            <div className="px-4 py-2 border-t border-[#2a2a2a] flex items-center gap-1.5">
+              <span className="text-[10px] text-[#666666] uppercase tracking-[1px] font-bold">Prev best</span>
+              <span className="text-[12px] text-[#666666] font-semibold">
                 {previousBest.weight_kg}kg × {previousBest.reps}
               </span>
             </div>
           )}
 
-          {/* Set rows */}
-          <div className="border-t border-[#1a1a1a]">
-            {Array.from({ length: totalSets }, (_, i) => {
-              const setNum = i + 1
-              const log = setMap[setNum]
-              const isDone = !!log
+          {/* Set chips grid */}
+          <div className="px-4 pb-3 pt-[6px]">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(68px,1fr))] gap-[6px]">
+              {Array.from({ length: totalSets }, (_, i) => {
+                const setNum = i + 1
+                const log = setMap[setNum]
+                const isDone = !!log
 
-              return (
-                <button
-                  key={setNum}
-                  className={`w-full flex items-center justify-between px-4 min-h-[48px] text-left active:bg-[#161616] transition-colors duration-120 ${
-                    i > 0 ? 'border-t border-[#0e0e0e]' : ''
-                  }`}
-                  onClick={() => onTapSet(exercise, setNum, totalSets, previousBest, log, exerciseIndex, restSec)}
-                  aria-label={isDone ? `Set ${setNum}: ${log.weight_kg}kg × ${log.reps}` : `Log set ${setNum}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-semibold tracking-[0.1em] uppercase text-[#333333] w-5">
+                return (
+                  <button
+                    key={setNum}
+                    className={`text-center py-[9px] px-1 rounded-[10px] transition-all duration-150 active:scale-[0.93] ${
+                      isDone
+                        ? 'bg-[rgba(34,197,94,0.15)] border border-[#22c55e]'
+                        : 'bg-[#242424] border border-[#2a2a2a]'
+                    }`}
+                    onClick={() => onTapSet(exercise, setNum, totalSets, previousBest, log, exerciseIndex, restSec)}
+                    aria-label={isDone ? `Set ${setNum}: ${log.weight_kg}kg × ${log.reps}` : `Log set ${setNum}`}
+                  >
+                    <span className={`font-['Bebas_Neue'] text-[15px] leading-none ${
+                      isDone ? 'text-[#22c55e]' : 'text-[#666666]'
+                    }`}>
                       S{setNum}
                     </span>
-                    {isDone ? (
-                      <span className="text-[14px] text-white font-medium">
-                        {log.weight_kg}kg × {log.reps}
-                        {log.rpe && <span className="text-[#444444]"> @{log.rpe}</span>}
-                      </span>
-                    ) : (
-                      <span className="text-[14px] text-[#444444]">
-                        {targetReps} reps
+                    <span className={`block text-[10px] mt-[1px] ${
+                      isDone ? 'text-[#22c55e] opacity-70' : 'text-[#666666]'
+                    }`}>
+                      {isDone ? `${log.weight_kg}×${log.reps}` : `${targetReps}`}
+                    </span>
+                    {isDone && log.rpe && (
+                      <span className="block text-[8px] text-[#06b6d4] font-bold tracking-[0.3px] mt-[1px] leading-none opacity-90">
+                        RPE {log.rpe}
                       </span>
                     )}
-                  </div>
-                  {isDone ? (
-                    <span className="text-[13px] text-[#22c55e] font-bold">✓</span>
-                  ) : (
-                    <span className="text-[16px] text-[#2a2a2a]">›</span>
-                  )}
-                </button>
-              )
-            })}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
       )}

@@ -11,7 +11,7 @@ function Skeleton({ width, height, className = '' }) {
 
   return (
     <div
-      className={`bg-[#1a1a1a] animate-pulse ${className}`}
+      className={`bg-[#1c1c1c] rounded-[8px] animate-pulse ${className}`}
       style={style}
       aria-hidden="true"
     />

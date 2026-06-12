@@ -4,17 +4,15 @@ import { upsertWarmupLog } from '../../services/checklistService'
 import { logger } from '../../lib/logger'
 import exerciseData from '../../data/exercises.json'
 import { SectionLabel, ProgressBar, Checkbox } from '../ui'
-import { shadows, gradients } from '../../styles/tokens'
+import { colors, radius } from '../../styles/tokens'
 
 const JSON_WARMUP_ITEMS = exerciseData.WARMUP_ITEMS
 
 const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, warmupItems: dbWarmupItems, onUpdate }) {
   const { user } = useAuth()
 
-  // Use DB warmup items if available, fall back to exercises.json
   const items = useMemo(() => {
     if (dbWarmupItems && dbWarmupItems.length > 0) {
-      // Map DB format → component format
       return dbWarmupItems.map(item => ({
         k: item.item_key,
         label: item.label,
@@ -44,7 +42,7 @@ const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, 
   }
 
   return (
-    <div className="mt-5">
+    <div className="mt-3">
       <SectionLabel
         label="Warmup Protocol"
         rightContent={
@@ -52,7 +50,7 @@ const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, 
             {allDone ? (
               <span className="text-[11px] font-semibold text-[#22c55e]">Done</span>
             ) : (
-              <span className="text-[11px] text-[#444444]">
+              <span className="text-[11px] text-[#666666]">
                 {completedCount}/{items.length}
               </span>
             )}
@@ -60,7 +58,7 @@ const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, 
               onClick={() => setCollapsed(!collapsed)}
               aria-label={collapsed ? 'Expand warmup' : 'Collapse warmup'}
             >
-              <span className={`text-[10px] text-[#333333] transition-transform duration-200 inline-block ${
+              <span className={`text-[10px] text-[#666666] transition-transform duration-200 inline-block ${
                 collapsed ? '' : 'rotate-180'
               }`}>
                 ▾
@@ -73,29 +71,39 @@ const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, 
 
       <ProgressBar
         progress={(completedCount / items.length) * 100}
+        color="yellow"
         animated
         className="mb-3"
       />
 
       {!collapsed && (
-        <div className="border border-[#1e1e1e] bg-[#0e0e0e]">
+        <div
+          className="overflow-hidden"
+          style={{
+            background: 'rgba(251,191,36,0.05)',
+            border: '1px solid rgba(251,191,36,0.18)',
+            borderRadius: radius.button,
+          }}
+        >
           {items.map((item, idx) => {
             const done = completedKeys.has(item.k)
             return (
               <button
                 key={item.k}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-left active:bg-[#161616] transition-colors duration-120 ${
-                  idx > 0 ? 'border-t border-[#141414]' : ''
+                className={`w-full flex items-center gap-[8px] px-[14px] py-[3px] text-left cursor-pointer transition-colors duration-150 ${
+                  idx > 0 ? 'border-t border-[rgba(251,191,36,0.08)]' : ''
                 }`}
                 onClick={() => toggleItem(item)}
                 aria-label={`${item.label} — ${done ? 'completed' : 'not completed'}`}
               >
                 <Checkbox checked={done} />
                 <div className="flex-1 min-w-0">
-                  <p className={`text-[13px] font-medium leading-tight ${done ? 'text-[#444444]' : 'text-white'}`}>
+                  <p className={`text-[13px] leading-tight ${done ? 'text-[#666666] line-through opacity-40' : 'text-[#aaaaaa]'}`}>
                     {item.label}
                   </p>
-                  <p className="text-[11px] text-[#333333] mt-0.5">{item.detail}</p>
+                  {item.detail && (
+                    <p className="text-[11px] text-[#666666] mt-0.5">{item.detail}</p>
+                  )}
                 </div>
                 <span className="text-[16px] shrink-0">{item.ic}</span>
               </button>

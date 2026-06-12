@@ -1,14 +1,14 @@
 import { memo, useRef, useEffect } from 'react'
 import SectionLabel from './SectionLabel'
-import { shadows, gradients } from '../../styles/tokens'
+import { colors, radius } from '../../styles/tokens'
 
 const VARIANT_CLASSES = {
-  field: 'h-[52px] w-full border border-[#222222] px-4 text-white text-[15px] placeholder:text-[#444444] focus:border-[#ff4520] focus:outline-none transition-all duration-150',
-  large: 'text-[24px] font-black text-white text-center bg-transparent focus:outline-none w-full placeholder-[#555555]',
+  field: "h-[52px] w-full px-[14px] text-[#f0ede8] text-[16px] font-['DM_Sans'] placeholder:text-[#444444] focus:border-[#ff4520] transition-all duration-150",
+  large: "text-[24px] font-black text-[#f0ede8] text-center bg-transparent focus:outline-none w-full placeholder-[#555555] font-['Bebas_Neue'] tracking-[1px]",
 }
 
 const VARIANT_STYLES = {
-  field: { background: gradients.input, boxShadow: shadows.input },
+  field: { background: colors.surface2, border: `1.5px solid ${colors.border}`, borderRadius: radius.input },
   large: {},
 }
 
@@ -59,7 +59,7 @@ function Input({
         aria-label={label}
       />
       {unit && (
-        <span className="text-[10px] text-[#444444] mt-1 block text-center">{unit}</span>
+        <span className="text-[10px] text-[#666666] mt-1 block text-center">{unit}</span>
       )}
     </div>
   )

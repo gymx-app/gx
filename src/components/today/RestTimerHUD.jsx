@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, memo } from 'react'
 import { ProgressBar } from '../ui'
+import { colors } from '../../styles/tokens'
 
 const RestTimerHUD = memo(function RestTimerHUD({ durationSec, exerciseName, onDismiss }) {
   const [remaining, setRemaining] = useState(durationSec)
@@ -29,36 +30,33 @@ const RestTimerHUD = memo(function RestTimerHUD({ durationSec, exerciseName, onD
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-[55] border-t border-[#222222]"
+      className="fixed bottom-[72px] left-1/2 -translate-x-1/2 z-[55] flex items-center gap-3 px-[18px] py-[10px] whitespace-nowrap transition-all duration-250"
       style={{
-        background: 'linear-gradient(180deg, #141414 0%, #111111 100%)',
-        boxShadow: '0 -4px 20px rgba(0,0,0,0.7)',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        background: colors.surface,
+        border: `1.5px solid ${colors.border}`,
+        borderRadius: '16px',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
       }}
     >
-      <ProgressBar
-        progress={progressPct}
-        color={isDone ? 'success' : 'accent'}
-        height={3}
-      />
-
-      <div className="flex items-center justify-between px-4 py-3">
-        <div>
-          <p className={`text-[24px] font-black tracking-tight ${isDone ? 'text-[#22c55e]' : 'text-white'}`}>
-            {isDone ? 'GO' : timeStr}
-          </p>
-          {exerciseName && (
-            <p className="text-[11px] text-[#444444] mt-0.5">Rest — {exerciseName}</p>
-          )}
-        </div>
-        <button
-          onClick={onDismiss}
-          className="px-4 py-2 text-[12px] font-bold tracking-wider text-[#555555] active:text-white min-h-[44px]"
-          aria-label="Skip rest timer"
-        >
-          SKIP
-        </button>
+      <div>
+        <span className="font-['Bebas_Neue'] text-[13px] tracking-[1px] text-[#666666] block">REST</span>
       </div>
+      <span className={`font-['Bebas_Neue'] text-[28px] tracking-[2px] min-w-[52px] text-center ${isDone ? 'text-[#22c55e]' : 'text-[#f0ede8]'}`}>
+        {isDone ? 'GO' : timeStr}
+      </span>
+      <div className="w-[80px] h-1 bg-[#2a2a2a] rounded-[4px] overflow-hidden">
+        <div
+          className={`h-full rounded-[4px] transition-[width] duration-[0.9s] linear ${isDone ? 'bg-[#22c55e]' : 'bg-[#22c55e]'}`}
+          style={{ width: `${progressPct}%` }}
+        />
+      </div>
+      <button
+        onClick={onDismiss}
+        className="text-[11px] font-bold text-[#666666] px-2 py-1 rounded-[6px] tracking-[0.5px] active:opacity-60"
+        aria-label="Skip rest timer"
+      >
+        SKIP
+      </button>
     </div>
   )
 })
