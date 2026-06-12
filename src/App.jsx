@@ -8,6 +8,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import SplashScreen from './components/SplashScreen'
 import LoadingBar from './components/LoadingBar'
 import PWAUpdatePrompt from './components/PWAUpdatePrompt'
+import AppLayout from './components/layout/AppLayout'
 
 /**
  * Lazy import with automatic retry + hard reload on chunk load failure.
@@ -33,6 +34,9 @@ function lazyWithRetry(importFn) {
 
 const Login = lazyWithRetry(() => import('./pages/Login'))
 const Today = lazyWithRetry(() => import('./pages/Today'))
+const Progress = lazyWithRetry(() => import('./pages/Progress'))
+const Program = lazyWithRetry(() => import('./pages/Program'))
+const Account = lazyWithRetry(() => import('./pages/Account'))
 
 function AppRoutes() {
   const { user, loading } = useAuth()
@@ -66,14 +70,12 @@ function AppRoutes() {
           path="/login"
           element={user ? <Navigate to="/" replace /> : <Login />}
         />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Today />
-            </ProtectedRoute>
-          }
-        />
+        <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+          <Route path="/" element={<Today />} />
+          <Route path="/progress" element={<Progress />} />
+          <Route path="/program" element={<Program />} />
+          <Route path="/account" element={<Account />} />
+        </Route>
       </Routes>
       </Suspense>
     </>
