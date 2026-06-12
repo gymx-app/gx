@@ -27,6 +27,11 @@
   box-sizing: border-box;
 }
 
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   background-color: #0a0a0a;
   background-image: radial-gradient(ellipse at 50% 0%, rgba(255,69,32,0.03) 0%, transparent 60%);
@@ -35,10 +40,13 @@ body {
     'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   margin: 0;
-  overflow: hidden;
-  position: fixed;
-  width: 100%;
-  height: 100%;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
 }
 
 button, [role="button"] {
@@ -66,24 +74,11 @@ input, textarea, select {
   animation: slide-up 0.25s ease-out;
 }
 
-/* Safe area insets — 44px fallback for iOS PWA where env() may not resolve */
+/* Safe area insets */
 .safe-area-top {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-/*
- * Scroll offset: clears the fixed top bar.
- * TopBar = safe-area-inset-top + 56px (h-14 content).
- */
-.scroll-offset {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 56px);
-}
-
-/* Content bottom clearance: nav bar + safe area bottom */
-.content-bottom-clearance {
-  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 8px);
 }

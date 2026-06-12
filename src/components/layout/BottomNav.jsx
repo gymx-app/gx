@@ -15,12 +15,11 @@ const BottomNav = memo(function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#1a1a1a]"
+      className="border-t border-[#1a1a1a] flex-shrink-0"
       style={{
         background: gradients.nav,
         boxShadow: shadows.nav,
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
-        minHeight: 'calc(64px + env(safe-area-inset-bottom, 0px))',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
       <div className="h-16 flex justify-around items-center">

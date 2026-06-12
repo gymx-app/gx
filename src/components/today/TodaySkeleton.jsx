@@ -7,9 +7,9 @@ import { Skeleton } from '../ui'
  */
 const TodaySkeleton = memo(function TodaySkeleton() {
   return (
-    <div className="fixed inset-0 bg-[#0a0a0a] flex flex-col">
+    <>
       {/* TopBar skeleton */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0a] border-b border-[#111111] safe-area-top">
+      <div className="bg-[#0a0a0a] border-b border-[#111111] flex-shrink-0 safe-area-top">
         <div className="h-14 px-4 flex items-center justify-between">
           <Skeleton width={32} height={24} />
           <Skeleton width={160} height={12} />
@@ -17,7 +17,7 @@ const TodaySkeleton = memo(function TodaySkeleton() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden scroll-offset">
+      <div className="flex-1 overflow-hidden">
         {/* Phase card skeleton */}
         <div className="mx-4 mt-3 bg-[#111111] border border-[#1a1a1a] p-4">
           <div className="flex items-baseline justify-between">
@@ -76,7 +76,7 @@ const TodaySkeleton = memo(function TodaySkeleton() {
           ))}
         </div>
       </div>
-    </div>
+    </>
   )
 })
 
