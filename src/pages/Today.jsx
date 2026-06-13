@@ -1,8 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { useLoading } from '../hooks/useLoading'
-import { supabase } from '../lib/supabase'
-import { logger } from '../lib/logger'
 import {
   computePhaseAndWeek,
   getDayKey,
@@ -12,6 +10,7 @@ import {
 } from '../utils/programme'
 import { useTodayData } from '../hooks/useTodayData'
 import { Text, Button, Badge, SectionLabel, Toggle } from '../components/ui'
+import TopBar from '../components/layout/TopBar'
 
 import PhaseCard from '../components/today/PhaseCard'
 import WarmupSection from '../components/today/WarmupSection'
@@ -20,38 +19,35 @@ import SetLogSheet from '../components/today/SetLogSheet'
 import RestTimerHUD from '../components/today/RestTimerHUD'
 import LissDay from '../components/today/LissDay'
 import WorkoutCompleteSheet from '../components/today/WorkoutCompleteSheet'
+import CooldownSection from '../components/today/CooldownSection'
+import FinisherBlock from '../components/today/FinisherBlock'
 import TodaySkeleton from '../components/today/TodaySkeleton'
 
-// ───────────────────────────────────────────
-// Top Bar (inline — small component)
-// ───────────────────────────────────────────
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
-const TopBar = memo(function TopBar({ phase, totalWeek, syncStatus }) {
-  const now = new Date()
+function SyncIndicator({ syncStatus }) {
   const sync = syncStatus || 'synced'
   const dotColor = sync === 'synced' ? 'bg-[#22c55e]' : sync === 'saving' ? 'bg-[#f59e0b]' : 'bg-[#ef4444]'
-  const labelText = sync === 'synced' ? 'SYNCED' : sync === 'saving' ? 'SAVING' : 'OFFLINE'
-
+  const labelText = sync === 'synced' ? 'synced' : sync === 'saving' ? 'saving' : 'offline'
   return (
-    <div className="bg-[#141414] border-b border-[#2a2a2a] flex-shrink-0 safe-area-top" style={{ zIndex: 10 }}>
-      <div className="h-[52px] px-4 flex items-center justify-between">
-        <span className="font-['Bebas_Neue'] text-[20px] tracking-[2px] text-[#f0ede8]">G<span className="text-[#ff4520]">x</span></span>
-        <Text variant="label">
-          {DAYS[now.getDay()]} {now.getDate()} {MONTHS[now.getMonth()]} · W{totalWeek} · P{phase}
-        </Text>
-        <div className="flex items-center justify-end gap-1.5 min-h-[44px] min-w-[44px]">
-          <div className={`w-2 h-2 rounded-full ${dotColor} ${sync === 'saving' ? 'animate-pulse' : ''}`} style={{ transition: 'background .3s' }} />
-        </div>
-      </div>
+    <div className="flex items-center gap-[6px] min-h-[44px] min-w-[44px] justify-end">
+      <span className="text-[11px] text-[#666666]">{labelText}</span>
+      <div className={`w-2 h-2 rounded-full shrink-0 ${dotColor} ${sync === 'saving' ? 'animate-pulse' : ''}`} style={{ transition: 'background .3s' }} />
     </div>
   )
-})
+}
 
-// ───────────────────────────────────────────
-// Rest Day (inline — tiny)
-// ───────────────────────────────────────────
+function TodayTopBar({ phase, totalWeek, syncStatus }) {
+  const now = new Date()
+  return (
+    <TopBar
+      title={`${DAYS[now.getDay()]} ${now.getDate()} ${MONTHS[now.getMonth()]} · W${totalWeek} · P${phase}`}
+      rightContent={<SyncIndicator syncStatus={syncStatus} />}
+    />
+  )
+}
+
 const RestDay = memo(function RestDay({ workout }) {
   return (
     <div className="mt-4">
@@ -66,171 +62,6 @@ const RestDay = memo(function RestDay({ workout }) {
     </div>
   )
 })
-
-// ───────────────────────────────────────────
-// Finisher block
-// ───────────────────────────────────────────
-function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }) {
-  const { user } = useAuth()
-  const existing = checklistLogs.find(l => l.item_key === 'fin-main' && l.item_type === 'finisher')
-  const isLogged = existing?.completed || false
-
-  const [finInputs, setFinInputs] = useState(() => {
-    if (isLogged && existing?.notes) {
-      try { return JSON.parse(existing.notes) } catch { return {} }
-    }
-    return {}
-  })
-
-  const isCardio = fin.type === 'cardio'
-  const hasDuration = !!finInputs.duration
-
-  async function handleLogFinisher() {
-    if (isCardio && !hasDuration) return
-    if (navigator.vibrate) navigator.vibrate(50)
-
-    const notes = {}
-    if (isCardio) {
-      if (finInputs.incline) notes.incline = parseFloat(finInputs.incline)
-      if (finInputs.speed) notes.speed = parseFloat(finInputs.speed)
-      if (finInputs.duration) notes.duration = parseFloat(finInputs.duration)
-    }
-
-    await supabase.from('checklist_logs').upsert({
-      user_id: user.id,
-      date: dateStr,
-      item_type: 'finisher',
-      item_key: 'fin-main',
-      completed: true,
-      notes: JSON.stringify(notes),
-    }, { onConflict: 'user_id,date,item_key' })
-    onUpdate()
-  }
-
-  return (
-    <div className="mt-6">
-      <SectionLabel label="Finisher" className="mb-3" />
-
-      <h4 className="font-['Bebas_Neue'] text-[18px] tracking-[1.5px] text-[#ff4520] mb-[5px]">{fin.title}</h4>
-      {fin.desc && <p className="text-[13px] text-[#aaaaaa] leading-[1.6] mt-1">{fin.desc}</p>}
-
-      {fin.rounds && fin.rounds.length > 0 && (
-        <div className="mt-2">
-          {fin.rounds.map((round, i) => (
-            <p key={i} className="text-[13px] text-[#aaaaaa] leading-[1.6]">{round}</p>
-          ))}
-        </div>
-      )}
-
-      <div className="flex items-center gap-2 mt-2">
-        {fin.dur && <span className="text-[12px] text-[#666666]">{fin.dur}</span>}
-        {fin.kcal && <><span className="text-[12px] text-[#666666]">·</span><span className="text-[12px] text-[#666666]">{fin.kcal}</span></>}
-      </div>
-
-      {/* Cardio finisher: 3-input layout */}
-      {isCardio && (
-        <div className="flex gap-2 mt-4">
-          {[
-            { name: 'incline', unit: '%', placeholder: '7' },
-            { name: 'speed', unit: 'km/h', placeholder: '5.5' },
-            { name: 'duration', unit: 'min', placeholder: '20' },
-          ].map(({ name, unit, placeholder }) => (
-            <div
-              key={name}
-              className="flex-1 focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-all duration-150"
-              style={{ background: '#1c1c1c', border: '1.5px solid #2a2a2a', borderRadius: '10px' }}
-            >
-              <label className="text-[9px] font-bold tracking-[1px] uppercase text-[#666666] mb-2">
-                {name.charAt(0).toUpperCase() + name.slice(1)}
-              </label>
-              <input
-                type="number"
-                inputMode="decimal"
-                step={name === 'speed' ? '0.1' : '1'}
-                value={finInputs[name] || ''}
-                onChange={e => setFinInputs(prev => ({ ...prev, [name]: e.target.value }))}
-                readOnly={isLogged}
-                className="w-full bg-transparent text-center text-[24px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] placeholder-[#555555] focus:outline-none"
-                placeholder={placeholder}
-              />
-              <span className="text-[10px] text-[#666666] mt-1">{unit}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="mt-4">
-        <Button
-          variant={isLogged ? 'success' : 'primary'}
-          label={isLogged ? '✓ FINISHER LOGGED' : 'LOG FINISHER'}
-          onPress={handleLogFinisher}
-          disabled={isLogged || (isCardio && !hasDuration)}
-        />
-      </div>
-
-      {isLogged && isCardio && (
-        <Text variant="caption" className="text-center mt-2 font-medium">
-          {finInputs.incline && `${finInputs.incline}%`}
-          {finInputs.speed && ` · ${finInputs.speed} km/h`}
-          {finInputs.duration && ` · ${finInputs.duration} min`}
-        </Text>
-      )}
-    </div>
-  )
-}
-
-// ───────────────────────────────────────────
-// Cooldown section
-// ───────────────────────────────────────────
-function CooldownSection({ items, dateStr, checklistLogs, onUpdate }) {
-  const { user } = useAuth()
-  const completedKeys = new Set(checklistLogs.filter(l => l.completed).map(l => l.item_key))
-
-  async function toggle(key) {
-    const done = completedKeys.has(key)
-    await supabase.from('checklist_logs').upsert({
-      user_id: user.id,
-      date: dateStr,
-      item_type: 'cooldown',
-      item_key: key,
-      completed: !done,
-    }, { onConflict: 'user_id,date,item_key' })
-    onUpdate()
-  }
-
-  return (
-    <div className="mt-6 mb-4">
-      <SectionLabel label="Cooldown" className="mb-2" />
-      <div className="overflow-hidden" style={{ background: 'rgba(6,182,212,0.05)', border: '1px solid rgba(6,182,212,0.18)', borderRadius: '12px' }}>
-        {items.map((item, idx) => {
-          const key = `cd-${idx}`
-          const done = completedKeys.has(key)
-          return (
-            <button
-              key={key}
-              className={`w-full flex items-center gap-3 px-[14px] py-3 text-left transition-colors duration-150 ${
-                idx > 0 ? 'border-t border-[rgba(6,182,212,0.08)]' : ''
-              }`}
-              onClick={() => toggle(key)}
-              aria-label={`${item} — ${done ? 'completed' : 'not completed'}`}
-            >
-              <div className={`w-5 h-5 rounded-[5px] flex items-center justify-center shrink-0 transition-all duration-150 ${
-                done ? 'bg-[#22c55e] text-black' : 'text-transparent'
-              }`} style={done ? {} : { border: '1.5px solid #666666' }}>
-                <svg className="w-[11px] h-[11px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span className={`text-[13px] ${done ? 'text-[#666666] line-through opacity-40' : 'text-[#aaaaaa]'}`}>
-                {item}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
 
 // ═══════════════════════════════════════════
 // TODAY — Main Controller
@@ -297,8 +128,10 @@ export default function Today() {
 
   // ── Loading bar ──
   useEffect(() => {
-    if (loading) startLoading()
-    else stopLoading()
+    if (loading) {
+      startLoading()
+      return () => stopLoading()
+    }
   }, [loading, startLoading, stopLoading])
 
   // Wrapped refetch that flashes saving state
@@ -614,7 +447,7 @@ export default function Today() {
   // ── Render ──
   return (
     <>
-      <TopBar phase={phase} totalWeek={totalWeek} syncStatus={syncStatus} />
+      <TodayTopBar phase={phase} totalWeek={totalWeek} syncStatus={syncStatus} />
 
       <div
         className="flex-1 overflow-y-auto pb-8"
@@ -646,8 +479,9 @@ export default function Today() {
         {/* Content — with swipe slide animation */}
         <div
           ref={contentRef}
-          className="px-4 pt-5 transition-transform duration-150 ease-out"
+          className="px-4 mt-6 transition-transform duration-150 ease-out"
           style={{
+            background: 'linear-gradient(180deg, #1a1a1a, #0a0a0a)',
             transform: swipeAnim === 'left'
               ? 'translateX(-8px)'
               : swipeAnim === 'right'
@@ -688,7 +522,7 @@ export default function Today() {
           {dayType === 'workout' && (
             <>
               {/* Workout header */}
-              <p className="text-[11px] text-[#666666] uppercase tracking-[2px] mb-1">
+              <p className="text-[11px] text-[#666666] uppercase tracking-[2px] pt-2.5 mb-1">
                 {(() => {
                   const d = new Date(dateStr + 'T00:00:00')
                   return `${d.getDate()} ${MONTHS[d.getMonth()]} · WEEK ${totalWeek} · PHASE ${phase}`
@@ -787,7 +621,7 @@ export default function Today() {
           {/* No data */}
           {dayType === 'none' && (
             <div className="mt-8">
-              <Text variant="pageTitle" className="text-[#222222]">NO DATA</Text>
+              <Text variant="pageTitle" className="text-[#2a2a2a]">NO DATA</Text>
               <Text variant="bodyMuted" className="mt-2">
                 No workout defined for this day in phase {phase}.
               </Text>
