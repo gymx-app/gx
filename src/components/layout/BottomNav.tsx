@@ -19,7 +19,7 @@ function BottomNav() {
         borderTop: '1px solid #2a2a2a',
         flexShrink: 0,
         zIndex: 10,
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingBottom: 0,
       }}
     >
       <div style={{ height: 60, display: 'flex' }}>

@@ -11,10 +11,6 @@
   --dim: #666666;
   --accent: #ff4520;
 
-  --sat: env(safe-area-inset-top);
-  --sar: env(safe-area-inset-right);
-  --sab: env(safe-area-inset-bottom);
-  --sal: env(safe-area-inset-left);
   --nav-height: 60px;
 }
 
@@ -23,7 +19,7 @@
   box-sizing: border-box;
 }
 
-html, body {
+html, body, #root {
   height: 100%;
   overflow: hidden;
 }
@@ -36,6 +32,8 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   margin: 0;
+  position: fixed;
+  width: 100%;
 }
 
 .app-shell {

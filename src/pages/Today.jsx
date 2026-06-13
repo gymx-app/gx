@@ -50,7 +50,7 @@ function TodayTopBar({ phase, totalWeek, syncStatus }) {
 
 const RestDay = memo(function RestDay({ workout }) {
   return (
-    <div className="mt-4">
+    <div className="pt-2.5">
       <Text variant="pageTitle" className="text-[#666666]">{workout?.title || 'REST DAY'}</Text>
       <Text variant="bodyMuted" className="mt-2">{workout?.sub || 'Recovery · Sleep · Meal Prep'}</Text>
       <div className="mt-4 p-8 text-center" style={{ background: '#141414', border: '1px solid #2a2a2a', borderRadius: '16px' }}>

@@ -7,7 +7,7 @@ interface TopBarProps {
 
 function TopBar({ title, rightContent }: TopBarProps) {
   return (
-    <div className="bg-[#141414] border-b border-[#2a2a2a] flex-shrink-0 safe-area-top" style={{ zIndex: 10 }}>
+    <div className="bg-[#141414] border-b border-[#2a2a2a] flex-shrink-0" style={{ zIndex: 10 }}>
       <div className="h-[52px] px-4 flex items-center justify-between">
         <span className="font-['Bebas_Neue'] text-[20px] tracking-[2px] text-[#f0ede8]">
           G<span className="text-[#ff4520]">x</span>
