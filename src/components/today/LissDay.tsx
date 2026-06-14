@@ -223,6 +223,7 @@ const LissDay = memo(function LissDay({
       } catch { /* ignore parse errors */ }
     }
 
+    let cancelled = false
     async function fetchPrev() {
       const { data } = await supabase
         .from('checklist_logs')
@@ -235,11 +236,12 @@ const LissDay = memo(function LissDay({
         .order('date', { ascending: false })
         .limit(1)
 
-      if (data?.[0]?.notes) {
+      if (!cancelled && data?.[0]?.notes) {
         try { setPreviousLog(JSON.parse(data[0].notes)) } catch { /* ignore */ }
       }
     }
     fetchPrev()
+    return () => { cancelled = true }
   }, [checklistLogs, dateStr, user.id])
 
   function handleInputChange(name: string, value: string) {

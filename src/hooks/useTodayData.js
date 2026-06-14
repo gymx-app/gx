@@ -139,7 +139,9 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
         supabase.from('programme_config').select('*').eq('user_id', user.id).single(),
         supabase.from('workout_sessions')
           .select('id, date, day_of_week, phase, is_travel, completed_at')
-          .eq('user_id', user.id),
+          .eq('user_id', user.id)
+          .order('date', { ascending: false })
+          .limit(200),
         fetchDayLogs(user.id, dateStr),
         supabase.from('exercises').select('id, name'),
         supabase.from('exercise_logs')
@@ -266,24 +268,19 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
       idbCache.set('programme-config', cacheKey.config(user.id), freshConfig)
 
       // ── STEP 4: Diff — only re-render if data changed ──
-      const freshSnapshot = JSON.stringify({
-        config: freshConfig,
-        sessions: freshSessions,
-        logs: freshLogs,
-        warmupLogs: freshWarmupLogs,
-        checklistLogs: freshChecklistLogs,
-        exerciseMap: freshExMap,
-        previousBests: freshBests,
-        programme: freshProgramme,
-        phases: freshPhases,
-        dayData: freshDayData,
-        programmeExercises: freshProgrammeExercises,
-        warmupItems: freshWarmupItems,
-        cooldownItems: freshCooldownItems,
-      })
+      const freshFingerprint = [
+        freshConfig?.start_date, freshConfig?.phase_weeks,
+        freshSessions.length, freshSessions[0]?.id,
+        freshLogs.length, freshLogs[0]?.id, freshLogs[freshLogs.length - 1]?.id,
+        freshWarmupLogs.length, freshChecklistLogs.length,
+        Object.keys(freshExMap).length, Object.keys(freshBests).length,
+        freshProgramme?.id, freshPhases.length,
+        freshDayData?.id, freshProgrammeExercises?.length,
+        freshWarmupItems?.length, freshCooldownItems?.length,
+      ].join('|')
 
-      if (freshSnapshot !== snapshotRef.current) {
-        snapshotRef.current = freshSnapshot
+      if (freshFingerprint !== snapshotRef.current) {
+        snapshotRef.current = freshFingerprint
         setConfig(freshConfig)
         setSessions(freshSessions)
         setLogs(freshLogs)

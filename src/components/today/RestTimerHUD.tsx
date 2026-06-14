@@ -22,7 +22,7 @@ const RestTimerHUD = memo(function RestTimerHUD({ durationSec, exerciseName, onD
         if (navigator.vibrate) navigator.vibrate([200, 100, 200])
         setTimeout(onDismiss, 3000)
       }
-    }, 100)
+    }, 1000)
 
     return () => clearInterval(interval)
   }, [durationSec, onDismiss])

@@ -38,15 +38,19 @@ function SyncIndicator({ syncStatus }) {
   )
 }
 
-function TodayTopBar({ phase, totalWeek, syncStatus }) {
+const TodayTopBar = memo(function TodayTopBar({ phase, totalWeek, syncStatus }) {
   const now = new Date()
+  const title = useMemo(
+    () => `${DAYS[now.getDay()]} ${now.getDate()} ${MONTHS[now.getMonth()]} · W${totalWeek} · P${phase}`,
+    [phase, totalWeek]
+  )
   return (
     <TopBar
-      title={`${DAYS[now.getDay()]} ${now.getDate()} ${MONTHS[now.getMonth()]} · W${totalWeek} · P${phase}`}
+      title={title}
       rightContent={<SyncIndicator syncStatus={syncStatus} />}
     />
   )
-}
+})
 
 const RestDay = memo(function RestDay({ workout }) {
   return (
@@ -86,8 +90,9 @@ export default function Today() {
   const [isTravelMode, setIsTravelMode] = useState(false)
 
   // ── Swipe navigation ──
-  const touchRef = useRef({ startX: 0, startY: 0 })
-  const [swipeAnim, setSwipeAnim] = useState(null) // 'left' | 'right' | null
+  const touchRef = useRef({ startX: 0, startY: 0, startTime: 0, tracking: false, locked: false })
+  const [swipeX, setSwipeX] = useState(0)
+  const [swipePhase, setSwipePhase] = useState('idle') // 'idle' | 'tracking' | 'animating'
   const contentRef = useRef(null)
 
   // ── Computed dates ──
@@ -217,6 +222,16 @@ export default function Today() {
     return workout?.cd || []
   }, [cooldownItems, workout?.cd])
 
+  const logsByExercise = useMemo(() => {
+    const map = {}
+    for (const log of logs) {
+      const name = log.exercise_name
+      if (!map[name]) map[name] = []
+      map[name].push(log)
+    }
+    return map
+  }, [logs])
+
   // Determine day type
   const dayType = workout?.isRest
     ? 'rest'
@@ -316,47 +331,53 @@ export default function Today() {
   }, [])
 
   // ── Handlers ──
-  function handleSelectDay(dayLabel, dateStr, date) {
+  const handleSelectDay = useCallback((dayLabel) => {
     setSelectedDayLabel(dayLabel)
     setExpandedExercise(null)
     setActiveSheet(null)
     setScreenState('orientation')
-  }
+  }, [])
 
-  function handlePrevWeek() {
-    const newOffset = weekOffset - 1
-    setWeekOffset(newOffset)
-    const newWeekDays = getWeekDays(newOffset)
-    const sameDay = newWeekDays.find(d => d.dayLabel === selectedDayLabel)
-    if (sameDay && sameDay.dateStr > todayDateStr) {
-      setSelectedDayLabel('MON')
-    }
+  const handlePrevWeek = useCallback(() => {
+    setWeekOffset(prev => {
+      const newOffset = prev - 1
+      const newWeekDays = getWeekDays(newOffset)
+      setSelectedDayLabel(cur => {
+        const sameDay = newWeekDays.find(d => d.dayLabel === cur)
+        if (sameDay && sameDay.dateStr > todayDateStr) return 'MON'
+        return cur
+      })
+      return newOffset
+    })
     setScreenState('orientation')
-  }
+  }, [todayDateStr])
 
-  function handleNextWeek() {
-    const newOffset = weekOffset + 1
-    setWeekOffset(newOffset)
-    const newWeekDays = getWeekDays(newOffset)
-    const sameDay = newWeekDays.find(d => d.dayLabel === selectedDayLabel)
-    if (sameDay && sameDay.dateStr > todayDateStr) {
-      setSelectedDayLabel('MON')
-    }
+  const handleNextWeek = useCallback(() => {
+    setWeekOffset(prev => {
+      const newOffset = prev + 1
+      const newWeekDays = getWeekDays(newOffset)
+      setSelectedDayLabel(cur => {
+        const sameDay = newWeekDays.find(d => d.dayLabel === cur)
+        if (sameDay && sameDay.dateStr > todayDateStr) return 'MON'
+        return cur
+      })
+      return newOffset
+    })
     setScreenState('orientation')
-  }
+  }, [todayDateStr])
 
-  function handleGoToToday() {
+  const handleGoToToday = useCallback(() => {
     setWeekOffset(0)
     setSelectedDayLabel(getDayKey(new Date()))
     setExpandedExercise(null)
     setActiveSheet(null)
     setScreenState('orientation')
-  }
+  }, [])
 
-  function handleTapSet(exercise, setNumber, totalSets, prevBest, existingLog, exerciseIndex, restSec) {
+  const handleTapSet = useCallback((exercise, setNumber, totalSets, prevBest, existingLog, exerciseIndex, restSec) => {
     setActiveSheet({ exercise, setNumber, totalSets, prevBest, existingLog, exerciseIndex, restSec })
     setScreenState('active')
-  }
+  }, [])
 
   // ── Swipe day navigation ──
   const DAY_SEQ = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
@@ -391,34 +412,85 @@ export default function Today() {
     setExpandedExercise(null)
     setActiveSheet(null)
     setScreenState('orientation')
-    setSwipeAnim(direction === 'next' ? 'left' : 'right')
+    // swipe animation is driven by touch handlers
   }
 
-  function handleTouchStart(e) {
-    touchRef.current.startX = e.touches[0].clientX
-    touchRef.current.startY = e.touches[0].clientY
-  }
+  const scrollRef = useRef(null)
+  const navigateDayRef = useRef(navigateDay)
+  navigateDayRef.current = navigateDay
+  const swipePhaseRef = useRef(swipePhase)
+  swipePhaseRef.current = swipePhase
 
-  function handleTouchEnd(e) {
-    const dx = e.changedTouches[0].clientX - touchRef.current.startX
-    const dy = e.changedTouches[0].clientY - touchRef.current.startY
-    if (Math.abs(dx) > 50 && Math.abs(dy) < 30) {
-      navigateDay(dx < 0 ? 'next' : 'prev')
-    }
-  }
-
-  // Clear swipe animation after transition
   useEffect(() => {
-    if (!swipeAnim) return
-    const t = setTimeout(() => setSwipeAnim(null), 150)
-    return () => clearTimeout(t)
-  }, [swipeAnim])
+    const el = scrollRef.current
+    if (!el) return
 
-  const handleLogged = useCallback((sid) => {
+    function onTouchStart(e) {
+      if (swipePhaseRef.current === 'animating') return
+      const t = e.touches[0]
+      touchRef.current = { startX: t.clientX, startY: t.clientY, startTime: Date.now(), tracking: false, locked: false }
+    }
+
+    function onTouchMove(e) {
+      if (swipePhaseRef.current === 'animating') return
+      const ref = touchRef.current
+      const t = e.touches[0]
+      const dx = t.clientX - ref.startX
+      const dy = t.clientY - ref.startY
+
+      if (!ref.locked) {
+        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return
+        ref.locked = true
+        ref.tracking = Math.abs(dx) > Math.abs(dy) * 1.2
+        if (!ref.tracking) return
+      }
+
+      if (!ref.tracking) return
+      e.preventDefault()
+      setSwipeX(dx)
+      setSwipePhase('tracking')
+    }
+
+    function onTouchEnd(e) {
+      const ref = touchRef.current
+      if (!ref.tracking) {
+        return
+      }
+
+      const dx = e.changedTouches[0].clientX - ref.startX
+      const elapsed = Date.now() - ref.startTime
+      const velocity = Math.abs(dx) / Math.max(elapsed, 1)
+      const triggered = Math.abs(dx) > 50 || (Math.abs(dx) > 20 && velocity > 0.3)
+      const direction = dx < 0 ? 'next' : 'prev'
+
+      if (triggered) {
+        setSwipePhase('animating')
+        setSwipeX(dx < 0 ? -16 : 16)
+        setTimeout(() => {
+          navigateDayRef.current(direction)
+          setSwipeX(0)
+          setSwipePhase('idle')
+        }, 120)
+      } else {
+        setSwipeX(0)
+        setSwipePhase('idle')
+      }
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [])
+
+  const handleLogged = useCallback((sid, weight = 0) => {
     const restSec = activeSheet?.restSec || 60
     const exName = activeSheet?.exercise?.n || ''
     const setNum = activeSheet?.setNumber
-    const weight = activeSheet ? parseFloat(document.querySelector('input[type="number"]')?.value || '0') : 0
 
     setActiveSheet(null)
     setRestTimer({ duration: restSec, exerciseName: exName })
@@ -450,9 +522,8 @@ export default function Today() {
       <TodayTopBar phase={phase} totalWeek={totalWeek} syncStatus={syncStatus} />
 
       <div
+        ref={scrollRef}
         className="flex-1 overflow-y-auto pb-8"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
       >
         {/* Phase card + day pills */}
         <PhaseCard
@@ -479,14 +550,16 @@ export default function Today() {
         {/* Content — with swipe slide animation */}
         <div
           ref={contentRef}
-          className="px-4 mt-6 transition-transform duration-150 ease-out"
+          className="px-4 mt-6"
           style={{
             background: 'linear-gradient(180deg, #1a1a1a, #0a0a0a)',
-            transform: swipeAnim === 'left'
-              ? 'translateX(-8px)'
-              : swipeAnim === 'right'
-              ? 'translateX(8px)'
+            transform: swipePhase === 'tracking'
+              ? `translateX(${Math.sign(swipeX) * Math.min(Math.abs(swipeX) * 0.3, 40)}px)`
+              : swipePhase === 'animating'
+              ? `translateX(${swipeX}px)`
               : 'translateX(0)',
+            opacity: swipePhase === 'tracking' ? Math.max(0.7, 1 - Math.abs(swipeX) / 800) : 1,
+            transition: swipePhase === 'tracking' ? 'none' : 'transform 120ms ease-out, opacity 120ms ease-out',
           }}
         >
           {/* Error */}
@@ -587,7 +660,7 @@ export default function Today() {
                     key={`${ex.n}-${idx}`}
                     exercise={ex}
                     exerciseIndex={idx}
-                    exerciseLogs={logs.filter(l => l.exercise_name === ex.n)}
+                    exerciseLogs={logsByExercise[ex.n] || []}
                     previousBest={previousBests[ex.n]}
                     isExpanded={expandedExercise === idx}
                     onToggleExpand={() => setExpandedExercise(expandedExercise === idx ? null : idx)}

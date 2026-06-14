@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useRef, memo, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useRef, useEffect, memo, type ReactNode } from 'react'
 
 type ToastType = 'success' | 'error' | 'warning' | 'info'
 
@@ -28,15 +28,25 @@ const MAX_TOASTS = 3
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
   const idRef = useRef(0)
+  const timersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
+
+  useEffect(() => {
+    return () => {
+      timersRef.current.forEach(tid => clearTimeout(tid))
+      timersRef.current.clear()
+    }
+  }, [])
 
   const show = useCallback(({ message, type = 'info', duration = 3000 }: { message: string; type?: ToastType; duration?: number }) => {
     const id = ++idRef.current
     setToasts(prev => [...prev.slice(-(MAX_TOASTS - 1)), { id, message, type, duration }])
 
     if (duration > 0) {
-      setTimeout(() => {
+      const tid = setTimeout(() => {
         setToasts(prev => prev.filter(t => t.id !== id))
+        timersRef.current.delete(id)
       }, duration)
+      timersRef.current.set(id, tid)
     }
     return id
   }, [])

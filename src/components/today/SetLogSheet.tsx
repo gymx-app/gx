@@ -34,7 +34,7 @@ interface SetLogSheetProps {
   exerciseIndex: number
   exerciseMap: Record<string, string>
   onClose: () => void
-  onLogged: (sessionId: string) => void
+  onLogged: (sessionId: string, weight: number) => void
 }
 
 const RPE_COLORS: Record<number, string> = {
@@ -113,7 +113,7 @@ const SetLogSheet = memo(function SetLogSheet({
       })
       if (logErr) throw new Error(logErr)
 
-      onLogged(sid!)
+      onLogged(sid!, parseFloat(weight))
     } catch (err) {
       logger.error('SetLogSheet error:', err)
       setSaving(false)
