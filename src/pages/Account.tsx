@@ -1,53 +1,264 @@
-import { useState } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import TopBar from '../components/layout/TopBar'
 import { useAuth } from '../auth/AuthContext'
-import { Button } from '../components/ui'
+import { BottomSheet } from '../components/ui'
 import { colors } from '../styles/tokens'
+import { Heart, Bell, ShieldCheck, Link, Trash2, LogOut, ChevronRight } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { version } from '../../package.json'
+
+const DESTRUCTIVE_COLOR = '#FF3B30'
+
+function getInitials(email: string, fullName?: string): string {
+  if (fullName) {
+    const parts = fullName.trim().split(/\s+/)
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    return parts[0][0].toUpperCase()
+  }
+  return email[0].toUpperCase()
+}
+
+function getDisplayName(email: string, fullName?: string): string {
+  if (fullName) return fullName
+  return email.split('@')[0]
+}
+
+interface AccountRowProps {
+  label: string
+  icon: LucideIcon
+  onPress: () => void
+  destructive?: boolean
+  showDivider?: boolean
+}
+
+function AccountRow({ label, icon: Icon, onPress, destructive, showDivider = true }: AccountRowProps) {
+  const iconColor = destructive ? DESTRUCTIVE_COLOR : colors.muted
+  const textColor = destructive ? DESTRUCTIVE_COLOR : colors.text
+
+  return (
+    <button
+      onClick={onPress}
+      className="w-full flex items-center gap-3 active:opacity-60 transition-opacity duration-100"
+      style={{
+        background: 'transparent',
+        border: 'none',
+        borderBottom: showDivider ? `1px solid ${colors.border}` : 'none',
+        padding: '14px 16px',
+        minHeight: 52,
+        cursor: 'pointer',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+    >
+      <Icon size={20} strokeWidth={1.5} color={iconColor} style={{ flexShrink: 0 }} />
+      <span
+        className="font-['DM_Sans'] text-[14px] flex-1 text-left"
+        style={{ color: textColor }}
+      >
+        {label}
+      </span>
+      <ChevronRight size={16} color={colors.muted} style={{ flexShrink: 0 }} />
+    </button>
+  )
+}
+
+function SectionHeader({ children }: { children: string }) {
+  return (
+    <p
+      className="font-['DM_Sans'] font-bold uppercase tracking-[2px]"
+      style={{ fontSize: 11, color: colors.muted, paddingTop: 24, paddingBottom: 8, paddingLeft: 4 }}
+    >
+      {children}
+    </p>
+  )
+}
+
+interface SectionConfig {
+  title: string
+  items: {
+    label: string
+    icon: LucideIcon
+    onPress: () => void
+    destructive?: boolean
+  }[]
+}
 
 export default function Account() {
   const { user, signOut } = useAuth()
   const [loggingOut, setLoggingOut] = useState(false)
+  const [confirmSheet, setConfirmSheet] = useState<'signout' | 'delete' | null>(null)
 
-  async function handleLogout() {
+  const handleSignOut = useCallback(async () => {
+    setConfirmSheet(null)
     setLoggingOut(true)
     try {
       await signOut()
     } finally {
       setLoggingOut(false)
     }
-  }
+  }, [signOut])
+
+  const handleDeleteData = useCallback(async () => {
+    setConfirmSheet(null)
+    setLoggingOut(true)
+    try {
+      await signOut()
+    } finally {
+      setLoggingOut(false)
+    }
+  }, [signOut])
+
+  const sections: SectionConfig[] = useMemo(() => [
+    {
+      title: 'APP SETTINGS',
+      items: [
+        { label: 'Health Details', icon: Heart, onPress: () => {} },
+        { label: 'Notifications', icon: Bell, onPress: () => {} },
+        { label: 'Privacy', icon: ShieldCheck, onPress: () => {} },
+      ],
+    },
+    {
+      title: 'CONNECTED',
+      items: [
+        { label: 'Linked Apps', icon: Link, onPress: () => {} },
+      ],
+    },
+    {
+      title: 'ACCOUNT',
+      items: [
+        { label: 'Delete App Data', icon: Trash2, onPress: () => setConfirmSheet('delete'), destructive: true },
+        { label: loggingOut ? 'Signing out…' : 'Sign Out', icon: LogOut, onPress: () => setConfirmSheet('signout'), destructive: true },
+      ],
+    },
+  ], [loggingOut])
+
+  const email = user?.email ?? ''
+  const fullName = user?.user_metadata?.full_name as string | undefined
+  const initials = getInitials(email, fullName)
+  const displayName = getDisplayName(email, fullName)
 
   return (
     <>
       <TopBar title="ACCOUNT" />
-      <div className="flex-1 overflow-y-auto pb-8 flex flex-col items-center justify-center px-6 gap-6">
-        <div
-          className="w-full max-w-[320px] p-8 text-center"
-          style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: '16px' }}
-        >
-          <p className="text-[40px] mb-3">⚙️</p>
-          <h2 className="font-['Bebas_Neue'] text-[22px] tracking-[2px] text-[#f0ede8] mb-2">ACCOUNT</h2>
-          {user?.email && (
-            <p className="text-[13px] text-[#888888] mb-3 break-all">{user.email}</p>
-          )}
-          <p className="text-[13px] text-[#666666] leading-[1.6]">
-            Manage your profile, preferences, and programme settings.
-          </p>
-          <p className="text-[11px] text-[#444444] mt-3">Coming soon</p>
-          {user?.id && (
-            <p className="text-[10px] text-[#333333] mt-2 break-all font-mono">uid: {user.id}</p>
-          )}
-        </div>
+      <div className="flex-1 overflow-y-auto px-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
 
-        <div className="w-full max-w-[320px]">
-          <Button
-            variant="danger"
-            label="Log Out"
-            onPress={handleLogout}
-            loading={loggingOut}
-          />
-        </div>
+        {/* Profile card */}
+        <button
+          className="w-full flex items-center gap-4 active:opacity-70 transition-opacity duration-100 mt-4"
+          style={{
+            background: colors.surface,
+            border: `1px solid ${colors.border}`,
+            borderRadius: 16,
+            padding: '16px 16px',
+            cursor: 'pointer',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          {user?.user_metadata?.avatar_url ? (
+            <img
+              src={user.user_metadata.avatar_url as string}
+              alt=""
+              className="rounded-full"
+              style={{ width: 48, height: 48, objectFit: 'cover', flexShrink: 0 }}
+            />
+          ) : (
+            <div
+              className="flex items-center justify-center rounded-full font-['Bebas_Neue'] text-[20px] tracking-[1px]"
+              style={{ width: 48, height: 48, background: colors.accent, color: '#ffffff', flexShrink: 0 }}
+            >
+              {initials}
+            </div>
+          )}
+          <div className="flex-1 text-left min-w-0">
+            <p className="font-['DM_Sans'] text-[16px] font-medium truncate" style={{ color: colors.text }}>
+              {displayName}
+            </p>
+            <p className="font-['DM_Sans'] text-[13px] truncate" style={{ color: colors.muted }}>
+              {email}
+            </p>
+          </div>
+          <ChevronRight size={16} color={colors.muted} style={{ flexShrink: 0 }} />
+        </button>
+
+        {/* Sections */}
+        {sections.map((section) => (
+          <div key={section.title}>
+            <SectionHeader>{section.title}</SectionHeader>
+            <div style={{ background: colors.surface, borderRadius: 14, overflow: 'hidden', border: `1px solid ${colors.border}` }}>
+              {section.items.map((item, i) => (
+                <AccountRow
+                  key={item.label}
+                  label={item.label}
+                  icon={item.icon}
+                  onPress={item.onPress}
+                  destructive={item.destructive}
+                  showDivider={i < section.items.length - 1}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {/* Footer */}
+        <footer className="text-center mt-12" style={{ opacity: 0.5 }}>
+          <p className="font-['DM_Sans']" style={{ fontSize: 11, color: colors.muted }}>
+            v{version} · Viking Wellness Technology Pvt. Ltd.
+          </p>
+        </footer>
       </div>
+
+      {/* Sign Out confirmation */}
+      <BottomSheet isOpen={confirmSheet === 'signout'} onClose={() => setConfirmSheet(null)}>
+        <div className="p-6 text-center">
+          <LogOut size={32} color={colors.muted} className="mx-auto mb-3" />
+          <h3 className="font-['Bebas_Neue'] text-[22px] tracking-[2px] text-[#f0ede8] mb-2">SIGN OUT</h3>
+          <p className="text-[13px] text-[#888888] mb-6">
+            Are you sure you want to sign out? Your cached data will be cleared.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setConfirmSheet(null)}
+              className="flex-1 py-3 font-['Bebas_Neue'] text-[16px] tracking-[1px] text-[#888888] active:opacity-70"
+              style={{ background: colors.surface2, borderRadius: 12, border: 'none' }}
+            >
+              CANCEL
+            </button>
+            <button
+              onClick={handleSignOut}
+              className="flex-1 py-3 font-['Bebas_Neue'] text-[16px] tracking-[1px] text-[#f0ede8] active:opacity-70"
+              style={{ background: DESTRUCTIVE_COLOR, borderRadius: 12, border: 'none' }}
+            >
+              SIGN OUT
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
+
+      {/* Delete Data confirmation */}
+      <BottomSheet isOpen={confirmSheet === 'delete'} onClose={() => setConfirmSheet(null)}>
+        <div className="p-6 text-center">
+          <Trash2 size={32} color={colors.error} className="mx-auto mb-3" />
+          <h3 className="font-['Bebas_Neue'] text-[22px] tracking-[2px] text-[#f0ede8] mb-2">DELETE ALL DATA</h3>
+          <p className="text-[13px] text-[#888888] mb-6">
+            This will permanently delete all your workout logs, programme data and body measurements. This cannot be undone.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setConfirmSheet(null)}
+              className="flex-1 py-3 font-['Bebas_Neue'] text-[16px] tracking-[1px] text-[#888888] active:opacity-70"
+              style={{ background: colors.surface2, borderRadius: 12, border: 'none' }}
+            >
+              CANCEL
+            </button>
+            <button
+              onClick={handleDeleteData}
+              className="flex-1 py-3 font-['Bebas_Neue'] text-[16px] tracking-[1px] text-[#f0ede8] active:opacity-70"
+              style={{ background: colors.error, borderRadius: 12, border: 'none' }}
+            >
+              DELETE
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
     </>
   )
 }
