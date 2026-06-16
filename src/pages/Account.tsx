@@ -3,6 +3,7 @@ import TopBar from '../components/layout/TopBar'
 import { useAuth } from '../auth/AuthContext'
 import { BottomSheet } from '../components/ui'
 import ProfileEditSheet from '../components/ProfileEditSheet'
+import HealthDetailsSheet from '../components/HealthDetailsSheet'
 import { colors } from '../styles/tokens'
 import { Heart, Bell, ShieldCheck, Link, Trash2, LogOut, ChevronRight } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -88,6 +89,7 @@ export default function Account() {
   const [loggingOut, setLoggingOut] = useState(false)
   const [confirmSheet, setConfirmSheet] = useState<'signout' | 'delete' | null>(null)
   const [profileSheetOpen, setProfileSheetOpen] = useState(false)
+  const [healthDetailsOpen, setHealthDetailsOpen] = useState(false)
   const [displayProfile, setDisplayProfile] = useState<{ first_name: string; last_name: string } | null>(null)
 
   const handleSignOut = useCallback(async () => {
@@ -114,7 +116,7 @@ export default function Account() {
     {
       title: 'APP SETTINGS',
       items: [
-        { label: 'Health Details', icon: Heart, onPress: () => {} },
+        { label: 'Health Details', icon: Heart, onPress: () => setHealthDetailsOpen(true) },
         { label: 'Notifications', icon: Bell, onPress: () => {} },
         { label: 'Privacy', icon: ShieldCheck, onPress: () => {} },
       ],
@@ -270,6 +272,12 @@ export default function Account() {
         open={profileSheetOpen}
         onClose={() => setProfileSheetOpen(false)}
         onProfileUpdate={(profile) => setDisplayProfile(profile)}
+      />
+
+      {/* Health Details Sheet */}
+      <HealthDetailsSheet
+        open={healthDetailsOpen}
+        onClose={() => setHealthDetailsOpen(false)}
       />
     </>
   )
