@@ -9,7 +9,7 @@ import {
 } from '../utils/programme'
 import { useTodayData } from '../hooks/useTodayData'
 import { getPendingCount } from '../services/syncQueue'
-import { Text, Button, Badge, SectionLabel, Toggle } from '../components/ui'
+import { Text, Button, Badge, SectionLabel } from '../components/ui'
 import TopBar from '../components/layout/TopBar'
 
 import PhaseCard from '../components/today/PhaseCard'
@@ -99,7 +99,6 @@ export default function Today() {
   const [activeSheet, setActiveSheet] = useState(null)
   const [restTimer, setRestTimer] = useState(null)
   const [completedSets, setCompletedSets] = useState({})
-  const [isTravelMode, setIsTravelMode] = useState(false)
 
   // ── Swipe navigation ──
   const touchRef = useRef({ startX: 0, startY: 0, startTime: 0, tracking: false, locked: false })
@@ -577,8 +576,6 @@ export default function Today() {
               totalWeek={totalWeek}
               checklistLogs={checklistLogs}
               cooldownItems={cooldownItems}
-              isTravelMode={isTravelMode}
-              onToggleTravel={() => setIsTravelMode(p => !p)}
               onUpdate={syncRefetch}
             />
           )}
@@ -616,19 +613,6 @@ export default function Today() {
                 {workout.tags?.map(tag => (
                   <Badge key={tag} label={tag} />
                 ))}
-              </div>
-
-              {/* Travel toggle */}
-              <div
-                className="flex items-center justify-between mt-3 py-[14px] px-[14px] cursor-pointer active:scale-[0.98] transition-transform duration-150"
-                style={{ background: 'rgba(6,182,212,0.06)', border: '1.5px solid rgba(6,182,212,0.2)', borderRadius: '14px' }}
-                onClick={() => setIsTravelMode(p => !p)}
-              >
-                <div className="flex-1 min-w-0">
-                  <span className="text-[13px] font-bold text-[#06b6d4] tracking-[0.3px]">✈ Travel Mode</span>
-                  <p className="text-[11px] text-[#666666] mt-0.5">Swap gym gear for bodyweight</p>
-                </div>
-                <Toggle value={isTravelMode} onChange={() => setIsTravelMode(p => !p)} />
               </div>
 
               {/* Warmup */}

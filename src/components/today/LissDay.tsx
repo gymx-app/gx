@@ -3,7 +3,7 @@ import { useAuth } from '../../auth/AuthContext'
 import { upsertChecklistLog } from '../../services/checklistService'
 import { supabase } from '../../lib/supabase'
 import { logger } from '../../lib/logger'
-import { Text, Button, Badge, SectionLabel, Toggle } from '../ui'
+import { Text, Button, Badge, SectionLabel } from '../ui'
 import CooldownSection from './CooldownSection'
 import { colors, radius } from '../../styles/tokens'
 
@@ -113,7 +113,6 @@ const EQUIPMENT_CONFIG: Record<string, EquipmentConfig> = {
 }
 
 const GYM_OPTIONS = ['treadmill', 'crosstrainer', 'bike', 'rowing', 'stairmaster']
-const TRAVEL_OPTIONS = ['walking', 'swimming']
 
 interface ChecklistLog {
   item_key: string
@@ -149,8 +148,6 @@ interface LissDayProps {
   totalWeek: number
   checklistLogs: ChecklistLog[]
   cooldownItems: CooldownItem[]
-  isTravelMode: boolean
-  onToggleTravel: () => void
   onUpdate: () => void
 }
 
@@ -162,8 +159,6 @@ const LissDay = memo(function LissDay({
   totalWeek,
   checklistLogs,
   cooldownItems: dbCooldownItems,
-  isTravelMode,
-  onToggleTravel,
   onUpdate,
 }: LissDayProps) {
   const { user } = useAuth()
@@ -180,23 +175,13 @@ const LissDay = memo(function LissDay({
   const duration = dayData?.duration_min ? String(dayData.duration_min) : workout?.dur
   const tags = dayData?.tags || workout?.tags
 
-  const equipmentOptions = isTravelMode ? TRAVEL_OPTIONS : GYM_OPTIONS
-  const defaultEquipment = isTravelMode ? 'walking' : 'treadmill'
+  const equipmentOptions = GYM_OPTIONS
+  const defaultEquipment = 'treadmill'
 
   const [selectedEquipment, setSelectedEquipment] = useState(defaultEquipment)
   const [inputValues, setInputValues] = useState<Record<string, string>>({})
   const [isLogged, setIsLogged] = useState(false)
   const [previousLog, setPreviousLog] = useState<Record<string, unknown> | null>(null)
-
-  useEffect(() => {
-    if (isTravelMode && !TRAVEL_OPTIONS.includes(selectedEquipment)) {
-      setSelectedEquipment('walking')
-      setInputValues({})
-    } else if (!isTravelMode && !GYM_OPTIONS.includes(selectedEquipment)) {
-      setSelectedEquipment('treadmill')
-      setInputValues({})
-    }
-  }, [isTravelMode, selectedEquipment])
 
   const config = EQUIPMENT_CONFIG[selectedEquipment]
 
@@ -301,18 +286,6 @@ const LissDay = memo(function LissDay({
         {tags?.map(tag => (
           <Badge key={tag} label={tag} />
         ))}
-      </div>
-
-      <div
-        className="flex items-center justify-between mt-3 py-[14px] px-[14px] cursor-pointer active:scale-[0.98] transition-transform duration-150"
-        style={{ background: 'rgba(6,182,212,0.06)', border: '1.5px solid rgba(6,182,212,0.2)', borderRadius: '14px' }}
-        onClick={onToggleTravel}
-      >
-        <div className="flex-1 min-w-0">
-          <span className="text-[13px] font-bold text-[#06b6d4] tracking-[0.3px]">✈ Travel Mode</span>
-          <p className="text-[11px] text-[#666666] mt-0.5">Swap gym gear for bodyweight</p>
-        </div>
-        <Toggle value={isTravelMode} onChange={onToggleTravel} />
       </div>
 
       <div className="mt-5">

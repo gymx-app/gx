@@ -177,7 +177,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
         // Need sessions to compute phase — fetch at P1 since we need it here
         const sessRes = await enqueue(`sessions_${user.id}`, PRIORITY.HIGH, () =>
           supabase.from('workout_sessions')
-            .select('id, date, day_of_week, phase, is_travel, completed_at')
+            .select('id, date, day_of_week, phase, completed_at')
             .eq('user_id', user.id)
             .order('date', { ascending: false })
             .limit(200)
@@ -264,7 +264,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
         fetchPromises.push(
           enqueue(`sessions_${user.id}`, PRIORITY.NORMAL, () =>
             supabase.from('workout_sessions')
-              .select('id, date, day_of_week, phase, is_travel, completed_at')
+              .select('id, date, day_of_week, phase, completed_at')
               .eq('user_id', user.id)
               .order('date', { ascending: false })
               .limit(200)
