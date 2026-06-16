@@ -56,17 +56,19 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
 
   const snapshotRef = useRef('')
   const prefetchedRef = useRef(new Set())
+  const isFirstMount = useRef(true)
 
   // ── STEP 1: Load from IDB cache (instant) ──
   const loadFromCache = useCallback(async () => {
     if (!user?.id || !dateStr) return false
 
     try {
-      const [cachedDay, cachedSessions, cachedExercises, cachedConfig] = await Promise.all([
+      const [cachedDay, cachedSessions, cachedExercises, cachedConfig, cachedContext] = await Promise.all([
         idbCache.get('workout-data', cacheKey.workout(user.id, dateStr)),
         idbCache.get('week-sessions', cacheKey.sessions(user.id, weekStartStr)),
         idbCache.get('exercises', cacheKey.exercises(user.id)),
         idbCache.get('programme-config', cacheKey.config(user.id)),
+        idbCache.get('programme-context', user.id),
       ])
 
       if (cachedDay && cachedConfig) {
@@ -79,6 +81,37 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
         if (cachedExercises) setExerciseMap(cachedExercises)
         setConfig(cachedConfig)
 
+        // Restore programme structure from cache
+        if (cachedContext?.programme && cachedContext?.phases?.length > 0 && selectedDayLabel) {
+          setProgramme(cachedContext.programme)
+          setPhases(cachedContext.phases)
+
+          const phaseInfo = computePhaseAndWeek(cachedSessions || [], {
+            start_date: cachedConfig.start_date,
+            phase_weeks: cachedConfig.phase_weeks,
+            min_active_days: cachedConfig.min_active_days,
+          })
+          const currentPhase = cachedContext.phases.find(p => p.phase_number === phaseInfo.phase)
+
+          if (currentPhase) {
+            const cachedDayData = await idbCache.get('programme-day', cacheKey.programmeDay(currentPhase.id, selectedDayLabel))
+            if (cachedDayData) {
+              setDayData(cachedDayData)
+
+              const isWorkout = cachedDayData.workout_type === 'workout'
+              const [cachedProgExercises, cachedWarmup, cachedCooldown] = await Promise.all([
+                isWorkout ? idbCache.get('programme-exercises', cacheKey.programmeExercises(cachedDayData.id)) : null,
+                idbCache.get('warmup-items', cacheKey.warmupItems(cachedContext.programme.id)),
+                isWorkout && cachedDayData.id ? idbCache.get('cooldown-items', cacheKey.cooldownItems(cachedDayData.id)) : null,
+              ])
+
+              if (cachedProgExercises) setProgrammeExercises(cachedProgExercises)
+              if (cachedWarmup) setWarmupItems(cachedWarmup)
+              if (cachedCooldown) setCooldownItems(cachedCooldown)
+            }
+          }
+        }
+
         setHasCachedData(true)
         setLoading(false)
         return true
@@ -88,7 +121,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
     }
 
     return false
-  }, [user?.id, dateStr, weekStartStr])
+  }, [user?.id, dateStr, weekStartStr, selectedDayLabel])
 
   // ── STEP 2: Priority-queued network fetch ──
   const fetchFromNetwork = useCallback(async () => {
@@ -138,6 +171,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
       let freshProgrammeExercises = null
       let freshWarmupItems = null
       let freshCooldownItems = null
+      let sessionsFetched = null
 
       if (freshProgramme && freshPhases.length > 0 && selectedDayLabel) {
         // Need sessions to compute phase — fetch at P1 since we need it here
@@ -148,7 +182,8 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
             .order('date', { ascending: false })
             .limit(200)
         )
-        const freshSessions = sessRes.data || []
+        sessionsFetched = sessRes.data || []
+        const freshSessions = sessionsFetched
 
         const phaseInfo = computePhaseAndWeek(freshSessions, {
           start_date: freshConfig.start_date,
@@ -212,8 +247,8 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
         freshExMap[row.name] = row.id
       }
 
-      // ── P2 NORMAL: previous bests + sessions (if not already fetched) ──
-      const [prevRes, sessRes2] = await Promise.all([
+      // ── P2 NORMAL: previous bests (+ sessions if not already fetched at P1) ──
+      const fetchPromises = [
         enqueue(`bests_${user.id}_${dateStr}`, PRIORITY.NORMAL, () =>
           supabase.from('exercise_logs')
             .select('exercise_name, weight_kg, reps, date')
@@ -224,14 +259,21 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
             .lt('date', dateStr)
             .order('date', { ascending: false })
         ),
-        enqueue(`sessions_${user.id}`, PRIORITY.NORMAL, () =>
-          supabase.from('workout_sessions')
-            .select('id, date, day_of_week, phase, is_travel, completed_at')
-            .eq('user_id', user.id)
-            .order('date', { ascending: false })
-            .limit(200)
-        ),
-      ])
+      ]
+      if (!sessionsFetched) {
+        fetchPromises.push(
+          enqueue(`sessions_${user.id}`, PRIORITY.NORMAL, () =>
+            supabase.from('workout_sessions')
+              .select('id, date, day_of_week, phase, is_travel, completed_at')
+              .eq('user_id', user.id)
+              .order('date', { ascending: false })
+              .limit(200)
+          )
+        )
+      }
+
+      const fetchResults = await Promise.all(fetchPromises)
+      const prevRes = fetchResults[0]
 
       const freshBests = {}
       for (const log of (prevRes.data || [])) {
@@ -240,7 +282,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
         }
       }
 
-      const freshSessions = sessRes2.data || []
+      const freshSessions = sessionsFetched || (fetchResults[1]?.data || [])
 
       // ── Write to IDB cache (non-blocking) ──
       const dayPayload = {
@@ -364,10 +406,18 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
     let cancelled = false
 
     async function load() {
-      setLoading(true)
       snapshotRef.current = ''
 
-      await loadFromCache()
+      if (isFirstMount.current) {
+        const hasCache = await loadFromCache()
+        isFirstMount.current = false
+        if (!hasCache) {
+          setLoading(true)
+        }
+      } else {
+        setLoading(true)
+        await loadFromCache()
+      }
 
       if (!cancelled) {
         await fetchFromNetwork()

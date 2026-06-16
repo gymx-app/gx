@@ -9,6 +9,11 @@ import SplashScreen from './components/SplashScreen'
 import LoadingBar from './components/LoadingBar'
 import PWAUpdatePrompt from './components/PWAUpdatePrompt'
 import AppLayout from './components/layout/AppLayout'
+import { checkCacheVersion } from './services/cacheVersion'
+import { initNetworkQuality } from './services/networkQuality'
+
+checkCacheVersion()
+initNetworkQuality()
 
 function lazyWithRetry(importFn: () => Promise<{ default: ComponentType }>) {
   return lazy(() =>
@@ -61,12 +66,16 @@ function AppRoutes() {
           path="/login"
           element={user ? <Navigate to="/" replace /> : <Login />}
         />
-        <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-          <Route path="/" element={<Today />} />
-          <Route path="/progress" element={<Progress />} />
-          <Route path="/program" element={<Program />} />
-          <Route path="/account" element={<Account />} />
-        </Route>
+        <Route path="/*" element={
+          <ProtectedRoute>
+            <AppLayout tabs={[
+              { path: '/', element: <Today /> },
+              { path: '/program', element: <Program /> },
+              { path: '/progress', element: <Progress /> },
+              { path: '/account', element: <Account /> },
+            ]} />
+          </ProtectedRoute>
+        } />
       </Routes>
       </Suspense>
     </>

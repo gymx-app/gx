@@ -1,4 +1,5 @@
 import { logger } from '../lib/logger'
+import { memCache } from './memoryCache'
 
 const DB_NAME = 'gx-cache'
 const DB_VERSION = 3
@@ -69,6 +70,10 @@ function openDB() {
  * @returns {Promise<any|null>} The cached data, or null
  */
 export async function get(store, key) {
+  const memKey = `${store}:${key}`
+  const memHit = memCache.get(memKey)
+  if (memHit !== null) return memHit
+
   try {
     const db = await openDB()
     return new Promise((resolve) => {
@@ -81,11 +86,11 @@ export async function get(store, key) {
 
         const ttl = TTL[store] || 0
         if (ttl > 0 && Date.now() - entry.timestamp > ttl) {
-          // Expired — return null but don't block on delete
           resolve(null)
           return
         }
 
+        memCache.set(memKey, entry.data, ttl || 5 * 60 * 1000)
         resolve(entry.data)
       }
       req.onerror = () => resolve(null)
@@ -102,6 +107,10 @@ export async function get(store, key) {
  * @param {any} data - Data to cache
  */
 export async function set(store, key, data) {
+  const memKey = `${store}:${key}`
+  const ttl = TTL[store] || 5 * 60 * 1000
+  memCache.set(memKey, data, ttl)
+
   try {
     const db = await openDB()
     return new Promise((resolve) => {
@@ -121,6 +130,7 @@ export async function set(store, key, data) {
  * @param {string} key - Cache key
  */
 export async function invalidate(store, key) {
+  memCache.delete(`${store}:${key}`)
   try {
     const db = await openDB()
     return new Promise((resolve) => {
@@ -139,6 +149,7 @@ export async function invalidate(store, key) {
  * to prevent data leaking between accounts on the same device.
  */
 export async function clearAll() {
+  memCache.clear()
   try {
     const db = await openDB()
 

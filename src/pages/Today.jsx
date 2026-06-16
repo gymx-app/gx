@@ -8,6 +8,7 @@ import {
   toDateStr,
 } from '../utils/programme'
 import { useTodayData } from '../hooks/useTodayData'
+import { getPendingCount } from '../services/syncQueue'
 import { Text, Button, Badge, SectionLabel, Toggle } from '../components/ui'
 import TopBar from '../components/layout/TopBar'
 
@@ -25,19 +26,31 @@ import TodaySkeleton from '../components/today/TodaySkeleton'
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
-function SyncIndicator({ syncStatus }) {
+function SyncIndicator({ syncStatus, pendingCount = 0 }) {
   const sync = syncStatus || 'synced'
-  const dotColor = sync === 'synced' ? 'bg-[#22c55e]' : sync === 'saving' ? 'bg-[#f59e0b]' : 'bg-[#ef4444]'
-  const labelText = sync === 'synced' ? 'synced' : sync === 'saving' ? 'saving' : 'offline'
+  const isOffline = !navigator.onLine
+  const effectiveSync = isOffline ? 'offline' : sync
+
+  const dotColor = effectiveSync === 'synced' ? 'bg-[#22c55e]'
+    : effectiveSync === 'saving' ? 'bg-[#f59e0b]'
+    : effectiveSync === 'offline' ? 'bg-[#666666]'
+    : 'bg-[#ef4444]'
+  const labelText = effectiveSync === 'synced'
+    ? (pendingCount > 0 ? `${pendingCount} pending` : 'synced')
+    : effectiveSync === 'saving' ? 'saving'
+    : effectiveSync === 'offline' ? 'offline'
+    : 'error'
+  const shouldPulse = effectiveSync === 'saving' || (effectiveSync === 'synced' && pendingCount > 0)
+
   return (
     <div className="flex items-center gap-[6px] min-h-[44px] min-w-[44px] justify-end">
       <span className="text-[11px] text-[#666666]">{labelText}</span>
-      <div className={`w-2 h-2 rounded-full shrink-0 ${dotColor} ${sync === 'saving' ? 'animate-pulse' : ''}`} style={{ transition: 'background .3s' }} />
+      <div className={`w-2 h-2 rounded-full shrink-0 ${dotColor} ${shouldPulse ? 'animate-pulse' : ''}`} style={{ transition: 'background .3s' }} />
     </div>
   )
 }
 
-const TodayTopBar = memo(function TodayTopBar({ phase, totalWeek, syncStatus }) {
+const TodayTopBar = memo(function TodayTopBar({ phase, totalWeek, syncStatus, pendingCount }) {
   const now = new Date()
   const title = useMemo(
     () => `${DAYS[now.getDay()]} ${now.getDate()} ${MONTHS[now.getMonth()]} · W${totalWeek} · P${phase}`,
@@ -46,7 +59,7 @@ const TodayTopBar = memo(function TodayTopBar({ phase, totalWeek, syncStatus }) 
   return (
     <TopBar
       title={title}
-      rightContent={<SyncIndicator syncStatus={syncStatus} />}
+      rightContent={<SyncIndicator syncStatus={syncStatus} pendingCount={pendingCount} />}
     />
   )
 })
@@ -498,7 +511,7 @@ export default function Today() {
   // ── Render ──
   return (
     <>
-      <TodayTopBar phase={phase} totalWeek={totalWeek} syncStatus={syncStatus} />
+      <TodayTopBar phase={phase} totalWeek={totalWeek} syncStatus={syncStatus} pendingCount={getPendingCount()} />
 
       <div
         ref={scrollRef}
