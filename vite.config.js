@@ -3,8 +3,13 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const buildVersion = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12)
+
 export default defineConfig({
   base: '/gx/',
+  define: {
+    __BUILD_VERSION__: JSON.stringify(buildVersion),
+  },
   test: {
     environment: 'jsdom',
     globals: true,

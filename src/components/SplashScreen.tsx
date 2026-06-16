@@ -9,6 +9,7 @@ const MESSAGES = [
 ]
 
 const UPDATE_MESSAGE = 'Updating to latest version'
+const BUILD_VERSION = __BUILD_VERSION__
 
 export default function SplashScreen() {
   const [msgIndex, setMsgIndex] = useState(0)
@@ -55,6 +56,7 @@ export default function SplashScreen() {
         <p className="text-[11px] tracking-[3px] uppercase text-[#666666] font-medium text-center font-['DM_Sans']">
           {statusText}
         </p>
+        <p className="text-[9px] text-[#333333] font-mono mt-1">v{BUILD_VERSION}</p>
       </div>
 
       <style>{`
