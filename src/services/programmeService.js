@@ -66,9 +66,9 @@ export async function getActiveProgramme(userId) {
       .eq('user_id', userId)
       .eq('is_active', true)
       .limit(1)
-      .single()
+      .maybeSingle()
     if (error) throw error
-    return { data, error: null }
+    return { data: data || null, error: null }
   } catch (err) {
     logger.error('getActiveProgramme:', err)
     return { data: null, error: 'Failed to load programme' }
@@ -201,8 +201,11 @@ export async function getFullProgrammeContext(userId) {
 
     // Fetch programme
     const { data: programme, error: pErr } = await getActiveProgramme(userId)
-    if (pErr || !programme) {
-      return { data: null, error: pErr || 'No active programme' }
+    if (pErr) {
+      return { data: null, error: pErr }
+    }
+    if (!programme) {
+      return { data: { programme: null, phases: [] }, error: null }
     }
 
     // Fetch phases
