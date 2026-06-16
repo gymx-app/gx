@@ -672,7 +672,7 @@ export default function Today() {
 
           {/* No data */}
           {dayType === 'none' && (
-            <div className="mt-8">
+            <div className="mt-8 pt-2.5">
               <Text variant="pageTitle" className="text-[#2a2a2a]">NO DATA</Text>
               <Text variant="bodyMuted" className="mt-2">
                 No workout defined for this day in phase {phase}.

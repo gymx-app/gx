@@ -1,12 +1,16 @@
 import { memo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { Home, LayoutList, TrendingUp, CircleUser } from 'lucide-react'
 
-const TABS = [
-  { label: 'TODAY', path: '/', icon: '🏋️' },
-  { label: 'PROGRESS', path: '/progress', icon: '📈' },
-  { label: 'PROGRAM', path: '/program', icon: '📋' },
-  { label: 'ACCOUNT', path: '/account', icon: '⚙️' },
+const NAV_ITEMS = [
+  { label: 'Today', path: '/', icon: Home },
+  { label: 'Programme', path: '/program', icon: LayoutList },
+  { label: 'Progress', path: '/progress', icon: TrendingUp },
+  { label: 'Account', path: '/account', icon: CircleUser },
 ] as const
+
+const ACTIVE_COLOR = '#FF4520'
+const INACTIVE_COLOR = 'var(--muted)'
 
 function BottomNav() {
   const navigate = useNavigate()
@@ -23,13 +27,15 @@ function BottomNav() {
       }}
     >
       <div style={{ height: 60, display: 'flex' }}>
-        {TABS.map(({ label, path, icon }) => {
-          const active = location.pathname === path
+        {NAV_ITEMS.map((item) => {
+          const isActive = location.pathname === item.path
+          const color = isActive ? ACTIVE_COLOR : INACTIVE_COLOR
+          const Icon = item.icon
 
           return (
             <button
-              key={path}
-              onClick={() => navigate(path)}
+              key={item.path}
+              onClick={() => navigate(item.path)}
               style={{
                 flex: 1,
                 display: 'flex',
@@ -44,14 +50,17 @@ function BottomNav() {
                 fontSize: 9,
                 fontWeight: 500,
                 letterSpacing: '0.5px',
-                color: active ? '#f0ede8' : '#666666',
+                color,
                 WebkitTapHighlightColor: 'transparent',
-                padding: 0,
+                padding: '8px 0',
+                minWidth: 44,
+                minHeight: 44,
               }}
-              aria-label={label}
+              aria-label={item.label}
+              aria-current={isActive ? 'page' : undefined}
             >
-              <span style={{ fontSize: 19, lineHeight: 1 }}>{icon}</span>
-              <span>{label}</span>
+              <Icon size={24} strokeWidth={isActive ? 2 : 1.5} color={color} />
+              <span>{item.label}</span>
             </button>
           )
         })}
