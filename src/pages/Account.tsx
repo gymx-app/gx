@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import TopBar from '../components/layout/TopBar'
 import { useAuth } from '../auth/AuthContext'
 import { BottomSheet } from '../components/ui'
+import ProfileEditSheet from '../components/ProfileEditSheet'
 import { colors } from '../styles/tokens'
 import { Heart, Bell, ShieldCheck, Link, Trash2, LogOut, ChevronRight } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -86,6 +87,8 @@ export default function Account() {
   const { user, signOut } = useAuth()
   const [loggingOut, setLoggingOut] = useState(false)
   const [confirmSheet, setConfirmSheet] = useState<'signout' | 'delete' | null>(null)
+  const [profileSheetOpen, setProfileSheetOpen] = useState(false)
+  const [displayProfile, setDisplayProfile] = useState<{ first_name: string; last_name: string } | null>(null)
 
   const handleSignOut = useCallback(async () => {
     setConfirmSheet(null)
@@ -132,7 +135,8 @@ export default function Account() {
   ], [loggingOut])
 
   const email = user?.email ?? ''
-  const fullName = user?.user_metadata?.full_name as string | undefined
+  const profileFullName = displayProfile ? `${displayProfile.first_name} ${displayProfile.last_name}`.trim() : undefined
+  const fullName = profileFullName || (user?.user_metadata?.full_name as string | undefined)
   const initials = getInitials(email, fullName)
   const displayName = getDisplayName(email, fullName)
 
@@ -143,6 +147,7 @@ export default function Account() {
 
         {/* Profile card */}
         <button
+          onClick={() => setProfileSheetOpen(true)}
           className="w-full flex items-center gap-4 active:opacity-70 transition-opacity duration-100 mt-4"
           style={{
             background: colors.surface,
@@ -259,6 +264,13 @@ export default function Account() {
           </div>
         </div>
       </BottomSheet>
+
+      {/* Profile Edit Sheet */}
+      <ProfileEditSheet
+        open={profileSheetOpen}
+        onClose={() => setProfileSheetOpen(false)}
+        onProfileUpdate={(profile) => setDisplayProfile(profile)}
+      />
     </>
   )
 }
