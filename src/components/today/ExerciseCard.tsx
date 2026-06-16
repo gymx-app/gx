@@ -1,9 +1,17 @@
 import { useMemo, memo } from 'react'
-import exerciseData from '../../data/exercises.json'
 import { SectionLabel, Badge } from '../ui'
 import { colors, radius } from '../../styles/tokens'
 
-const EQ_NAMES = exerciseData.EQ_NAMES as Record<string, string>
+const EQ_NAMES: Record<string, string> = {
+  bb: 'Barbell',
+  db: 'Dumbbell',
+  kb: 'Kettlebell',
+  bw: 'Bodyweight',
+  rope: 'Battle Rope',
+  tyre: 'Tyre',
+  cable: 'Cable',
+  mach: 'Machine',
+}
 
 const EQ_COLORS: Record<string, { bg: string; color: string }> = {
   BB: { bg: 'rgba(251,191,36,0.12)', color: '#fbbf24' },

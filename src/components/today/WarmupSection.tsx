@@ -2,11 +2,8 @@ import { useState, useMemo, memo } from 'react'
 import { useAuth } from '../../auth/AuthContext'
 import { upsertWarmupLog } from '../../services/checklistService'
 import { logger } from '../../lib/logger'
-import exerciseData from '../../data/exercises.json'
 import { SectionLabel, ProgressBar, Checkbox } from '../ui'
 import { radius } from '../../styles/tokens'
-
-const JSON_WARMUP_ITEMS = exerciseData.WARMUP_ITEMS
 
 interface WarmupItem {
   k: string
@@ -39,15 +36,13 @@ const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, 
   const { user } = useAuth()
 
   const items: WarmupItem[] = useMemo(() => {
-    if (dbWarmupItems && dbWarmupItems.length > 0) {
-      return dbWarmupItems.map(item => ({
-        k: item.item_key,
-        label: item.label,
-        detail: item.detail || '',
-        ic: item.icon || '',
-      }))
-    }
-    return JSON_WARMUP_ITEMS
+    if (!dbWarmupItems || dbWarmupItems.length === 0) return []
+    return dbWarmupItems.map(item => ({
+      k: item.item_key,
+      label: item.label,
+      detail: item.detail || '',
+      ic: item.icon || '',
+    }))
   }, [dbWarmupItems])
 
   const completedKeys = new Set(warmupLogs.filter(l => l.completed).map(l => l.item_key))

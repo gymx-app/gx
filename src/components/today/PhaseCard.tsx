@@ -1,17 +1,8 @@
-import { useMemo, memo } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { getDayWorkout } from '../../utils/programme'
-import { colors, radius } from '../../styles/tokens'
+import { useState, useMemo, memo } from 'react'
+import { colors } from '../../styles/tokens'
+import PhaseBottomSheet from './PhaseBottomSheet'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-const PHASE_COLORS: Record<number, string> = {
-  1: '#ff4520',
-  2: '#ff8c00',
-  3: '#22c55e',
-  4: '#3b82f6',
-  5: '#a855f7',
-}
 
 interface Phase {
   phase_number: number
@@ -26,6 +17,11 @@ interface WeekDay {
   dateStr: string
 }
 
+interface Programme {
+  name?: string
+  goal?: string
+}
+
 interface PhaseCardProps {
   phase: number
   weekInPhase: number
@@ -38,7 +34,7 @@ interface PhaseCardProps {
   onNextWeek: () => void
   canGoBack: boolean
   canGoForward: boolean
-  programme: unknown
+  programme: Programme | null
   phases: Phase[]
   weekDays: WeekDay[]
   selectedDateStr: string
@@ -67,14 +63,16 @@ const PhaseCard = memo(function PhaseCard({
   onSelectDay,
   onGoToToday,
 }: PhaseCardProps) {
-  const navigate = useNavigate()
+  const [sheetOpen, setSheetOpen] = useState(false)
+
   const currentPhase = phases?.find(p => p.phase_number === phase)
-  const totalWeeksInPhase = currentPhase?.weeks_count || phaseWeeks[phase - 1] || 4
+  const totalWeeksInPhase = currentPhase?.weeks_count || phaseWeeks?.[phase - 1] || 4
   const isOngoing = totalWeeksInPhase === 999
   const totalPhases = phases?.length || phaseWeeks?.length || 5
+  const phaseName = currentPhase?.name || `Phase ${phase}`
 
-  const phaseColor = PHASE_COLORS[phase] || colors.accent
-  const phasePct = isOngoing ? 100 : Math.min(100, (weekInPhase / totalWeeksInPhase) * 100)
+  const qualifyPct = Math.min(100, (currentWeekActiveDays / minActiveDays) * 100)
+  const qualified = currentWeekActiveDays >= minActiveDays
 
   const todayDateStr = useMemo(() => {
     const d = new Date()
@@ -83,107 +81,50 @@ const PhaseCard = memo(function PhaseCard({
       String(d.getDate()).padStart(2, '0')
   }, [])
 
-  const lissLabels = useMemo(() => {
-    const set = new Set<string>()
-    const labels = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
-    for (const label of labels) {
-      const w = getDayWorkout(phase, label)
-      if (w?.isLiss) set.add(label)
-    }
-    return set
-  }, [phase])
-
   const showTodayPill = weekOffset !== 0
 
   return (
     <>
+      {/* ── Phase card ── */}
       <div
-        className="mx-4 mt-3 overflow-hidden"
-        style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.settings }}
+        className="mx-4 mt-3 px-4 py-3"
+        style={{ background: '#141414', border: '1px solid #202020' }}
       >
-        {/* Header — tappable to Programme tab */}
-        <button
-          onClick={() => navigate('/program')}
-          className="w-full px-[14px] py-3 flex justify-between items-center active:bg-[#1c1c1c] transition-colors duration-150"
-        >
-          <span className="font-['Bebas_Neue'] text-[18px] tracking-[1.5px] text-[#f0ede8]">
-            FITNESS PROGRAMME
+        {/* Line 1 */}
+        <div className="flex justify-between items-center">
+          <span className="text-[13px] font-semibold tracking-[-0.01em] text-white">
+            {phaseName.toUpperCase()} · WK {weekInPhase}{isOngoing ? '' : ` OF ${totalWeeksInPhase}`}
           </span>
-          <span className="text-[11px] text-[#666666]">›</span>
-        </button>
-
-        {/* Phase progress bar */}
-        <div className="h-[3px] bg-[#2a2a2a] mx-[14px]">
-          <div
-            className="h-full rounded-[2px] transition-all duration-600"
-            style={{ width: `${phasePct}%`, background: phaseColor }}
-          />
+          <button
+            onClick={() => setSheetOpen(true)}
+            className="text-[13px] font-semibold text-[#ff4520] min-w-[44px] min-h-[44px] flex items-center justify-end"
+          >
+            {phase}/{totalPhases} ›
+          </button>
         </div>
 
-        {/* Phase timeline — horizontal scroll */}
-        <div className="flex gap-[6px] px-[14px] py-[10px] overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          {Array.from({ length: totalPhases }, (_, i) => {
-            const p = i + 1
-            const isCurrent = p === phase
-            const isCompleted = p < phase
-            const pColor = PHASE_COLORS[p] || colors.accent
-            const phaseDef = phases?.find(ph => ph.phase_number === p)
-            const name = phaseDef?.name || `Phase ${p}`
-            const wks = phaseDef?.weeks_count || phaseWeeks[i] || 4
-            const isOngoingPhase = wks === 999
-
-            return (
-              <div
-                key={p}
-                className="shrink-0 flex flex-col items-center gap-[2px] rounded-[10px] px-[10px] py-[6px] transition-all duration-200"
-                style={
-                  isCurrent
-                    ? { background: `${pColor}15`, border: `1.5px solid ${pColor}50` }
-                    : isCompleted
-                    ? { background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)' }
-                    : { background: colors.surface2, border: `1px solid ${colors.border}`, opacity: 0.5 }
-                }
-              >
-                <span
-                  className="text-[10px] font-bold tracking-[0.5px] leading-none whitespace-nowrap"
-                  style={{ color: isCompleted ? '#22c55e' : isCurrent ? pColor : '#666666' }}
-                >
-                  {isCompleted ? `✓ P${p}` : `P${p}`} ({name})
-                </span>
-                <span
-                  className="text-[9px] leading-none"
-                  style={{ color: isCompleted ? '#22c55e' : isCurrent ? colors.text : '#666666' }}
-                >
-                  {isCompleted
-                    ? 'Done'
-                    : isCurrent
-                    ? (isOngoing ? 'Ongoing' : `${weekInPhase}/${wks} weeks`)
-                    : (isOngoingPhase ? 'Ongoing' : `${wks} weeks`)
-                  }
-                </span>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Weekly qualification */}
-        <div className="px-[14px] pb-[10px] flex justify-between items-center">
-          <span className="text-[12px] text-[#666666]">
-            {currentWeekActiveDays >= minActiveDays ? (
-              <><strong className="text-[#f0ede8]">{currentWeekActiveDays}/{minActiveDays}</strong> days — qualified</>
-            ) : (
-              <><strong className="text-[#f0ede8]">{currentWeekActiveDays}/{minActiveDays}</strong> days — {Math.max(0, minActiveDays - currentWeekActiveDays)} more needed</>
-            )}
-          </span>
-          {currentWeekActiveDays >= minActiveDays && (
-            <span className="text-[11px] font-bold tracking-[0.5px] text-[#22c55e]">✓</span>
+        {/* Line 2 */}
+        <div className="flex items-center gap-3 mt-2">
+          <div className="flex-1 h-[3px] bg-[#1a1a1a]">
+            <div
+              className="h-full bg-[#ff4520] transition-all duration-300"
+              style={{ width: `${qualifyPct}%` }}
+            />
+          </div>
+          {qualified ? (
+            <span className="text-[11px] text-[#22c55e] font-semibold whitespace-nowrap">
+              ✓ WEEK QUALIFIES
+            </span>
+          ) : (
+            <span className="text-[11px] text-[#555555] whitespace-nowrap">
+              {currentWeekActiveDays}/{minActiveDays} days
+            </span>
           )}
         </div>
       </div>
 
-      {/* Week strip */}
+      {/* ── Week strip (unchanged) ── */}
       <div className="px-4 mt-3">
-        {/* Week nav header: < Wk 1 · 8 Jun – 13 Jun > */}
         <div className="flex items-center gap-[8px] pb-[10px]">
           <button
             onClick={onPrevWeek}
@@ -224,7 +165,6 @@ const PhaseCard = memo(function PhaseCard({
           </button>
         </div>
 
-        {/* Day pills */}
         <div className="flex gap-[6px]">
           {weekDays.map(({ dayLabel, date, dateStr: dayDateStr }) => {
             const isSelected = dayDateStr === selectedDateStr
@@ -284,6 +224,17 @@ const PhaseCard = memo(function PhaseCard({
           })}
         </div>
       </div>
+
+      {/* ── Phase bottom sheet ── */}
+      <PhaseBottomSheet
+        isOpen={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        programme={programme}
+        phases={phases}
+        currentPhase={phase}
+        weekInPhase={weekInPhase}
+        phaseWeeks={phaseWeeks}
+      />
     </>
   )
 })

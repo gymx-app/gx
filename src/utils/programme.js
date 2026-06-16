@@ -3,8 +3,6 @@
  * and programme config.
  */
 
-import exerciseData from '../data/exercises.json'
-
 const DAY_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
 
 /**
@@ -95,15 +93,6 @@ export function computePhaseAndWeek(sessions, config) {
   const totalWeek = getWeekNumber(start_date, toDateStr(new Date()))
 
   return { phase, weekInPhase, totalWeek, qualifyingWeeks }
-}
-
-/**
- * Get workout definition for a specific phase + day.
- */
-export function getDayWorkout(phase, dayOfWeek) {
-  const phaseData = exerciseData.W[String(phase)]
-  if (!phaseData) return null
-  return phaseData[dayOfWeek] || null
 }
 
 /**

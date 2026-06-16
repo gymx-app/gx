@@ -68,6 +68,7 @@ export async function getActiveProgramme(userId) {
       .limit(1)
       .maybeSingle()
     if (error) throw error
+    if (data && data.user_id !== userId) return { data: null, error: null }
     return { data: data || null, error: null }
   } catch (err) {
     logger.error('getActiveProgramme:', err)

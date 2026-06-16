@@ -132,7 +132,6 @@ interface Workout {
   sub?: string
   dur?: string
   tags?: string[]
-  cd?: string[]
 }
 
 interface DayData {
@@ -173,13 +172,13 @@ const LissDay = memo(function LissDay({
     if (dbCooldownItems && dbCooldownItems.length > 0) {
       return dbCooldownItems.map(ci => ci.label || ci.item_key)
     }
-    return workout.cd || []
-  }, [dbCooldownItems, workout.cd])
+    return []
+  }, [dbCooldownItems])
 
-  const title = dayData?.title || workout.title || 'LISS + RECOVERY'
-  const subtitle = dayData?.subtitle || workout.sub
-  const duration = dayData?.duration_min ? String(dayData.duration_min) : workout.dur
-  const tags = dayData?.tags || workout.tags
+  const title = dayData?.title || workout?.title || 'LISS + RECOVERY'
+  const subtitle = dayData?.subtitle || workout?.sub
+  const duration = dayData?.duration_min ? String(dayData.duration_min) : workout?.dur
+  const tags = dayData?.tags || workout?.tags
 
   const equipmentOptions = isTravelMode ? TRAVEL_OPTIONS : GYM_OPTIONS
   const defaultEquipment = isTravelMode ? 'walking' : 'treadmill'

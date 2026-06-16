@@ -5,14 +5,12 @@ import { logger } from '../lib/logger'
 import { toDateStr, computePhaseAndWeek } from '../utils/programme'
 import * as idbCache from '../services/idbCache'
 import * as programmeService from '../services/programmeService'
+import { enqueue, cancelAll, PRIORITY } from '../services/fetchQueue'
 
-/**
- * Cache key helpers — all scoped to userId.
- */
 const cacheKey = {
   workout: (uid, date) => `${uid}_${date}`,
   sessions: (uid, weekStart) => `${uid}_${weekStart}`,
-  exercises: () => 'global',
+  exercises: (uid) => uid,
   config: (uid) => uid,
   programmeDay: (phaseId, dow) => `${phaseId}_${dow}`,
   programmeExercises: (dayId) => dayId,
@@ -21,42 +19,22 @@ const cacheKey = {
 }
 
 /**
- * Fetch all log data for a single day from Supabase (no cache interaction).
- * Used for both main load and background prefetch.
+ * IDB-first fetch helper. Checks cache, falls back to queue-managed network fetch.
+ * Writes result to cache on success.
  */
-async function fetchDayLogs(userId, dateStr) {
-  const [logsRes, warmupRes, checklistRes] = await Promise.all([
-    supabase.from('exercise_logs').select('*').eq('user_id', userId).eq('date', dateStr),
-    supabase.from('warmup_logs').select('*').eq('user_id', userId).eq('date', dateStr),
-    supabase.from('checklist_logs').select('*').eq('user_id', userId).eq('date', dateStr),
-  ])
+async function cachedFetch(store, key, queueId, priority, fetchFn) {
+  const cached = await idbCache.get(store, key)
+  if (cached) return cached
 
-  return {
-    logs: logsRes.data || [],
-    warmupLogs: warmupRes.data || [],
-    checklistLogs: checklistRes.data || [],
-  }
+  const result = await enqueue(queueId, priority, fetchFn)
+  const data = result?.data ?? result
+  if (data) idbCache.set(store, key, data)
+  return data
 }
 
-/**
- * Custom hook — fetches all data the Today screen needs.
- * Implements Stale-While-Revalidate (SWR) pattern with IndexedDB caching.
- *
- * Flow:
- *   1. Check IDB cache — if hit, render immediately (< 5ms)
- *   2. Fire all Supabase fetches in parallel
- *   3. Update cache with fresh data
- *   4. Update UI only if data actually changed
- *
- * @param {string} dateStr - Selected date as YYYY-MM-DD
- * @param {string} weekStartStr - Monday of the displayed week
- * @param {string} weekEndStr - Saturday of the displayed week
- * @param {string} selectedDayLabel - Day of week: 'MON', 'TUE', etc.
- */
 export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel) {
   const { user } = useAuth()
 
-  // Legacy config (programme_config table)
   const [config, setConfig] = useState(null)
   const [sessions, setSessions] = useState([])
   const [logs, setLogs] = useState([])
@@ -65,7 +43,6 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
   const [exerciseMap, setExerciseMap] = useState({})
   const [previousBests, setPreviousBests] = useState({})
 
-  // New programme data
   const [programme, setProgramme] = useState(null)
   const [phases, setPhases] = useState([])
   const [dayData, setDayData] = useState(null)
@@ -75,13 +52,9 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-
-  // Track whether we've shown cached data (to avoid skeleton)
   const [hasCachedData, setHasCachedData] = useState(false)
 
-  // Track last rendered data snapshot for diffing
   const snapshotRef = useRef('')
-  // Track prefetched dates to avoid repeat work
   const prefetchedRef = useRef(new Set())
 
   // ── STEP 1: Load from IDB cache (instant) ──
@@ -92,7 +65,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
       const [cachedDay, cachedSessions, cachedExercises, cachedConfig] = await Promise.all([
         idbCache.get('workout-data', cacheKey.workout(user.id, dateStr)),
         idbCache.get('week-sessions', cacheKey.sessions(user.id, weekStartStr)),
-        idbCache.get('exercises', cacheKey.exercises()),
+        idbCache.get('exercises', cacheKey.exercises(user.id)),
         idbCache.get('programme-config', cacheKey.config(user.id)),
       ])
 
@@ -108,87 +81,75 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
 
         setHasCachedData(true)
         setLoading(false)
-        return true // cache hit
+        return true
       }
     } catch {
       // Cache read failure — fall through to network
     }
 
-    return false // cache miss
+    return false
   }, [user?.id, dateStr, weekStartStr])
 
-  // ── STEP 2 + 3 + 4: Network fetch, cache, diff-update ──
+  // ── STEP 2: Priority-queued network fetch ──
   const fetchFromNetwork = useCallback(async () => {
     if (!user?.id || !dateStr) return
 
     try {
       setError(null)
 
-      // Fire ALL fetches in parallel
       const monthAgo = new Date(dateStr + 'T00:00:00')
       monthAgo.setDate(monthAgo.getDate() - 30)
 
-      const [
-        cfgRes,
-        sessRes,
-        dayLogs,
-        exRes,
-        prevRes,
-        ctxRes,
-      ] = await Promise.all([
-        supabase.from('programme_config').select('*').eq('user_id', user.id).single(),
-        supabase.from('workout_sessions')
-          .select('id, date, day_of_week, phase, is_travel, completed_at')
-          .eq('user_id', user.id)
-          .order('date', { ascending: false })
-          .limit(200),
-        fetchDayLogs(user.id, dateStr),
-        supabase.from('exercises').select('id, name'),
-        supabase.from('exercise_logs')
-          .select('exercise_name, weight_kg, reps, date')
-          .eq('user_id', user.id)
-          .eq('completed', true)
-          .eq('is_mm_set', false)
-          .gte('date', toDateStr(monthAgo))
-          .lt('date', dateStr)
-          .order('date', { ascending: false }),
-        programmeService.getFullProgrammeContext(user.id),
+      // ── P0 CRITICAL: config + programme context (blocks render) ──
+      const [cfgRes, ctxRes] = await Promise.all([
+        enqueue(`config_${user.id}`, PRIORITY.CRITICAL, () =>
+          supabase.from('programme_config').select('*').eq('user_id', user.id).single()
+        ),
+        enqueue(`ctx_${user.id}`, PRIORITY.CRITICAL, () =>
+          programmeService.getFullProgrammeContext(user.id)
+        ),
       ])
 
       if (cfgRes.error) throw cfgRes.error
 
       const freshConfig = cfgRes.data
-      const freshSessions = sessRes.data || []
-      const freshLogs = dayLogs.logs
-      const freshWarmupLogs = dayLogs.warmupLogs
-      const freshChecklistLogs = dayLogs.checklistLogs
-
-      // Build exercise map
-      const freshExMap = {}
-      for (const row of (exRes.data || [])) {
-        freshExMap[row.name] = row.id
-      }
-
-      // Build previous bests
-      const freshBests = {}
-      for (const log of (prevRes.data || [])) {
-        if (!freshBests[log.exercise_name]) {
-          freshBests[log.exercise_name] = { weight_kg: log.weight_kg, reps: log.reps }
-        }
-      }
-
-      // Programme context
       const freshProgramme = ctxRes.data?.programme || null
       const freshPhases = ctxRes.data?.phases || []
 
-      // ── Fetch day-specific programme data ──
+      // ── P0 CRITICAL: day logs (blocks render) ──
+      const [logsRes, warmupLogsRes, checklistLogsRes] = await Promise.all([
+        enqueue(`logs_${dateStr}`, PRIORITY.CRITICAL, () =>
+          supabase.from('exercise_logs').select('*').eq('user_id', user.id).eq('date', dateStr)
+        ),
+        enqueue(`wulogs_${dateStr}`, PRIORITY.CRITICAL, () =>
+          supabase.from('warmup_logs').select('*').eq('user_id', user.id).eq('date', dateStr)
+        ),
+        enqueue(`cklogs_${dateStr}`, PRIORITY.CRITICAL, () =>
+          supabase.from('checklist_logs').select('*').eq('user_id', user.id).eq('date', dateStr)
+        ),
+      ])
+
+      const freshLogs = logsRes.data || []
+      const freshWarmupLogs = warmupLogsRes.data || []
+      const freshChecklistLogs = checklistLogsRes.data || []
+
+      // ── Resolve current phase + day ──
       let freshDayData = null
       let freshProgrammeExercises = null
       let freshWarmupItems = null
       let freshCooldownItems = null
 
       if (freshProgramme && freshPhases.length > 0 && selectedDayLabel) {
-        // Find current phase using the same logic as computePhaseAndWeek
+        // Need sessions to compute phase — fetch at P1 since we need it here
+        const sessRes = await enqueue(`sessions_${user.id}`, PRIORITY.HIGH, () =>
+          supabase.from('workout_sessions')
+            .select('id, date, day_of_week, phase, is_travel, completed_at')
+            .eq('user_id', user.id)
+            .order('date', { ascending: false })
+            .limit(200)
+        )
+        const freshSessions = sessRes.data || []
+
         const phaseInfo = computePhaseAndWeek(freshSessions, {
           start_date: freshConfig.start_date,
           phase_weeks: freshConfig.phase_weeks,
@@ -197,77 +158,103 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
         const currentPhase = freshPhases.find(p => p.phase_number === phaseInfo.phase)
 
         if (currentPhase) {
-          // Check caches first for day data
+          // ── P1 HIGH: day data ──
           const dayKey = cacheKey.programmeDay(currentPhase.id, selectedDayLabel)
-          const cachedDay = await idbCache.get('programme-day', dayKey)
+          freshDayData = await cachedFetch(
+            'programme-day', dayKey,
+            `day_${currentPhase.id}_${selectedDayLabel}`, PRIORITY.HIGH,
+            () => programmeService.getProgrammeDay(currentPhase.id, selectedDayLabel)
+          )
 
-          if (cachedDay) {
-            freshDayData = cachedDay
-          } else {
-            const { data: dd } = await programmeService.getProgrammeDay(
-              currentPhase.id, selectedDayLabel
-            )
-            freshDayData = dd
-            if (dd) idbCache.set('programme-day', dayKey, dd)
-          }
-
-          // Parallel fetch for exercises, warmup, cooldown
           if (freshDayData) {
             const isWorkout = freshDayData.workout_type === 'workout'
 
+            // ── P1 HIGH: exercises, warmup, cooldown ──
             const [exResult, wuResult, cdResult] = await Promise.all([
               isWorkout
-                ? (async () => {
-                    const exKey = cacheKey.programmeExercises(freshDayData.id)
-                    const cached = await idbCache.get('programme-exercises', exKey)
-                    if (cached) return { data: cached }
-                    const res = await programmeService.getProgrammeDayExercises(freshDayData.id)
-                    if (res.data) idbCache.set('programme-exercises', exKey, res.data)
-                    return res
-                  })()
-                : { data: null },
-              (async () => {
-                const wuKey = cacheKey.warmupItems(freshProgramme.id)
-                const cached = await idbCache.get('warmup-items', wuKey)
-                if (cached) return { data: cached }
-                const res = await programmeService.getWarmupItems(freshProgramme.id)
-                if (res.data) idbCache.set('warmup-items', wuKey, res.data)
-                return res
-              })(),
+                ? cachedFetch(
+                    'programme-exercises', cacheKey.programmeExercises(freshDayData.id),
+                    `progex_${freshDayData.id}`, PRIORITY.HIGH,
+                    () => programmeService.getProgrammeDayExercises(freshDayData.id)
+                  )
+                : null,
+              cachedFetch(
+                'warmup-items', cacheKey.warmupItems(freshProgramme.id),
+                `warmup_${freshProgramme.id}`, PRIORITY.HIGH,
+                () => programmeService.getWarmupItems(freshProgramme.id)
+              ),
               isWorkout && freshDayData.id
-                ? (async () => {
-                    const cdKey = cacheKey.cooldownItems(freshDayData.id)
-                    const cached = await idbCache.get('cooldown-items', cdKey)
-                    if (cached) return { data: cached }
-                    const res = await programmeService.getCooldownItems(freshDayData.id)
-                    if (res.data) idbCache.set('cooldown-items', cdKey, res.data)
-                    return res
-                  })()
-                : { data: null },
+                ? cachedFetch(
+                    'cooldown-items', cacheKey.cooldownItems(freshDayData.id),
+                    `cooldown_${freshDayData.id}`, PRIORITY.HIGH,
+                    () => programmeService.getCooldownItems(freshDayData.id)
+                  )
+                : null,
             ])
 
-            freshProgrammeExercises = exResult.data
-            freshWarmupItems = wuResult.data
-            freshCooldownItems = cdResult.data
+            freshProgrammeExercises = exResult
+            freshWarmupItems = wuResult
+            freshCooldownItems = cdResult
           }
+        }
+
+        // Write sessions to cache and state (fetched above at P1)
+        idbCache.set('week-sessions', cacheKey.sessions(user.id, weekStartStr), freshSessions)
+        setSessions(freshSessions)
+      }
+
+      // ── P1 HIGH: exercise name→id map ──
+      const exRes = await enqueue(`exercises_${user.id}`, PRIORITY.HIGH, () =>
+        supabase.from('exercises').select('id, name')
+      )
+      const freshExMap = {}
+      for (const row of (exRes.data || [])) {
+        freshExMap[row.name] = row.id
+      }
+
+      // ── P2 NORMAL: previous bests + sessions (if not already fetched) ──
+      const [prevRes, sessRes2] = await Promise.all([
+        enqueue(`bests_${user.id}_${dateStr}`, PRIORITY.NORMAL, () =>
+          supabase.from('exercise_logs')
+            .select('exercise_name, weight_kg, reps, date')
+            .eq('user_id', user.id)
+            .eq('completed', true)
+            .eq('is_mm_set', false)
+            .gte('date', toDateStr(monthAgo))
+            .lt('date', dateStr)
+            .order('date', { ascending: false })
+        ),
+        enqueue(`sessions_${user.id}`, PRIORITY.NORMAL, () =>
+          supabase.from('workout_sessions')
+            .select('id, date, day_of_week, phase, is_travel, completed_at')
+            .eq('user_id', user.id)
+            .order('date', { ascending: false })
+            .limit(200)
+        ),
+      ])
+
+      const freshBests = {}
+      for (const log of (prevRes.data || [])) {
+        if (!freshBests[log.exercise_name]) {
+          freshBests[log.exercise_name] = { weight_kg: log.weight_kg, reps: log.reps }
         }
       }
 
-      // ── STEP 3: Write to IDB cache (non-blocking) ──
+      const freshSessions = sessRes2.data || []
+
+      // ── Write to IDB cache (non-blocking) ──
       const dayPayload = {
         logs: freshLogs,
         warmupLogs: freshWarmupLogs,
         checklistLogs: freshChecklistLogs,
         previousBests: freshBests,
       }
-
-      // Fire-and-forget cache writes
       idbCache.set('workout-data', cacheKey.workout(user.id, dateStr), dayPayload)
       idbCache.set('week-sessions', cacheKey.sessions(user.id, weekStartStr), freshSessions)
-      idbCache.set('exercises', cacheKey.exercises(), freshExMap)
+      idbCache.set('exercises', cacheKey.exercises(user.id), freshExMap)
       idbCache.set('programme-config', cacheKey.config(user.id), freshConfig)
 
-      // ── STEP 4: Diff — only re-render if data changed ──
+      // ── Diff — only re-render if data changed ──
       const freshFingerprint = [
         freshConfig?.start_date, freshConfig?.phase_weeks,
         freshSessions.length, freshSessions[0]?.id,
@@ -299,13 +286,14 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
       setLoading(false)
       setHasCachedData(true)
     } catch (err) {
+      if (err?.name === 'AbortError') return
       logger.error('useTodayData network error:', err)
-      setError(err.message)
+      setError(err.message || String(err))
       setLoading(false)
     }
   }, [user?.id, dateStr, weekStartStr, selectedDayLabel])
 
-  // ── STEP 5: Prefetch adjacent days ──
+  // ── STEP 3: P3 LOW — Prefetch adjacent days ──
   const prefetchAdjacent = useCallback(async () => {
     if (!user?.id || !dateStr) return
 
@@ -315,47 +303,58 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
     const yesterday = new Date(base)
     yesterday.setDate(yesterday.getDate() - 1)
 
-    const dates = [toDateStr(tomorrow), toDateStr(yesterday)]
-
-    for (const d of dates) {
+    for (const d of [toDateStr(tomorrow), toDateStr(yesterday)]) {
       const k = cacheKey.workout(user.id, d)
       if (prefetchedRef.current.has(k)) continue
 
-      // Check if already cached and fresh
       const existing = await idbCache.get('workout-data', k)
       if (existing) {
         prefetchedRef.current.add(k)
         continue
       }
 
-      // Fetch and cache — background only, no state updates
       try {
-        const dayLogs = await fetchDayLogs(user.id, d)
+        const [logsRes, warmupRes, checklistRes] = await Promise.all([
+          enqueue(`pflog_${d}`, PRIORITY.LOW, () =>
+            supabase.from('exercise_logs').select('*').eq('user_id', user.id).eq('date', d)
+          ),
+          enqueue(`pfwu_${d}`, PRIORITY.LOW, () =>
+            supabase.from('warmup_logs').select('*').eq('user_id', user.id).eq('date', d)
+          ),
+          enqueue(`pfck_${d}`, PRIORITY.LOW, () =>
+            supabase.from('checklist_logs').select('*').eq('user_id', user.id).eq('date', d)
+          ),
+        ])
 
-        // Fetch previous bests for that day too
         const monthAgo = new Date(d + 'T00:00:00')
         monthAgo.setDate(monthAgo.getDate() - 30)
-        const { data: prevLogs } = await supabase
-          .from('exercise_logs')
-          .select('exercise_name, weight_kg, reps, date')
-          .eq('user_id', user.id)
-          .eq('completed', true)
-          .eq('is_mm_set', false)
-          .gte('date', toDateStr(monthAgo))
-          .lt('date', d)
-          .order('date', { ascending: false })
+        const prevRes = await enqueue(`pfbest_${d}`, PRIORITY.LOW, () =>
+          supabase.from('exercise_logs')
+            .select('exercise_name, weight_kg, reps, date')
+            .eq('user_id', user.id)
+            .eq('completed', true)
+            .eq('is_mm_set', false)
+            .gte('date', toDateStr(monthAgo))
+            .lt('date', d)
+            .order('date', { ascending: false })
+        )
 
         const bests = {}
-        for (const log of (prevLogs || [])) {
+        for (const log of (prevRes.data || [])) {
           if (!bests[log.exercise_name]) {
             bests[log.exercise_name] = { weight_kg: log.weight_kg, reps: log.reps }
           }
         }
 
-        await idbCache.set('workout-data', k, { ...dayLogs, previousBests: bests })
+        await idbCache.set('workout-data', k, {
+          logs: logsRes.data || [],
+          warmupLogs: warmupRes.data || [],
+          checklistLogs: checklistRes.data || [],
+          previousBests: bests,
+        })
         prefetchedRef.current.add(k)
       } catch {
-        // Prefetch failure is non-fatal
+        // P3 prefetch failure is non-fatal
       }
     }
   }, [user?.id, dateStr])
@@ -368,15 +367,12 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
       setLoading(true)
       snapshotRef.current = ''
 
-      // Step 1: try cache
-      const hit = await loadFromCache()
+      await loadFromCache()
 
-      // Step 2: always revalidate from network
       if (!cancelled) {
         await fetchFromNetwork()
       }
 
-      // Step 5: prefetch neighbors after 2s
       if (!cancelled) {
         setTimeout(() => {
           if (!cancelled) prefetchAdjacent()
@@ -386,12 +382,14 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
 
     load()
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      cancelAll()
+    }
   }, [loadFromCache, fetchFromNetwork, prefetchAdjacent])
 
   // ── Public refetch (after writes) ──
   const refetch = useCallback(async () => {
-    // Invalidate cache for this day so next load fetches fresh
     if (user?.id) {
       await idbCache.invalidate('workout-data', cacheKey.workout(user.id, dateStr))
     }
@@ -406,14 +404,12 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
     checklistLogs,
     exerciseMap,
     previousBests,
-    // New programme data
     programme,
     phases,
     dayData,
     programmeExercises,
     warmupItems,
     cooldownItems,
-    // State
     loading,
     hasCachedData,
     error,

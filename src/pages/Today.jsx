@@ -4,7 +4,6 @@ import { useLoading } from '../hooks/useLoading'
 import {
   computePhaseAndWeek,
   getDayKey,
-  getDayWorkout,
   getWeekDays,
   toDateStr,
 } from '../utils/programme'
@@ -158,69 +157,49 @@ export default function Today() {
   const phase = phaseInfo.phase
   const totalWeek = phaseInfo.totalWeek
 
-  // ── Workout for selected day ──
-  // Prefer DB dayData; fall back to exercises.json
+  // ── Workout for selected day (DB only) ──
   const workout = useMemo(() => {
-    const jsonWorkout = getDayWorkout(phase, selectedDayLabel)
-
-    if (dayData) {
-      // Merge DB dayData with JSON fallback for exercise list
-      return {
-        ...jsonWorkout,
-        title: dayData.title || jsonWorkout?.title,
-        sub: dayData.subtitle || jsonWorkout?.sub,
-        dur: dayData.duration_min ? String(dayData.duration_min) : jsonWorkout?.dur,
-        kcal: dayData.kcal_range || jsonWorkout?.kcal,
-        tags: dayData.tags || jsonWorkout?.tags,
-        workout_type: dayData.workout_type,
-        has_warmup: dayData.has_warmup,
-        // Keep JSON exercise data as fallback if no DB exercises yet
-        ex: jsonWorkout?.ex,
-        fin: jsonWorkout?.fin,
-        cd: jsonWorkout?.cd,
-        wu: jsonWorkout?.wu,
-        isRest: dayData.workout_type === 'rest',
-        isLiss: dayData.workout_type === 'liss',
-      }
+    if (!dayData) return null
+    return {
+      title: dayData.title || '',
+      sub: dayData.subtitle || '',
+      dur: dayData.duration_min ? String(dayData.duration_min) : null,
+      kcal: dayData.kcal_range || null,
+      tags: dayData.tags || [],
+      workout_type: dayData.workout_type,
+      has_warmup: dayData.has_warmup,
+      fin: dayData.finisher || null,
+      isRest: dayData.workout_type === 'rest',
+      isLiss: dayData.workout_type === 'liss',
     }
-
-    return jsonWorkout
-  }, [phase, selectedDayLabel, dayData])
+  }, [dayData])
 
   // ── Map DB programme exercises → ExerciseCard format ──
-  // Falls back to workout.ex (JSON) when no DB exercises seeded yet
   const displayExercises = useMemo(() => {
     if (programmeExercises && programmeExercises.length > 0) {
       return programmeExercises.map(pe => ({
-        n: pe.exercises?.name || pe.exercise_name || 'Unknown',
+        n: pe.exercises?.name || 'Unknown',
         s: pe.sets_reps || '3×12',
         r: pe.rest || '60s',
         note: pe.notes || null,
         warn: pe.warn || null,
-        eq: pe.exercises?.equipment ? [pe.exercises.equipment] : [],
+        eq: pe.exercises?.equipment ?? [],
         icon: pe.icon || null,
-        // Extra DB fields for future use
         _bodyPart: pe.exercises?.body_part,
         _targetMuscle: pe.exercises?.target_muscle,
         _gifUrl: pe.exercises?.gif_url,
       }))
     }
 
-    if (import.meta.env.DEV && dayData?.workout_type === 'workout' && !programmeExercises) {
-      console.warn('[Gx] No programme_exercises for this day — using JSON fallback')
-    }
+    return []
+  }, [programmeExercises])
 
-    return workout?.ex || []
-  }, [programmeExercises, workout?.ex, dayData?.workout_type])
-
-  // ── Map DB cooldown items → CooldownSection format ──
-  // Falls back to workout.cd (JSON strings) when no DB cooldown items
   const displayCooldownItems = useMemo(() => {
     if (cooldownItems && cooldownItems.length > 0) {
       return cooldownItems.map(ci => ci.label || ci.item_key)
     }
-    return workout?.cd || []
-  }, [cooldownItems, workout?.cd])
+    return []
+  }, [cooldownItems])
 
   const logsByExercise = useMemo(() => {
     const map = {}
@@ -237,7 +216,7 @@ export default function Today() {
     ? 'rest'
     : workout?.isLiss
     ? 'liss'
-    : workout?.ex || (dayData?.workout_type === 'workout')
+    : dayData?.workout_type === 'workout'
     ? 'workout'
     : 'none'
 
@@ -640,7 +619,7 @@ export default function Today() {
               </div>
 
               {/* Warmup */}
-              {(workout.wu || workout.has_warmup) && (
+              {workout.has_warmup && (
                 <WarmupSection
                   dateStr={dateStr}
                   phase={phase}
