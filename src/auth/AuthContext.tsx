@@ -7,6 +7,7 @@ interface AuthContextValue {
   session: Session | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<unknown>
+  signUp: (email: string, password: string) => Promise<unknown>
   signOut: () => Promise<void>
 }
 
@@ -44,14 +45,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data
   }, [])
 
+  const signUp = useCallback(async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    })
+    if (error) throw error
+    return data
+  }, [])
+
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut()
     if (error) throw error
   }, [])
 
   const value = useMemo(
-    () => ({ user, session, loading, signIn, signOut }),
-    [user, session, loading, signIn, signOut]
+    () => ({ user, session, loading, signIn, signUp, signOut }),
+    [user, session, loading, signIn, signUp, signOut]
   )
 
   return (

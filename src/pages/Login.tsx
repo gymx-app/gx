@@ -22,27 +22,42 @@ const Login = memo(function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const { signIn } = useAuth()
+  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const { signIn, signUp } = useAuth()
   const { startLoading, stopLoading } = useLoading()
   const navigate = useNavigate()
 
-  async function handleSignIn() {
+  async function handleSubmit() {
     setError(null)
+    setSuccess(null)
     setSubmitting(true)
     startLoading()
 
     try {
-      const { user } = await signIn(email, password) as { user: { id: string } }
-      await ensureProgrammeConfig(user.id)
-      navigate('/', { replace: true })
+      if (mode === 'signup') {
+        await signUp(email, password)
+        setSuccess('Account created! Check your email to confirm, then sign in.')
+        setMode('login')
+      } else {
+        const { user } = await signIn(email, password) as { user: { id: string } }
+        await ensureProgrammeConfig(user.id)
+        navigate('/', { replace: true })
+      }
     } catch (err: unknown) {
-      logger.error('Login error:', err)
+      logger.error(`${mode} error:`, err)
       setError((err as Error).message)
     } finally {
       setSubmitting(false)
       stopLoading()
     }
+  }
+
+  function switchMode() {
+    setMode(mode === 'login' ? 'signup' : 'login')
+    setError(null)
+    setSuccess(null)
   }
 
   return (
@@ -78,15 +93,32 @@ const Login = memo(function Login() {
           <Text variant="body" className="text-[#ef4444] text-[13px] -mt-1" role="alert">{error}</Text>
         )}
 
+        {success && (
+          <Text variant="body" className="text-[#22c55e] text-[13px] -mt-1" role="status">{success}</Text>
+        )}
+
         <div className="mt-2">
           <Button
             variant="primary"
-            label={submitting ? 'Signing in...' : 'Sign In'}
-            onPress={handleSignIn}
+            label={submitting
+              ? (mode === 'signup' ? 'Creating Account...' : 'Signing In...')
+              : (mode === 'signup' ? 'Create Account' : 'Sign In')
+            }
+            onPress={handleSubmit}
             disabled={!email || !password}
             loading={submitting}
           />
         </div>
+
+        <button
+          onClick={switchMode}
+          className="text-[13px] text-[#666666] mt-2 text-center active:text-[#f0ede8] transition-colors"
+        >
+          {mode === 'login'
+            ? <>Don&apos;t have an account? <span className="text-[#ff4520] font-bold">Sign Up</span></>
+            : <>Already have an account? <span className="text-[#ff4520] font-bold">Sign In</span></>
+          }
+        </button>
       </div>
 
       <div className="pb-12" />
