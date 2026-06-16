@@ -38,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signIn = useCallback(async (email: string, password: string) => {
+    await clearCache()
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
