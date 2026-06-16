@@ -1,7 +1,7 @@
 import { logger } from '../lib/logger'
 
 const DB_NAME = 'gx-cache'
-const DB_VERSION = 2
+const DB_VERSION = 3
 
 const STORES = [
   'workout-data',
@@ -43,10 +43,11 @@ function openDB() {
 
     request.onupgradeneeded = () => {
       const db = request.result
+      for (const name of [...db.objectStoreNames]) {
+        db.deleteObjectStore(name)
+      }
       for (const name of STORES) {
-        if (!db.objectStoreNames.contains(name)) {
-          db.createObjectStore(name)
-        }
+        db.createObjectStore(name)
       }
     }
 
@@ -134,38 +135,29 @@ export async function invalidate(store, key) {
 }
 
 /**
- * Remove all cache entries containing a userId prefix.
- * Called on signout to clear personal data from device.
- * @param {string} userId
+ * Clear all stores. Called on sign-out and user switch
+ * to prevent data leaking between accounts on the same device.
  */
-export async function invalidateUserData(userId) {
+export async function clearAll() {
   try {
     const db = await openDB()
 
     for (const storeName of STORES) {
       await new Promise((resolve) => {
         const tx = db.transaction(storeName, 'readwrite')
-        const store = tx.objectStore(storeName)
-        const req = store.openCursor()
-
-        req.onsuccess = () => {
-          const cursor = req.result
-          if (!cursor) return resolve()
-
-          // Delete entries whose key starts with this userId
-          const k = String(cursor.key)
-          if (k.startsWith(userId) || k === 'global') {
-            cursor.delete()
-          }
-          cursor.continue()
-        }
-
-        req.onerror = () => resolve()
+        tx.objectStore(storeName).clear()
         tx.oncomplete = () => resolve()
+        tx.onerror = () => resolve()
       })
     }
   } catch {
-    // Non-fatal — worst case stale data remains
-    logger.error('invalidateUserData failed')
+    logger.error('clearAll failed')
   }
+}
+
+/**
+ * @deprecated Use clearAll() instead
+ */
+export async function invalidateUserData() {
+  return clearAll()
 }

@@ -21,16 +21,12 @@ export async function signIn(email, password) {
 
 /**
  * Sign out current user.
- * Clears all personal data from IDB cache before signing out.
- * @param {string} [userId] - If provided, clears user-specific cache
+ * Clears all cached data from IDB to prevent leaking between accounts.
  * @returns {Promise<{ data: null, error: string|null }>}
  */
-export async function signOut(userId) {
+export async function signOut() {
   try {
-    // Clear personal data from device cache
-    if (userId) {
-      await idbCache.invalidateUserData(userId)
-    }
+    await idbCache.clearAll()
 
     const { error } = await supabase.auth.signOut()
     if (error) throw error
