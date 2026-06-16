@@ -34,6 +34,9 @@ export default function Account() {
             Manage your profile, preferences, and programme settings.
           </p>
           <p className="text-[11px] text-[#444444] mt-3">Coming soon</p>
+          {user?.id && (
+            <p className="text-[10px] text-[#333333] mt-2 break-all font-mono">uid: {user.id}</p>
+          )}
         </div>
 
         <div className="w-full max-w-[320px]">
