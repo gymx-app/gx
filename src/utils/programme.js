@@ -103,7 +103,37 @@ export function isPastWeek(weekOffset) {
 }
 
 /**
- * Get array of { dayLabel, date, dateStr } for Mon-Sat of the given week.
+ * Returns the most negative weekOffset allowed (the programme start week).
+ */
+export function getMinWeekOffset(programmeStartDate) {
+  if (!programmeStartDate) return -Infinity
+  const startMonday = getMonday(new Date(programmeStartDate + 'T00:00:00'))
+  const currentMonday = getMonday(new Date())
+  const diffWeeks = Math.round((currentMonday - startMonday) / (7 * 24 * 60 * 60 * 1000))
+  return -diffWeeks
+}
+
+/**
+ * Returns true if the displayed week is the programme start week.
+ */
+export function isProgrammeWeek1(weekOffset, programmeStartDate) {
+  if (!programmeStartDate) return false
+  return weekOffset === getMinWeekOffset(programmeStartDate)
+}
+
+/**
+ * Get programme week number for a given weekOffset.
+ */
+export function getProgrammeWeekNumber(weekOffset, programmeStartDate) {
+  if (!programmeStartDate) return 1
+  const startMonday = getMonday(new Date(programmeStartDate + 'T00:00:00'))
+  const displayedMonday = getMonday(new Date())
+  displayedMonday.setDate(displayedMonday.getDate() + weekOffset * 7)
+  return Math.floor((displayedMonday - startMonday) / (7 * 24 * 60 * 60 * 1000)) + 1
+}
+
+/**
+ * Get array of { dayLabel, date, dateStr } for Mon-Sun of the given week.
  * weekOffset: 0 = current week, -1 = last week, +1 = next week
  */
 export function getWeekDays(weekOffset = 0) {

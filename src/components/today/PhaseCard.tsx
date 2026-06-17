@@ -41,6 +41,7 @@ interface PhaseCardProps {
   completedDateStrs: Set<string>
   onSelectDay: (dayLabel: string, dateStr: string, date: Date) => void
   onGoToToday: () => void
+  programmeStartDate: string | null
 }
 
 const PhaseCard = memo(function PhaseCard({
@@ -62,6 +63,7 @@ const PhaseCard = memo(function PhaseCard({
   completedDateStrs,
   onSelectDay,
   onGoToToday,
+  programmeStartDate,
 }: PhaseCardProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
 
@@ -130,12 +132,12 @@ const PhaseCard = memo(function PhaseCard({
             onClick={onPrevWeek}
             disabled={!canGoBack}
             aria-label="Previous week"
-            className={`w-[44px] h-[44px] flex items-center justify-center rounded-[12px] shrink-0 transition-all duration-150 active:scale-[0.93] ${
-              canGoBack ? 'bg-[#1c1c1c] active:bg-[#242424]' : 'opacity-30'
+            className={`w-[44px] h-[44px] flex items-center justify-center rounded-[12px] shrink-0 transition-all duration-150 ${
+              canGoBack ? 'bg-[#1c1c1c] active:bg-[#242424] active:scale-[0.93]' : 'pointer-events-none cursor-default'
             }`}
             style={{ border: `1.5px solid ${colors.border}` }}
           >
-            <span className="text-[16px] leading-none text-[#f0ede8]">&lt;</span>
+            <span className="text-[16px] leading-none" style={{ color: canGoBack ? '#f0ede8' : '#1a1a1a' }}>&lt;</span>
           </button>
 
           <div className="flex-1 text-center">
@@ -154,11 +156,8 @@ const PhaseCard = memo(function PhaseCard({
 
           <button
             onClick={onNextWeek}
-            disabled={!canGoForward}
             aria-label="Next week"
-            className={`w-[44px] h-[44px] flex items-center justify-center rounded-[12px] shrink-0 transition-all duration-150 active:scale-[0.93] ${
-              canGoForward ? 'bg-[#1c1c1c] active:bg-[#242424]' : 'opacity-30'
-            }`}
+            className="w-[44px] h-[44px] flex items-center justify-center rounded-[12px] shrink-0 transition-all duration-150 bg-[#1c1c1c] active:bg-[#242424] active:scale-[0.93]"
             style={{ border: `1.5px solid ${colors.border}` }}
           >
             <span className="text-[16px] leading-none text-[#f0ede8]">&gt;</span>
@@ -167,6 +166,8 @@ const PhaseCard = memo(function PhaseCard({
 
         <div className="flex gap-[6px]">
           {weekDays.map(({ dayLabel, date, dateStr: dayDateStr }) => {
+            const isBeforeStart = programmeStartDate ? dayDateStr < programmeStartDate : false
+            const isStartDate = programmeStartDate ? dayDateStr === programmeStartDate : false
             const isSelected = dayDateStr === selectedDateStr
             const isToday = dayDateStr === todayDateStr
             const isCompleted = completedDateStrs.has(dayDateStr)
@@ -176,20 +177,30 @@ const PhaseCard = memo(function PhaseCard({
             const dayNum = date.getDate()
             const monthStr = MONTHS[date.getMonth()]
 
+            if (isBeforeStart) {
+              return (
+                <div
+                  key={dayLabel}
+                  className="flex-1 py-[10px] rounded-[14px] min-w-0"
+                  style={{ background: '#1c1c1c', border: '1.5px solid #2a2a2a' }}
+                />
+              )
+            }
+
             const isSkipped = isPast && !isCompleted && !isSunday
 
             let dayColor = '#666666'
             let numColor = '#f0ede8'
 
-            if (isSunday) {
+            if (isFuture) {
+              dayColor = '#222222'
+              numColor = '#222222'
+            } else if (isSunday) {
               dayColor = isToday ? '#ff4520' : '#333333'
               numColor = isToday ? '#f0ede8' : '#666666'
             } else if (isCompleted) {
               dayColor = '#22c55e'
             } else if (isSkipped) {
-              dayColor = '#666666'
-              numColor = '#666666'
-            } else if (isFuture) {
               dayColor = '#666666'
               numColor = '#666666'
             }
@@ -201,13 +212,14 @@ const PhaseCard = memo(function PhaseCard({
             return (
               <button
                 key={dayLabel}
-                className={`flex-1 flex flex-col items-center gap-[3px] py-[10px] rounded-[14px] min-w-0 transition-all duration-150 active:scale-[0.93]`}
+                className={`flex-1 flex flex-col items-center gap-[3px] py-[10px] rounded-[14px] min-w-0 transition-all duration-150 ${isFuture ? '' : 'active:scale-[0.93]'}`}
                 style={{
                   background: isSelected ? '#242424' : '#1c1c1c',
                   border: `1.5px solid ${isSelected ? '#ff4520' : '#2a2a2a'}`,
+                  ...(isFuture ? { pointerEvents: 'none' as const } : {}),
                 }}
                 onClick={() => onSelectDay(dayLabel, dayDateStr, date)}
-                aria-label={`${dayLabel} ${dayNum} ${monthStr}${isToday ? ' (today)' : ''}${isSunday ? ' rest day' : ''}${isCompleted ? ' completed' : ''}${isSkipped ? ' skipped' : ''}`}
+                aria-label={`${dayLabel} ${dayNum} ${monthStr}${isToday ? ' (today)' : ''}${isSunday ? ' rest day' : ''}${isCompleted ? ' completed' : ''}${isSkipped ? ' skipped' : ''}${isStartDate ? ' programme start' : ''}`}
                 aria-pressed={isSelected}
               >
                 <span className="text-[10px] font-semibold" style={{ color: dayColor }}>
@@ -216,8 +228,12 @@ const PhaseCard = memo(function PhaseCard({
                 <span className="font-['Bebas_Neue'] text-[20px] leading-none" style={{ color: numColor }}>
                   {dayNum} {monthStr}
                 </span>
-                {isSunday ? (
+                {isStartDate ? (
+                  <span className="text-[9px] font-semibold text-[#ff4520]">START</span>
+                ) : isSunday ? (
                   <span className="text-[9px] font-semibold" style={{ color: '#333333' }}>REST</span>
+                ) : isFuture ? (
+                  <div className="w-[5px] h-[5px]" />
                 ) : isCompleted ? (
                   <span className="text-[12px] leading-none text-[#22c55e]">✓</span>
                 ) : isSkipped ? (

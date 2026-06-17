@@ -5,6 +5,9 @@ import {
   computePhaseAndWeek,
   getDayKey,
   getWeekDays,
+  getMinWeekOffset,
+  isProgrammeWeek1,
+  getProgrammeWeekNumber,
   toDateStr,
 } from '../utils/programme'
 import { useTodayData } from '../hooks/useTodayData'
@@ -264,18 +267,10 @@ export default function Today() {
   }, [sessions, weekDays])
 
   // ── Week navigation bounds ──
-  // Navigate back to the programme start week, forward up to current week
-  const canGoBack = useMemo(() => {
-    if (!config?.start_date) return false
-    const sd = new Date(config.start_date + 'T00:00:00')
-    const dow = sd.getDay()
-    const startMonday = new Date(sd)
-    startMonday.setDate(sd.getDate() - (dow === 0 ? 6 : dow - 1))
-    startMonday.setHours(0, 0, 0, 0)
-    return weekDays[0].date > startMonday
-  }, [config, weekDays])
-
-  const canGoForward = weekOffset < 0
+  const programmeStartDate = config?.start_date || null
+  const minWeekOffset = useMemo(() => getMinWeekOffset(programmeStartDate), [programmeStartDate])
+  const canGoBack = weekOffset > minWeekOffset
+  const canGoForward = true
 
   // ── Pre-populate completedSets from exercise_logs ──
   useEffect(() => {
@@ -537,6 +532,7 @@ export default function Today() {
           completedDateStrs={completedDateStrs}
           onSelectDay={handleSelectDay}
           onGoToToday={handleGoToToday}
+          programmeStartDate={programmeStartDate}
         />
 
         {/* Content — with swipe slide animation */}
