@@ -4,6 +4,8 @@ import { upsertWarmupLog } from '../../services/checklistService'
 import { logger } from '../../lib/logger'
 import { SectionLabel, ProgressBar, Checkbox } from '../ui'
 import { radius } from '../../styles/tokens'
+import useOptimisticUpdate from '../../hooks/useOptimisticUpdate'
+import * as idbCache from '../../services/idbCache'
 
 interface WarmupItem {
   k: string
@@ -34,6 +36,7 @@ interface WarmupSectionProps {
 
 const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, warmupItems: dbWarmupItems, onUpdate }: WarmupSectionProps) {
   const { user } = useAuth()
+  const { execute } = useOptimisticUpdate()
 
   const items: WarmupItem[] = useMemo(() => {
     if (!dbWarmupItems || dbWarmupItems.length === 0) return []
@@ -45,22 +48,49 @@ const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, 
     }))
   }, [dbWarmupItems])
 
-  const completedKeys = new Set(warmupLogs.filter(l => l.completed).map(l => l.item_key))
+  const [localOverrides, setLocalOverrides] = useState<Record<string, boolean>>({})
+
+  const completedKeys = useMemo(() => {
+    const set = new Set(warmupLogs.filter(l => l.completed).map(l => l.item_key))
+    for (const [k, v] of Object.entries(localOverrides)) {
+      if (v) set.add(k)
+      else set.delete(k)
+    }
+    return set
+  }, [warmupLogs, localOverrides])
+
   const completedCount = completedKeys.size
   const allDone = completedCount === items.length
   const [collapsed, setCollapsed] = useState(allDone)
 
-  async function toggleItem(item: WarmupItem) {
+  function toggleItem(item: WarmupItem) {
     const isCompleted = completedKeys.has(item.k)
-    const { error } = await upsertWarmupLog(user.id, {
-      date: dateStr,
-      phase,
-      item_key: item.k,
-      item_label: item.label,
-      completed: !isCompleted,
+    const newValue = !isCompleted
+
+    execute({
+      optimisticUpdate: () => {
+        setLocalOverrides(prev => ({ ...prev, [item.k]: newValue }))
+        if (navigator.vibrate) navigator.vibrate(30)
+      },
+      idbWrite: async () => {
+        await idbCache.invalidate('workout-data', `${user.id}_${dateStr}`)
+      },
+      supabaseWrite: async () => {
+        const { error } = await upsertWarmupLog(user.id, {
+          date: dateStr,
+          phase,
+          item_key: item.k,
+          item_label: item.label,
+          completed: newValue,
+        })
+        if (error) throw new Error(error)
+        onUpdate()
+      },
+      rollback: () => {
+        setLocalOverrides(prev => ({ ...prev, [item.k]: isCompleted }))
+      },
+      syncKey: `warmup_${dateStr}_${item.k}`,
     })
-    if (error) logger.error('toggleWarmup:', error)
-    onUpdate()
   }
 
   return (

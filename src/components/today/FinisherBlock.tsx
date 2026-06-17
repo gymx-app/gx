@@ -3,6 +3,8 @@ import { useAuth } from '../../auth/AuthContext'
 import { upsertChecklistLog } from '../../services/checklistService'
 import { Text, Button, SectionLabel } from '../ui'
 import { colors, radius } from '../../styles/tokens'
+import useOptimisticUpdate from '../../hooks/useOptimisticUpdate'
+import * as idbCache from '../../services/idbCache'
 
 interface Finisher {
   title: string
@@ -29,8 +31,10 @@ interface FinisherBlockProps {
 
 function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }: FinisherBlockProps) {
   const { user } = useAuth()
+  const { execute } = useOptimisticUpdate()
   const existing = checklistLogs.find(l => l.item_key === 'fin-main' && l.item_type === 'finisher')
-  const isLogged = existing?.completed || false
+  const [localLogged, setLocalLogged] = useState<boolean | null>(null)
+  const isLogged = localLogged !== null ? localLogged : (existing?.completed || false)
 
   const [finInputs, setFinInputs] = useState<Record<string, string>>(() => {
     if (isLogged && existing?.notes) {
@@ -42,9 +46,8 @@ function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }: FinisherBlockP
   const isCardio = fin.type === 'cardio'
   const hasDuration = !!finInputs.duration
 
-  async function handleLogFinisher() {
+  function handleLogFinisher() {
     if (isCardio && !hasDuration) return
-    if (navigator.vibrate) navigator.vibrate(50)
 
     const notes: Record<string, number> = {}
     if (isCardio) {
@@ -52,15 +55,32 @@ function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }: FinisherBlockP
       if (finInputs.speed) notes.speed = parseFloat(finInputs.speed)
       if (finInputs.duration) notes.duration = parseFloat(finInputs.duration)
     }
+    const notesStr = JSON.stringify(notes)
 
-    await upsertChecklistLog(user.id, {
-      date: dateStr,
-      item_type: 'finisher',
-      item_key: 'fin-main',
-      completed: true,
-      notes: JSON.stringify(notes),
+    execute({
+      optimisticUpdate: () => {
+        setLocalLogged(true)
+        if (navigator.vibrate) navigator.vibrate(50)
+      },
+      idbWrite: async () => {
+        await idbCache.invalidate('workout-data', `${user.id}_${dateStr}`)
+      },
+      supabaseWrite: async () => {
+        const { error } = await upsertChecklistLog(user.id, {
+          date: dateStr,
+          item_type: 'finisher',
+          item_key: 'fin-main',
+          completed: true,
+          notes: notesStr,
+        })
+        if (error) throw new Error(error)
+        onUpdate()
+      },
+      rollback: () => {
+        setLocalLogged(false)
+      },
+      syncKey: `finisher_${dateStr}`,
     })
-    onUpdate()
   }
 
   return (

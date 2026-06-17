@@ -6,6 +6,8 @@ import { logger } from '../../lib/logger'
 import { Text, Button, Badge, SectionLabel } from '../ui'
 import CooldownSection from './CooldownSection'
 import { colors, radius } from '../../styles/tokens'
+import useOptimisticUpdate from '../../hooks/useOptimisticUpdate'
+import * as idbCache from '../../services/idbCache'
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
@@ -162,6 +164,7 @@ const LissDay = memo(function LissDay({
   onUpdate,
 }: LissDayProps) {
   const { user } = useAuth()
+  const { execute } = useOptimisticUpdate()
 
   const cooldown = useMemo(() => {
     if (dbCooldownItems && dbCooldownItems.length > 0) {
@@ -238,26 +241,40 @@ const LissDay = memo(function LissDay({
     setInputValues({})
   }
 
-  async function handleLog() {
+  function handleLog() {
     if (!hasDuration) return
-    setIsLogged(true)
-    if (navigator.vibrate) navigator.vibrate(50)
 
     const notes: Record<string, unknown> = { equipment: selectedEquipment }
     for (const name of config.inputs) {
       const val = inputValues[name]
       if (val) notes[name] = parseFloat(val)
     }
+    const notesStr = JSON.stringify(notes)
 
-    const { error } = await upsertChecklistLog(user.id, {
-      date: dateStr,
-      item_type: 'cardio',
-      item_key: 'liss',
-      completed: true,
-      notes: JSON.stringify(notes),
+    execute({
+      optimisticUpdate: () => {
+        setIsLogged(true)
+        if (navigator.vibrate) navigator.vibrate(50)
+      },
+      idbWrite: async () => {
+        await idbCache.invalidate('workout-data', `${user.id}_${dateStr}`)
+      },
+      supabaseWrite: async () => {
+        const { error } = await upsertChecklistLog(user.id, {
+          date: dateStr,
+          item_type: 'cardio',
+          item_key: 'liss',
+          completed: true,
+          notes: notesStr,
+        })
+        if (error) throw new Error(error)
+        onUpdate()
+      },
+      rollback: () => {
+        setIsLogged(false)
+      },
+      syncKey: `liss_${dateStr}`,
     })
-    if (error) logger.error('handleLog LISS:', error)
-    onUpdate()
   }
 
   const showPrevious = previousLog && previousLog.equipment === selectedEquipment

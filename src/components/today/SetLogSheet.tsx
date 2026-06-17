@@ -4,6 +4,8 @@ import { upsertExerciseLog, upsertWorkoutSession } from '../../services/workoutS
 import { logger } from '../../lib/logger'
 import { Button, SectionLabel } from '../ui'
 import { colors, radius } from '../../styles/tokens'
+import useOptimisticUpdate from '../../hooks/useOptimisticUpdate'
+import * as idbCache from '../../services/idbCache'
 
 interface Exercise {
   n: string
@@ -60,64 +62,76 @@ const SetLogSheet = memo(function SetLogSheet({
   onLogged,
 }: SetLogSheetProps) {
   const { user } = useAuth()
+  const { execute } = useOptimisticUpdate()
   const weightRef = useRef<HTMLInputElement>(null)
 
   const [weight, setWeight] = useState(existingLog?.weight_kg?.toString() || previousBest?.weight_kg?.toString() || '')
   const [reps, setReps] = useState(existingLog?.reps?.toString() || '')
   const [rpe, setRpe] = useState<number | null>(existingLog?.rpe || null)
   const [isMM, setIsMM] = useState(false)
-  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     setTimeout(() => weightRef.current?.focus(), 100)
   }, [])
 
-  async function handleLog() {
+  function handleLog() {
     if (!weight || !reps) return
-    setSaving(true)
 
-    try {
-      let sid = sessionId
-      if (!sid) {
-        const dayOfWeek = new Date(dateStr + 'T00:00:00')
-          .toLocaleDateString('en', { weekday: 'short' })
-          .toUpperCase()
-          .slice(0, 3)
+    const weightVal = parseFloat(weight)
+    const repsVal = parseInt(reps)
+    const exerciseId = exerciseMap[exercise.n]
 
-        const { data: sess, error: sessErr } = await upsertWorkoutSession(user.id, {
+    const sid = sessionId || crypto.randomUUID()
+
+    execute({
+      optimisticUpdate: () => {
+        if (navigator.vibrate) navigator.vibrate(50)
+        onLogged(sid, weightVal)
+      },
+      idbWrite: async () => {
+        await idbCache.invalidate('workout-data', `${user.id}_${dateStr}`)
+      },
+      supabaseWrite: async () => {
+        let finalSid = sessionId
+        if (!finalSid) {
+          const dayOfWeek = new Date(dateStr + 'T00:00:00')
+            .toLocaleDateString('en', { weekday: 'short' })
+            .toUpperCase()
+            .slice(0, 3)
+
+          const { data: sess, error: sessErr } = await upsertWorkoutSession(user.id, {
+            date: dateStr,
+            phase,
+            day_of_week: dayOfWeek,
+            workout_title: exercise.n,
+          })
+          if (sessErr) throw new Error(sessErr)
+          finalSid = sess.id
+        }
+
+        if (!exerciseId) throw new Error(`No exercise_id for "${exercise.n}"`)
+
+        const { error: logErr } = await upsertExerciseLog(user.id, {
+          session_id: finalSid,
+          exercise_id: exerciseId,
+          exercise_name: exercise.n,
           date: dateStr,
           phase,
-          day_of_week: dayOfWeek,
-          workout_title: exercise.n,
+          exercise_index: exerciseIndex,
+          set_number: setNumber,
+          is_mm_set: isMM,
+          weight_kg: weightVal,
+          reps: repsVal,
+          rpe: rpe || null,
+          completed: true,
         })
-        if (sessErr) throw new Error(sessErr)
-        sid = sess.id
-      }
-
-      const exerciseId = exerciseMap[exercise.n]
-      if (!exerciseId) throw new Error(`No exercise_id for "${exercise.n}"`)
-
-      const { error: logErr } = await upsertExerciseLog(user.id, {
-        session_id: sid,
-        exercise_id: exerciseId,
-        exercise_name: exercise.n,
-        date: dateStr,
-        phase,
-        exercise_index: exerciseIndex,
-        set_number: setNumber,
-        is_mm_set: isMM,
-        weight_kg: parseFloat(weight),
-        reps: parseInt(reps),
-        rpe: rpe || null,
-        completed: true,
-      })
-      if (logErr) throw new Error(logErr)
-
-      onLogged(sid!, parseFloat(weight))
-    } catch (err) {
-      logger.error('SetLogSheet error:', err)
-      setSaving(false)
-    }
+        if (logErr) throw new Error(logErr)
+      },
+      rollback: () => {
+        logger.warn('Set log failed — data queued for retry')
+      },
+      syncKey: `exercise_log_${dateStr}_${exerciseId}_${setNumber}`,
+    })
   }
 
   return (
@@ -234,10 +248,9 @@ const SetLogSheet = memo(function SetLogSheet({
 
         <Button
           variant="primary"
-          label={saving ? 'SAVING...' : 'LOG SET'}
+          label="LOG SET"
           onPress={handleLog}
           disabled={!weight || !reps}
-          loading={saving}
         />
       </div>
     </div>

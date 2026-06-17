@@ -11,9 +11,11 @@ import PWAUpdatePrompt from './components/PWAUpdatePrompt'
 import AppLayout from './components/layout/AppLayout'
 import { checkCacheVersion } from './services/cacheVersion'
 import { initNetworkQuality } from './services/networkQuality'
+import { initSyncState } from './services/syncState'
 
 checkCacheVersion()
 initNetworkQuality()
+initSyncState()
 
 function lazyWithRetry(importFn: () => Promise<{ default: ComponentType }>) {
   return lazy(() =>

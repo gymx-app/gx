@@ -1,8 +1,10 @@
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { useAuth } from '../../auth/AuthContext'
 import { upsertChecklistLog } from '../../services/checklistService'
 import { SectionLabel, Checkbox } from '../ui'
 import { radius } from '../../styles/tokens'
+import useOptimisticUpdate from '../../hooks/useOptimisticUpdate'
+import * as idbCache from '../../services/idbCache'
 
 interface ChecklistLog {
   item_key: string
@@ -18,20 +20,45 @@ interface CooldownSectionProps {
 
 function CooldownSection({ items, dateStr, checklistLogs, onUpdate }: CooldownSectionProps) {
   const { user } = useAuth()
-  const completedKeys = useMemo(
-    () => new Set(checklistLogs.filter(l => l.completed).map(l => l.item_key)),
-    [checklistLogs]
-  )
+  const { execute } = useOptimisticUpdate()
+  const [localOverrides, setLocalOverrides] = useState<Record<string, boolean>>({})
 
-  async function toggle(key: string) {
+  const completedKeys = useMemo(() => {
+    const set = new Set(checklistLogs.filter(l => l.completed).map(l => l.item_key))
+    for (const [k, v] of Object.entries(localOverrides)) {
+      if (v) set.add(k)
+      else set.delete(k)
+    }
+    return set
+  }, [checklistLogs, localOverrides])
+
+  function toggle(key: string) {
     const done = completedKeys.has(key)
-    await upsertChecklistLog(user.id, {
-      date: dateStr,
-      item_type: 'cooldown',
-      item_key: key,
-      completed: !done,
+    const newValue = !done
+
+    execute({
+      optimisticUpdate: () => {
+        setLocalOverrides(prev => ({ ...prev, [key]: newValue }))
+        if (navigator.vibrate) navigator.vibrate(30)
+      },
+      idbWrite: async () => {
+        await idbCache.invalidate('workout-data', `${user.id}_${dateStr}`)
+      },
+      supabaseWrite: async () => {
+        const { error } = await upsertChecklistLog(user.id, {
+          date: dateStr,
+          item_type: 'cooldown',
+          item_key: key,
+          completed: newValue,
+        })
+        if (error) throw new Error(error)
+        onUpdate()
+      },
+      rollback: () => {
+        setLocalOverrides(prev => ({ ...prev, [key]: done }))
+      },
+      syncKey: `cooldown_${dateStr}_${key}`,
     })
-    onUpdate()
   }
 
   if (!items || items.length === 0) return null
