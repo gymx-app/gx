@@ -26,9 +26,9 @@ const TodaySkeleton = memo(function TodaySkeleton() {
           </div>
         </div>
 
-        <div className="flex gap-[6px] px-4 py-3">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="flex-1 h-[62px] rounded-[12px]" style={{ background: '#141414', border: '1.5px solid #2a2a2a' }} />
+        <div className="px-4 py-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+          {[...Array(7)].map((_, i) => (
+            <div key={i} className="rounded-[12px]" style={{ minHeight: 72, background: '#141414', border: '1.5px solid #2a2a2a' }} />
           ))}
         </div>
 

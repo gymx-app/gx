@@ -164,7 +164,7 @@ const PhaseCard = memo(function PhaseCard({
           </button>
         </div>
 
-        <div className="flex gap-[6px]">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
           {weekDays.map(({ dayLabel, date, dateStr: dayDateStr }) => {
             const isBeforeStart = programmeStartDate ? dayDateStr < programmeStartDate : false
             const isStartDate = programmeStartDate ? dayDateStr === programmeStartDate : false
@@ -175,69 +175,100 @@ const PhaseCard = memo(function PhaseCard({
             const isFuture = dayDateStr > todayDateStr
             const isSunday = dayLabel === 'SUN'
             const dayNum = date.getDate()
-            const monthStr = MONTHS[date.getMonth()]
 
             if (isBeforeStart) {
               return (
                 <div
                   key={dayLabel}
-                  className="flex-1 py-[10px] rounded-[14px] min-w-0"
-                  style={{ background: '#1c1c1c', border: '1.5px solid #2a2a2a' }}
+                  className="rounded-[12px]"
+                  style={{ minHeight: 72, background: '#111111', border: '1.5px solid #1a1a1a' }}
                 />
               )
             }
 
             const isSkipped = isPast && !isCompleted && !isSunday
 
-            let dayColor = '#666666'
+            let dayColor = '#555555'
             let numColor = '#f0ede8'
 
-            if (isFuture) {
+            if (isSelected) {
+              dayColor = '#999999'
+              numColor = '#ffffff'
+            } else if (isFuture) {
               dayColor = '#444444'
               numColor = '#555555'
             } else if (isSunday) {
               dayColor = isToday ? '#ff4520' : '#333333'
-              numColor = isToday ? '#f0ede8' : '#666666'
+              numColor = isToday ? '#f0ede8' : '#444444'
             } else if (isCompleted) {
               dayColor = '#22c55e'
             } else if (isSkipped) {
-              dayColor = '#666666'
-              numColor = '#666666'
+              dayColor = '#555555'
+              numColor = '#555555'
             }
 
-            if (isToday && !isCompleted && !isSunday) {
+            if (isToday && !isSelected && !isCompleted && !isSunday) {
               dayColor = '#ff4520'
             }
+
+            const bg = isSelected ? '#1c1c1c' : 'transparent'
+            const border = isToday && !isSelected
+              ? `2px solid ${colors.accent}`
+              : isSelected
+              ? '2px solid #333333'
+              : '2px solid transparent'
 
             return (
               <button
                 key={dayLabel}
-                className="flex-1 flex flex-col items-center gap-[3px] py-[10px] rounded-[14px] min-w-0 transition-all duration-150 active:scale-[0.93]"
+                className="flex flex-col items-center justify-center rounded-[12px]"
                 style={{
-                  background: isSelected ? '#242424' : '#1c1c1c',
-                  border: `1.5px solid ${isSelected ? '#ff4520' : '#2a2a2a'}`,
+                  minHeight: 72,
+                  background: bg,
+                  border,
+                  transition: 'transform 120ms ease, background 120ms ease',
                 }}
                 onClick={() => onSelectDay(dayLabel, dayDateStr, date)}
-                aria-label={`${dayLabel} ${dayNum} ${monthStr}${isToday ? ' (today)' : ''}${isSunday ? ' rest day' : ''}${isCompleted ? ' completed' : ''}${isSkipped ? ' skipped' : ''}${isStartDate ? ' programme start' : ''}`}
+                onPointerDown={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(0.95)' }}
+                onPointerUp={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
+                onPointerLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
+                aria-label={`${dayLabel} ${dayNum}${isToday ? ' (today)' : ''}${isSunday ? ' rest day' : ''}${isCompleted ? ' completed' : ''}${isSkipped ? ' skipped' : ''}${isStartDate ? ' programme start' : ''}`}
                 aria-pressed={isSelected}
               >
-                <span className="text-[10px] font-semibold" style={{ color: dayColor }}>
+                <span
+                  className="text-[10px] font-semibold"
+                  style={{ color: dayColor, letterSpacing: '0.06em' }}
+                >
                   {dayLabel}
                 </span>
-                <span className="font-['Bebas_Neue'] text-[20px] leading-none" style={{ color: numColor }}>
-                  {dayNum} {monthStr}
-                </span>
-                {isStartDate ? (
-                  <span className="text-[9px] font-semibold text-[#ff4520]">START</span>
-                ) : isSunday ? (
-                  <span className="text-[9px] font-semibold" style={{ color: '#333333' }}>REST</span>
-                ) : isCompleted ? (
-                  <span className="text-[12px] leading-none text-[#22c55e]">✓</span>
-                ) : isSkipped ? (
-                  <span className="text-[12px] leading-none text-[#ff4520]">—</span>
+
+                {isSunday && !isToday ? (
+                  <span
+                    className="text-[10px] font-semibold mt-[6px]"
+                    style={{ color: '#333333', letterSpacing: '0.06em' }}
+                  >
+                    REST
+                  </span>
                 ) : (
-                  <div className="w-[5px] h-[5px] rounded-full" style={{ background: isToday ? '#ff4520' : colors.border }} />
+                  <span
+                    className="font-['Bebas_Neue'] text-[20px] leading-none mt-[4px]"
+                    style={{ color: numColor, fontWeight: 500 }}
+                  >
+                    {dayNum}
+                  </span>
                 )}
+
+                <div className="mt-[6px] h-[5px] flex items-center justify-center">
+                  {isStartDate ? (
+                    <span className="text-[8px] font-bold text-[#ff4520]" style={{ letterSpacing: '0.06em' }}>START</span>
+                  ) : isCompleted ? (
+                    <div className="w-[5px] h-[5px] rounded-full bg-[#22c55e]" />
+                  ) : isSkipped ? (
+                    <div className="w-[5px] h-[5px] rounded-full bg-[#ff4520]" />
+                  ) : (
+                    <div className="w-[5px] h-[5px]" />
+                  )}
+                </div>
               </button>
             )
           })}
