@@ -203,8 +203,12 @@ export default function Today() {
       }))
     }
 
+    if (dayData?.workout_type === 'workout' && !loading) {
+      console.warn('[GX] programme_exercises empty for day', dayData?.id, '— seed programme_exercises table')
+    }
+
     return []
-  }, [programmeExercises])
+  }, [programmeExercises, dayData, loading])
 
   const displayCooldownItems = useMemo(() => {
     if (cooldownItems && cooldownItems.length > 0) {
@@ -630,20 +634,27 @@ export default function Today() {
               <div className="mt-4">
                 <SectionLabel label="Exercises" className="mb-2" />
               </div>
-              <div className="flex flex-col gap-3">
-                {displayExercises.map((ex, idx) => (
-                  <ExerciseCard
-                    key={`${ex.n}-${idx}`}
-                    exercise={ex}
-                    exerciseIndex={idx}
-                    exerciseLogs={logsByExercise[ex.n] || []}
-                    previousBest={previousBests[ex.n]}
-                    isExpanded={expandedExercise === idx}
-                    onToggleExpand={() => setExpandedExercise(expandedExercise === idx ? null : idx)}
-                    onTapSet={handleTapSet}
-                  />
-                ))}
-              </div>
+              {displayExercises.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {displayExercises.map((ex, idx) => (
+                    <ExerciseCard
+                      key={`${ex.n}-${idx}`}
+                      exercise={ex}
+                      exerciseIndex={idx}
+                      exerciseLogs={logsByExercise[ex.n] || []}
+                      previousBest={previousBests[ex.n]}
+                      isExpanded={expandedExercise === idx}
+                      onToggleExpand={() => setExpandedExercise(expandedExercise === idx ? null : idx)}
+                      onTapSet={handleTapSet}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="py-6 text-center" style={{ background: '#141414', border: '1px solid #2a2a2a', borderRadius: '16px' }}>
+                  <Text variant="bodyMuted">No exercises configured for this day.</Text>
+                  <Text variant="caption" className="mt-1">Seed the programme_exercises table to populate.</Text>
+                </div>
+              )}
 
               {/* Finisher */}
               {workout.fin && (

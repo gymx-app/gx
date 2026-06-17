@@ -123,8 +123,8 @@ const PhaseCard = memo(function PhaseCard({
         </div>
       </div>
 
-      {/* ── Week strip (unchanged) ── */}
-      <div className="px-4 mt-3">
+      {/* ── Week strip — sticky below TopBar ── */}
+      <div className="px-4 mt-3 sticky top-0 z-40 bg-[#0a0a0a] pb-2 border-b border-[#1a1a1a]">
         <div className="flex items-center gap-[8px] pb-[10px]">
           <button
             onClick={onPrevWeek}
