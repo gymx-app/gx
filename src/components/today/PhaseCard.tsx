@@ -140,7 +140,7 @@ const PhaseCard = memo(function PhaseCard({
 
           <div className="flex-1 text-center">
             <span className="font-['Bebas_Neue'] text-[18px] tracking-[1px] text-[#f0ede8]">
-              Wk {totalWeek} · {weekDays[0].date.getDate()} {MONTHS[weekDays[0].date.getMonth()]} – {weekDays[5].date.getDate()} {MONTHS[weekDays[5].date.getMonth()]}
+              Wk {totalWeek} · {weekDays[0].date.getDate()} {MONTHS[weekDays[0].date.getMonth()]} – {weekDays[6].date.getDate()} {MONTHS[weekDays[6].date.getMonth()]}
             </span>
             {showTodayPill && (
               <button
@@ -172,15 +172,19 @@ const PhaseCard = memo(function PhaseCard({
             const isCompleted = completedDateStrs.has(dayDateStr)
             const isPast = dayDateStr < todayDateStr
             const isFuture = dayDateStr > todayDateStr
+            const isSunday = dayLabel === 'SUN'
             const dayNum = date.getDate()
             const monthStr = MONTHS[date.getMonth()]
 
-            const isSkipped = isPast && !isCompleted
+            const isSkipped = isPast && !isCompleted && !isSunday
 
             let dayColor = '#666666'
             let numColor = '#f0ede8'
 
-            if (isCompleted) {
+            if (isSunday) {
+              dayColor = isToday ? '#ff4520' : '#333333'
+              numColor = isToday ? '#f0ede8' : '#666666'
+            } else if (isCompleted) {
               dayColor = '#22c55e'
             } else if (isSkipped) {
               dayColor = '#666666'
@@ -190,7 +194,7 @@ const PhaseCard = memo(function PhaseCard({
               numColor = '#666666'
             }
 
-            if (isToday && !isCompleted) {
+            if (isToday && !isCompleted && !isSunday) {
               dayColor = '#ff4520'
             }
 
@@ -203,16 +207,18 @@ const PhaseCard = memo(function PhaseCard({
                   border: `1.5px solid ${isSelected ? '#ff4520' : '#2a2a2a'}`,
                 }}
                 onClick={() => onSelectDay(dayLabel, dayDateStr, date)}
-                aria-label={`${dayLabel} ${dayNum} ${monthStr}${isToday ? ' (today)' : ''}${isCompleted ? ' completed' : ''}${isSkipped ? ' skipped' : ''}`}
+                aria-label={`${dayLabel} ${dayNum} ${monthStr}${isToday ? ' (today)' : ''}${isSunday ? ' rest day' : ''}${isCompleted ? ' completed' : ''}${isSkipped ? ' skipped' : ''}`}
                 aria-pressed={isSelected}
               >
-                <span className="text-[9px] font-semibold" style={{ color: dayColor }}>
+                <span className="text-[10px] font-semibold" style={{ color: dayColor }}>
                   {dayLabel}
                 </span>
                 <span className="font-['Bebas_Neue'] text-[20px] leading-none" style={{ color: numColor }}>
                   {dayNum} {monthStr}
                 </span>
-                {isCompleted ? (
+                {isSunday ? (
+                  <span className="text-[9px] font-semibold" style={{ color: '#333333' }}>REST</span>
+                ) : isCompleted ? (
                   <span className="text-[12px] leading-none text-[#22c55e]">✓</span>
                 ) : isSkipped ? (
                   <span className="text-[12px] leading-none text-[#ff4520]">—</span>

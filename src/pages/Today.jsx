@@ -133,7 +133,7 @@ export default function Today() {
     hasCachedData,
     error,
     refetch,
-  } = useTodayData(dateStr, weekDays[0].dateStr, weekDays[5].dateStr, selectedDayLabel)
+  } = useTodayData(dateStr, weekDays[0].dateStr, weekDays[6].dateStr, selectedDayLabel)
 
   // ── Sync status derived from data hook ──
   useEffect(() => {
@@ -375,20 +375,18 @@ export default function Today() {
   }, [])
 
   // ── Swipe day navigation ──
-  const DAY_SEQ = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+  const DAY_SEQ = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 
   function navigateDay(direction) {
     const idx = DAY_SEQ.indexOf(selectedDayLabel)
     if (idx === -1) return
 
     if (direction === 'next') {
-      if (idx < 5) {
-        // Check if next day is in the future
+      if (idx < 6) {
         const nextDay = weekDays[idx + 1]
         if (nextDay && nextDay.dateStr > todayDateStr) return
         setSelectedDayLabel(DAY_SEQ[idx + 1])
       } else {
-        // On SAT → next week MON (only past weeks)
         if (weekOffset >= 0) return
         setWeekOffset(prev => prev + 1)
         setSelectedDayLabel('MON')
@@ -397,10 +395,9 @@ export default function Today() {
       if (idx > 0) {
         setSelectedDayLabel(DAY_SEQ[idx - 1])
       } else {
-        // On MON → previous week SAT
         if (!canGoBack) return
         setWeekOffset(prev => prev - 1)
-        setSelectedDayLabel('SAT')
+        setSelectedDayLabel('SUN')
       }
     }
 

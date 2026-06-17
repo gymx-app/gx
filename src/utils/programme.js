@@ -3,7 +3,7 @@
  * and programme config.
  */
 
-const DAY_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+const DAY_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 
 /**
  * Get the Monday of the week containing `date`.
