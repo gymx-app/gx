@@ -326,6 +326,8 @@ export default function Today() {
       String(d.getDate()).padStart(2, '0')
   }, [])
 
+  const isFutureDate = dateStr > todayDateStr
+
   // ── Handlers ──
   const handleSelectDay = useCallback((dayLabel) => {
     setSelectedDayLabel(dayLabel)
@@ -335,29 +337,13 @@ export default function Today() {
   }, [])
 
   const handlePrevWeek = useCallback(() => {
-    setWeekOffset(prev => {
-      const newOffset = prev - 1
-      const newWeekDays = getWeekDays(newOffset)
-      setSelectedDayLabel(cur => {
-        const sameDay = newWeekDays.find(d => d.dayLabel === cur)
-        if (sameDay && sameDay.dateStr > todayDateStr) return 'MON'
-        return cur
-      })
-      return newOffset
-    })
+    setWeekOffset(prev => prev - 1)
     setScreenState('orientation')
-  }, [todayDateStr])
+  }, [])
 
   const handleNextWeek = useCallback(() => {
     setWeekOffset(prev => {
-      const newOffset = prev + 1
-      const newWeekDays = getWeekDays(newOffset)
-      setSelectedDayLabel(cur => {
-        const sameDay = newWeekDays.find(d => d.dayLabel === cur)
-        if (sameDay && sameDay.dateStr > todayDateStr) return 'MON'
-        return cur
-      })
-      return newOffset
+      return prev + 1
     })
     setScreenState('orientation')
   }, [todayDateStr])
@@ -384,11 +370,8 @@ export default function Today() {
 
     if (direction === 'next') {
       if (idx < 6) {
-        const nextDay = weekDays[idx + 1]
-        if (nextDay && nextDay.dateStr > todayDateStr) return
         setSelectedDayLabel(DAY_SEQ[idx + 1])
       } else {
-        if (weekOffset >= 0) return
         setWeekOffset(prev => prev + 1)
         setSelectedDayLabel('MON')
       }
@@ -580,6 +563,7 @@ export default function Today() {
               checklistLogs={checklistLogs}
               cooldownItems={cooldownItems}
               onUpdate={syncRefetch}
+              readOnly={isFutureDate}
             />
           )}
 
@@ -593,6 +577,18 @@ export default function Today() {
                   return `${d.getDate()} ${MONTHS[d.getMonth()]} · WEEK ${totalWeek} · PHASE ${phase}`
                 })()}
               </p>
+
+              {isFutureDate && (
+                <span
+                  className="text-[11px] tracking-[0.08em] uppercase text-[#555555] px-3 py-1 inline-flex mb-2"
+                  style={{ background: '#111111', border: '1px solid #1a1a1a' }}
+                >
+                  UPCOMING · {(() => {
+                    const d = new Date(dateStr + 'T00:00:00')
+                    return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`
+                  })()}
+                </span>
+              )}
 
               <div className="flex items-baseline justify-between">
                 <Text variant="pageTitle">{workout.title}</Text>
@@ -626,6 +622,7 @@ export default function Today() {
                   warmupLogs={warmupLogs}
                   warmupItems={warmupItems}
                   onUpdate={syncRefetch}
+                  readOnly={isFutureDate}
                 />
               )}
 
@@ -644,7 +641,7 @@ export default function Today() {
                       previousBest={previousBests[ex.n]}
                       isExpanded={expandedExercise === idx}
                       onToggleExpand={() => setExpandedExercise(expandedExercise === idx ? null : idx)}
-                      onTapSet={handleTapSet}
+                      onTapSet={isFutureDate ? () => {} : handleTapSet}
                     />
                   ))}
                 </div>
@@ -656,7 +653,7 @@ export default function Today() {
               )}
 
               {/* Finisher */}
-              {workout.fin && (
+              {workout.fin && !isFutureDate && (
                 <FinisherBlock
                   fin={workout.fin}
                   dateStr={dateStr}
@@ -672,6 +669,7 @@ export default function Today() {
                   dateStr={dateStr}
                   checklistLogs={checklistLogs}
                   onUpdate={syncRefetch}
+                  readOnly={isFutureDate}
                 />
               )}
             </>

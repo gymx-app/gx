@@ -151,6 +151,7 @@ interface LissDayProps {
   checklistLogs: ChecklistLog[]
   cooldownItems: CooldownItem[]
   onUpdate: () => void
+  readOnly?: boolean
 }
 
 const LissDay = memo(function LissDay({
@@ -162,6 +163,7 @@ const LissDay = memo(function LissDay({
   checklistLogs,
   cooldownItems: dbCooldownItems,
   onUpdate,
+  readOnly = false,
 }: LissDayProps) {
   const { user } = useAuth()
   const { execute } = useOptimisticUpdate()
@@ -286,6 +288,19 @@ const LissDay = memo(function LissDay({
         {dateContext}
       </p>
 
+      {readOnly && (
+        <span
+          className="text-[11px] tracking-[0.08em] uppercase text-[#555555] px-3 py-1 inline-flex mb-2"
+          style={{ background: '#111111', border: '1px solid #1a1a1a' }}
+        >
+          UPCOMING · {(() => {
+            const d = new Date(dateStr + 'T00:00:00')
+            const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+            return `${days[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`
+          })()}
+        </span>
+      )}
+
       <div className="flex items-baseline justify-between">
         <Text variant="pageTitle">{title}</Text>
         {duration && (
@@ -340,59 +355,63 @@ const LissDay = memo(function LissDay({
         ))}
       </div>
 
-      <div className="flex gap-2 mt-6">
-        {config.inputs.map(name => (
-          <div
-            key={name}
-            className="flex-1 focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-colors"
-            style={{ background: colors.surface2, border: `1.5px solid ${colors.border}`, borderRadius: radius.input }}
-          >
-            <label className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#555555] mb-2">
-              {name.charAt(0).toUpperCase() + name.slice(1)}
-            </label>
-            <input
-              type="number"
-              inputMode="decimal"
-              step={name === 'speed' || name === 'rpm' || name === 'distance' ? '0.1' : '1'}
-              value={inputValues[name] || ''}
-              onChange={e => handleInputChange(name, e.target.value)}
-              readOnly={isLogged}
-              className="w-full bg-transparent text-center text-[24px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] placeholder-[#555555] focus:outline-none"
-              placeholder={config.placeholders[name] || ''}
-              aria-label={`${name} value`}
-            />
-            <span className="text-[10px] text-[#444444] mt-1">{config.units[name]}</span>
+      {!readOnly && (
+        <>
+          <div className="flex gap-2 mt-6">
+            {config.inputs.map(name => (
+              <div
+                key={name}
+                className="flex-1 focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-colors"
+                style={{ background: colors.surface2, border: `1.5px solid ${colors.border}`, borderRadius: radius.input }}
+              >
+                <label className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#555555] mb-2">
+                  {name.charAt(0).toUpperCase() + name.slice(1)}
+                </label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step={name === 'speed' || name === 'rpm' || name === 'distance' ? '0.1' : '1'}
+                  value={inputValues[name] || ''}
+                  onChange={e => handleInputChange(name, e.target.value)}
+                  readOnly={isLogged}
+                  className="w-full bg-transparent text-center text-[24px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] placeholder-[#555555] focus:outline-none"
+                  placeholder={config.placeholders[name] || ''}
+                  aria-label={`${name} value`}
+                />
+                <span className="text-[10px] text-[#444444] mt-1">{config.units[name]}</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {showPrevious && prevConfig && (
-        <Text variant="caption" className="mt-3 text-center tracking-wide uppercase">
-          Last session
-          {prevConfig.inputs.map(name => {
-            const val = previousLog![name]
-            return val != null ? ` · ${val}${prevConfig.units[name]}` : ''
-          }).join('')}
-        </Text>
-      )}
+          {showPrevious && prevConfig && (
+            <Text variant="caption" className="mt-3 text-center tracking-wide uppercase">
+              Last session
+              {prevConfig.inputs.map(name => {
+                const val = previousLog![name]
+                return val != null ? ` · ${val}${prevConfig.units[name]}` : ''
+              }).join('')}
+            </Text>
+          )}
 
-      <div className="mt-4">
-        <Button
-          variant={isLogged ? 'success' : 'primary'}
-          label={isLogged ? '✓ CARDIO LOGGED' : 'LOG CARDIO'}
-          onPress={handleLog}
-          disabled={isLogged || !hasDuration}
-        />
-      </div>
+          <div className="mt-4">
+            <Button
+              variant={isLogged ? 'success' : 'primary'}
+              label={isLogged ? '✓ CARDIO LOGGED' : 'LOG CARDIO'}
+              onPress={handleLog}
+              disabled={isLogged || !hasDuration}
+            />
+          </div>
 
-      {isLogged && (
-        <Text variant="caption" className="text-center mt-2 font-medium">
-          {config.icon} {config.label}
-          {config.inputs.map(name => {
-            const val = inputValues[name]
-            return val ? ` · ${val} ${config.units[name]}` : ''
-          }).join('')}
-        </Text>
+          {isLogged && (
+            <Text variant="caption" className="text-center mt-2 font-medium">
+              {config.icon} {config.label}
+              {config.inputs.map(name => {
+                const val = inputValues[name]
+                return val ? ` · ${val} ${config.units[name]}` : ''
+              }).join('')}
+            </Text>
+          )}
+        </>
       )}
 
       <CooldownSection
@@ -400,6 +419,7 @@ const LissDay = memo(function LissDay({
         dateStr={dateStr}
         checklistLogs={checklistLogs}
         onUpdate={onUpdate}
+        readOnly={readOnly}
       />
     </div>
   )

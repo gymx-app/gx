@@ -16,9 +16,10 @@ interface CooldownSectionProps {
   dateStr: string
   checklistLogs: ChecklistLog[]
   onUpdate: () => void
+  readOnly?: boolean
 }
 
-function CooldownSection({ items, dateStr, checklistLogs, onUpdate }: CooldownSectionProps) {
+function CooldownSection({ items, dateStr, checklistLogs, onUpdate, readOnly = false }: CooldownSectionProps) {
   const { user } = useAuth()
   const { execute } = useOptimisticUpdate()
   const [localOverrides, setLocalOverrides] = useState<Record<string, boolean>>({})
@@ -76,7 +77,7 @@ function CooldownSection({ items, dateStr, checklistLogs, onUpdate }: CooldownSe
               className={`w-full flex items-center gap-3 px-[14px] py-3 text-left transition-colors duration-150 ${
                 idx > 0 ? 'border-t border-[rgba(6,182,212,0.08)]' : ''
               }`}
-              onClick={() => toggle(key)}
+              onClick={() => !readOnly && toggle(key)}
               aria-label={`${item} — ${done ? 'completed' : 'not completed'}`}
             >
               <Checkbox checked={done} />

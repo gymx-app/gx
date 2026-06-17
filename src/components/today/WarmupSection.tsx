@@ -32,9 +32,10 @@ interface WarmupSectionProps {
   warmupLogs: WarmupLog[]
   warmupItems: DbWarmupItem[]
   onUpdate: () => void
+  readOnly?: boolean
 }
 
-const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, warmupItems: dbWarmupItems, onUpdate }: WarmupSectionProps) {
+const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, warmupItems: dbWarmupItems, onUpdate, readOnly = false }: WarmupSectionProps) {
   const { user } = useAuth()
   const { execute } = useOptimisticUpdate()
 
@@ -144,7 +145,7 @@ const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, 
                 className={`w-full flex items-center gap-[8px] px-[14px] py-[3px] text-left cursor-pointer transition-colors duration-150 ${
                   idx > 0 ? 'border-t border-[rgba(251,191,36,0.08)]' : ''
                 }`}
-                onClick={() => toggleItem(item)}
+                onClick={() => !readOnly && toggleItem(item)}
                 aria-label={`${item.label} — ${done ? 'completed' : 'not completed'}`}
               >
                 <Checkbox checked={done} />

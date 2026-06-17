@@ -193,8 +193,8 @@ const PhaseCard = memo(function PhaseCard({
             let numColor = '#f0ede8'
 
             if (isFuture) {
-              dayColor = '#222222'
-              numColor = '#222222'
+              dayColor = '#444444'
+              numColor = '#555555'
             } else if (isSunday) {
               dayColor = isToday ? '#ff4520' : '#333333'
               numColor = isToday ? '#f0ede8' : '#666666'
@@ -212,11 +212,10 @@ const PhaseCard = memo(function PhaseCard({
             return (
               <button
                 key={dayLabel}
-                className={`flex-1 flex flex-col items-center gap-[3px] py-[10px] rounded-[14px] min-w-0 transition-all duration-150 ${isFuture ? '' : 'active:scale-[0.93]'}`}
+                className="flex-1 flex flex-col items-center gap-[3px] py-[10px] rounded-[14px] min-w-0 transition-all duration-150 active:scale-[0.93]"
                 style={{
                   background: isSelected ? '#242424' : '#1c1c1c',
                   border: `1.5px solid ${isSelected ? '#ff4520' : '#2a2a2a'}`,
-                  ...(isFuture ? { pointerEvents: 'none' as const } : {}),
                 }}
                 onClick={() => onSelectDay(dayLabel, dayDateStr, date)}
                 aria-label={`${dayLabel} ${dayNum} ${monthStr}${isToday ? ' (today)' : ''}${isSunday ? ' rest day' : ''}${isCompleted ? ' completed' : ''}${isSkipped ? ' skipped' : ''}${isStartDate ? ' programme start' : ''}`}
@@ -232,8 +231,6 @@ const PhaseCard = memo(function PhaseCard({
                   <span className="text-[9px] font-semibold text-[#ff4520]">START</span>
                 ) : isSunday ? (
                   <span className="text-[9px] font-semibold" style={{ color: '#333333' }}>REST</span>
-                ) : isFuture ? (
-                  <div className="w-[5px] h-[5px]" />
                 ) : isCompleted ? (
                   <span className="text-[12px] leading-none text-[#22c55e]">✓</span>
                 ) : isSkipped ? (
