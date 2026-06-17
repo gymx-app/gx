@@ -10,6 +10,10 @@
   --muted: #666666;
   --dim: #666666;
   --accent: #ff4520;
+  --accent-tint: rgba(255, 69, 32, 0.08);
+  --success: #22c55e;
+  --danger: #ef4444;
+  --muted-border: rgba(255, 255, 255, 0.06);
 
   --nav-height: 60px;
 }

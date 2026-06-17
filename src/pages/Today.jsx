@@ -262,6 +262,9 @@ export default function Today() {
     return set
   }, [sessions, weekDays])
 
+  // ── Rest day indices (0=Mon … 6=Sun) ──
+  const restDayIndices = useMemo(() => new Set([6]), [])
+
   // ── Current week active days (for qualifying) ──
   const currentWeekActiveDays = useMemo(() => {
     let count = 0
@@ -519,6 +522,7 @@ export default function Today() {
           weekDays={weekDays}
           selectedDateStr={dateStr}
           completedDateStrs={completedDateStrs}
+          restDayIndices={restDayIndices}
           onSelectDay={handleSelectDay}
           onGoToToday={handleGoToToday}
           programmeStartDate={programmeStartDate}

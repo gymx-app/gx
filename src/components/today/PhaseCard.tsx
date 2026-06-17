@@ -1,6 +1,7 @@
 import { useState, useMemo, memo } from 'react'
 import { colors } from '../../styles/tokens'
 import PhaseBottomSheet from './PhaseBottomSheet'
+import { getDayStatus, type DayStatus } from '../../utils/dayStatus'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -39,9 +40,59 @@ interface PhaseCardProps {
   weekDays: WeekDay[]
   selectedDateStr: string
   completedDateStrs: Set<string>
+  restDayIndices: Set<number>
   onSelectDay: (dayLabel: string, dateStr: string, date: Date) => void
   onGoToToday: () => void
   programmeStartDate: string | null
+}
+
+function getPillStyle(status: DayStatus, isSelected: boolean) {
+  if (isSelected) {
+    return {
+      container: { background: 'var(--surface2)', border: '2px solid #333333' },
+      dayColor: '#999999',
+      numColor: '#ffffff',
+    }
+  }
+
+  switch (status) {
+    case 'completed':
+      return {
+        container: { background: 'transparent', border: '1.5px solid var(--success)' },
+        dayColor: 'var(--success)',
+        numColor: 'var(--text)',
+      }
+    case 'today':
+      return {
+        container: { background: 'var(--accent-tint)', border: '2px solid var(--accent)' },
+        dayColor: 'var(--accent)',
+        numColor: 'var(--text)',
+      }
+    case 'skipped':
+      return {
+        container: { background: 'transparent', border: '0.5px solid var(--muted-border)' },
+        dayColor: 'var(--muted)',
+        numColor: 'var(--muted)',
+      }
+    case 'future':
+      return {
+        container: { background: 'transparent', border: '0.5px solid var(--muted-border)' },
+        dayColor: 'var(--muted)',
+        numColor: 'var(--muted)',
+      }
+    case 'rest':
+      return {
+        container: { background: 'transparent', border: '0.5px solid var(--muted-border)' },
+        dayColor: 'var(--muted)',
+        numColor: 'var(--muted)',
+      }
+    default:
+      return {
+        container: { background: 'transparent', border: '0.5px solid var(--muted-border)' },
+        dayColor: 'var(--muted)',
+        numColor: 'var(--text)',
+      }
+  }
 }
 
 const PhaseCard = memo(function PhaseCard({
@@ -61,6 +112,7 @@ const PhaseCard = memo(function PhaseCard({
   weekDays,
   selectedDateStr,
   completedDateStrs,
+  restDayIndices,
   onSelectDay,
   onGoToToday,
   programmeStartDate,
@@ -165,58 +217,34 @@ const PhaseCard = memo(function PhaseCard({
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
-          {weekDays.map(({ dayLabel, date, dateStr: dayDateStr }) => {
-            const isBeforeStart = programmeStartDate ? dayDateStr < programmeStartDate : false
-            const isStartDate = programmeStartDate ? dayDateStr === programmeStartDate : false
+          {weekDays.map(({ dayLabel, date, dateStr: dayDateStr }, idx) => {
+            const status = getDayStatus(
+              dayDateStr, completedDateStrs, restDayIndices,
+              programmeStartDate, todayDateStr, idx,
+            )
             const isSelected = dayDateStr === selectedDateStr
-            const isToday = dayDateStr === todayDateStr
-            const isCompleted = completedDateStrs.has(dayDateStr)
-            const isPast = dayDateStr < todayDateStr
-            const isFuture = dayDateStr > todayDateStr
-            const isSunday = dayLabel === 'SUN'
             const dayNum = date.getDate()
 
-            if (isBeforeStart) {
+            if (status === 'pre_programme') {
               return (
                 <div
                   key={dayLabel}
-                  className="rounded-[12px]"
-                  style={{ minHeight: 72, background: '#111111', border: '1.5px solid #1a1a1a' }}
-                />
+                  className="rounded-[12px] flex flex-col items-center justify-center"
+                  style={{
+                    minHeight: 72,
+                    background: 'var(--surface)',
+                    border: '0.5px solid var(--muted-border)',
+                    cursor: 'default',
+                  }}
+                >
+                  <span className="text-[10px] font-semibold" style={{ color: 'var(--muted)', letterSpacing: '0.06em', opacity: 0.4 }}>
+                    {dayLabel}
+                  </span>
+                </div>
               )
             }
 
-            const isSkipped = isPast && !isCompleted && !isSunday
-
-            let dayColor = '#555555'
-            let numColor = '#f0ede8'
-
-            if (isSelected) {
-              dayColor = '#999999'
-              numColor = '#ffffff'
-            } else if (isFuture) {
-              dayColor = '#444444'
-              numColor = '#555555'
-            } else if (isSunday) {
-              dayColor = isToday ? '#ff4520' : '#333333'
-              numColor = isToday ? '#f0ede8' : '#444444'
-            } else if (isCompleted) {
-              dayColor = '#22c55e'
-            } else if (isSkipped) {
-              dayColor = '#555555'
-              numColor = '#555555'
-            }
-
-            if (isToday && !isSelected && !isCompleted && !isSunday) {
-              dayColor = '#ff4520'
-            }
-
-            const bg = isSelected ? '#1c1c1c' : 'transparent'
-            const border = isToday && !isSelected
-              ? `2px solid ${colors.accent}`
-              : isSelected
-              ? '2px solid #333333'
-              : '2px solid transparent'
+            const pillStyle = getPillStyle(status, isSelected)
 
             return (
               <button
@@ -224,47 +252,44 @@ const PhaseCard = memo(function PhaseCard({
                 className="flex flex-col items-center justify-center rounded-[12px]"
                 style={{
                   minHeight: 72,
-                  background: bg,
-                  border,
+                  ...pillStyle.container,
                   transition: 'transform 120ms ease, background 120ms ease',
                 }}
                 onClick={() => onSelectDay(dayLabel, dayDateStr, date)}
                 onPointerDown={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(0.95)' }}
                 onPointerUp={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
                 onPointerLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
-                aria-label={`${dayLabel} ${dayNum}${isToday ? ' (today)' : ''}${isSunday ? ' rest day' : ''}${isCompleted ? ' completed' : ''}${isSkipped ? ' skipped' : ''}${isStartDate ? ' programme start' : ''}`}
+                aria-label={`${dayLabel} ${dayNum}${status === 'today' ? ' (today)' : ''}${status === 'rest' ? ' rest day' : ''}${status === 'completed' ? ' completed' : ''}${status === 'skipped' ? ' skipped' : ''}`}
                 aria-pressed={isSelected}
               >
                 <span
                   className="text-[10px] font-semibold"
-                  style={{ color: dayColor, letterSpacing: '0.06em' }}
+                  style={{ color: pillStyle.dayColor, letterSpacing: '0.06em' }}
                 >
                   {dayLabel}
                 </span>
 
-                {isSunday && !isToday ? (
+                {status === 'rest' ? (
                   <span
                     className="text-[10px] font-semibold mt-[6px]"
-                    style={{ color: '#333333', letterSpacing: '0.06em' }}
+                    style={{ color: 'var(--muted)', letterSpacing: '0.06em', opacity: 0.5 }}
                   >
                     REST
                   </span>
                 ) : (
                   <span
                     className="font-['Bebas_Neue'] text-[20px] leading-none mt-[4px]"
-                    style={{ color: numColor, fontWeight: 500 }}
+                    style={{ color: pillStyle.numColor, fontWeight: 500 }}
                   >
                     {dayNum}
                   </span>
                 )}
 
-                <div className="mt-[6px] h-[5px] flex items-center justify-center">
-                  {isStartDate ? (
-                    <span className="text-[8px] font-bold text-[#ff4520]" style={{ letterSpacing: '0.06em' }}>START</span>
-                  ) : isCompleted ? (
-                    <div className="w-[5px] h-[5px] rounded-full bg-[#22c55e]" />
-                  ) : isSkipped ? (
-                    <div className="w-[5px] h-[5px] rounded-full bg-[#ff4520]" />
+                <div className="mt-[6px] h-[10px] flex items-center justify-center">
+                  {status === 'completed' ? (
+                    <span className="text-[10px] leading-none" style={{ color: 'var(--success)' }}>✓</span>
+                  ) : status === 'skipped' ? (
+                    <div className="w-[5px] h-[5px] rounded-full" style={{ background: 'var(--danger)' }} />
                   ) : (
                     <div className="w-[5px] h-[5px]" />
                   )}
