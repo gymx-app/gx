@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../hooks/useToast'
-import { Input, Skeleton } from './ui'
-import { SectionLabel } from './ui'
+import { Input, Skeleton, SectionLabel } from './ui'
 import { colors, radius } from '../styles/tokens'
 import { Lock } from 'lucide-react'
 
@@ -15,14 +14,6 @@ interface ProfileForm {
   date_of_birth: string
   gender: Gender
   phone_number: string
-}
-
-interface ProfileData {
-  first_name: string
-  last_name: string
-  date_of_birth: string | null
-  gender: string | null
-  phone_number: string | null
 }
 
 interface ProfileEditSheetProps {
@@ -48,10 +39,14 @@ const EMPTY_FORM: ProfileForm = {
 function getMaxDOB(): string {
   const d = new Date()
   d.setFullYear(d.getFullYear() - 13)
-  return d.toISOString().split('T')[0]
+  return d.toISOString().split('T')[0] ?? ''
 }
 
-export default function ProfileEditSheet({ open, onClose, onProfileUpdate }: ProfileEditSheetProps) {
+export default function ProfileEditSheet({
+  open,
+  onClose,
+  onProfileUpdate,
+}: ProfileEditSheetProps) {
   const { user } = useAuth()
   const toast = useToast()
   const [form, setForm] = useState<ProfileForm>(EMPTY_FORM)
@@ -60,34 +55,40 @@ export default function ProfileEditSheet({ open, onClose, onProfileUpdate }: Pro
   const [errors, setErrors] = useState<Partial<Record<keyof ProfileForm, string>>>({})
   const [attempted, setAttempted] = useState(false)
 
+  /* eslint-disable react-hooks/set-state-in-effect -- reset form state when sheet opens */
   useEffect(() => {
     if (!open || !user) return
-    setLoading(true)
     setAttempted(false)
     setErrors({})
 
-    supabase
-      .from('user_profiles')
-      .select('first_name, last_name, date_of_birth, gender, phone_number')
-      .eq('user_id', user.id)
-      .single()
-      .then(({ data }) => {
-        const d = data as ProfileData | null
-        setForm({
-          first_name: d?.first_name ?? '',
-          last_name: d?.last_name ?? '',
-          date_of_birth: d?.date_of_birth ?? '',
-          gender: (d?.gender as Gender) ?? '',
-          phone_number: d?.phone_number ?? '',
-        })
-        setLoading(false)
+    const load = async () => {
+      setLoading(true)
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('first_name, last_name, date_of_birth, gender, phone_number')
+        .eq('user_id', user.id)
+        .single()
+      const d = data
+      setForm({
+        first_name: d?.first_name ?? '',
+        last_name: d?.last_name ?? '',
+        date_of_birth: d?.date_of_birth ?? '',
+        gender: (d?.gender as Gender) ?? '',
+        phone_number: d?.phone_number ?? '',
       })
+      setLoading(false)
+    }
+    void load()
   }, [open, user])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  const updateField = useCallback(<K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) => {
-    setForm(prev => ({ ...prev, [key]: value }))
-    if (attempted) setErrors(prev => ({ ...prev, [key]: undefined }))
-  }, [attempted])
+  const updateField = useCallback(
+    <K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) => {
+      setForm((prev) => ({ ...prev, [key]: value }))
+      if (attempted) setErrors((prev) => ({ ...prev, [key]: undefined }))
+    },
+    [attempted]
+  )
 
   const validate = useCallback((): boolean => {
     const errs: Partial<Record<keyof ProfileForm, string>> = {}
@@ -112,9 +113,8 @@ export default function ProfileEditSheet({ open, onClose, onProfileUpdate }: Pro
     if (!validate()) return
 
     setSaving(true)
-    const { error } = await supabase
-      .from('user_profiles')
-      .upsert({
+    const { error } = await supabase.from('user_profiles').upsert(
+      {
         user_id: user!.id,
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim(),
@@ -122,7 +122,9 @@ export default function ProfileEditSheet({ open, onClose, onProfileUpdate }: Pro
         gender: form.gender || null,
         phone_number: form.phone_number.trim() || null,
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' })
+      },
+      { onConflict: 'user_id' }
+    )
 
     setSaving(false)
 
@@ -155,7 +157,10 @@ export default function ProfileEditSheet({ open, onClose, onProfileUpdate }: Pro
         aria-modal="true"
         aria-label="Edit Profile"
       >
-        <div className="w-10 h-1 rounded-[2px] mx-auto mt-3 mb-2" style={{ background: colors.border }} />
+        <div
+          className="w-10 h-1 rounded-[2px] mx-auto mt-3 mb-2"
+          style={{ background: colors.border }}
+        />
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3">
@@ -170,7 +175,7 @@ export default function ProfileEditSheet({ open, onClose, onProfileUpdate }: Pro
             EDIT PROFILE
           </h3>
           <button
-            onClick={handleSave}
+            onClick={() => void handleSave()}
             disabled={!canSave || saving}
             className="font-['DM_Sans'] text-[14px] font-semibold active:opacity-60"
             style={{
@@ -202,11 +207,13 @@ export default function ProfileEditSheet({ open, onClose, onProfileUpdate }: Pro
                 <Input
                   label="FIRST NAME"
                   value={form.first_name}
-                  onChange={e => updateField('first_name', e.target.value)}
+                  onChange={(e) => updateField('first_name', e.target.value)}
                   placeholder="Enter first name"
                 />
                 {errors.first_name && (
-                  <p className="text-[11px] mt-1 pl-1" style={{ color: colors.error }}>{errors.first_name}</p>
+                  <p className="text-[11px] mt-1 pl-1" style={{ color: colors.error }}>
+                    {errors.first_name}
+                  </p>
                 )}
               </div>
 
@@ -215,11 +222,13 @@ export default function ProfileEditSheet({ open, onClose, onProfileUpdate }: Pro
                 <Input
                   label="LAST NAME"
                   value={form.last_name}
-                  onChange={e => updateField('last_name', e.target.value)}
+                  onChange={(e) => updateField('last_name', e.target.value)}
                   placeholder="Enter last name"
                 />
                 {errors.last_name && (
-                  <p className="text-[11px] mt-1 pl-1" style={{ color: colors.error }}>{errors.last_name}</p>
+                  <p className="text-[11px] mt-1 pl-1" style={{ color: colors.error }}>
+                    {errors.last_name}
+                  </p>
                 )}
               </div>
 
@@ -230,7 +239,7 @@ export default function ProfileEditSheet({ open, onClose, onProfileUpdate }: Pro
                   type="date"
                   value={form.date_of_birth}
                   max={getMaxDOB()}
-                  onChange={e => updateField('date_of_birth', e.target.value)}
+                  onChange={(e) => updateField('date_of_birth', e.target.value)}
                   className="h-[52px] w-full px-[14px] text-[#f0ede8] text-[16px] font-['DM_Sans'] transition-all duration-150"
                   style={{
                     background: colors.surface2,
@@ -241,7 +250,9 @@ export default function ProfileEditSheet({ open, onClose, onProfileUpdate }: Pro
                   aria-label="Date of birth"
                 />
                 {errors.date_of_birth && (
-                  <p className="text-[11px] mt-1 pl-1" style={{ color: colors.error }}>{errors.date_of_birth}</p>
+                  <p className="text-[11px] mt-1 pl-1" style={{ color: colors.error }}>
+                    {errors.date_of_birth}
+                  </p>
                 )}
               </div>
 
@@ -249,7 +260,7 @@ export default function ProfileEditSheet({ open, onClose, onProfileUpdate }: Pro
               <div className="mt-4">
                 <SectionLabel label="GENDER" className="mb-2" />
                 <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Gender">
-                  {GENDER_OPTIONS.map(opt => {
+                  {GENDER_OPTIONS.map((opt) => {
                     const isActive = form.gender === opt.value
                     return (
                       <button
@@ -298,11 +309,13 @@ export default function ProfileEditSheet({ open, onClose, onProfileUpdate }: Pro
                   type="tel"
                   inputMode="tel"
                   value={form.phone_number}
-                  onChange={e => updateField('phone_number', e.target.value)}
+                  onChange={(e) => updateField('phone_number', e.target.value)}
                   placeholder="Optional"
                 />
                 {errors.phone_number && (
-                  <p className="text-[11px] mt-1 pl-1" style={{ color: colors.error }}>{errors.phone_number}</p>
+                  <p className="text-[11px] mt-1 pl-1" style={{ color: colors.error }}>
+                    {errors.phone_number}
+                  </p>
                 )}
               </div>
             </>

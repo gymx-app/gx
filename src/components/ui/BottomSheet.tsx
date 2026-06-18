@@ -21,42 +21,46 @@ function BottomSheet({ isOpen, onClose, children, height = 'auto' }: BottomSheet
   const triggerRef = useRef<Element | null>(null)
   const touchStartY = useRef(0)
   const [translateY, setTranslateY] = useState(0)
-  const [mounted, setMounted] = useState(false)
+  const mountedRef = useRef(false)
 
   useEffect(() => {
     if (isOpen) {
       triggerRef.current = document.activeElement
-      setMounted(true)
+      mountedRef.current = true
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = ''
       ;(triggerRef.current as HTMLElement)?.focus?.()
     }
-    return () => { document.body.style.overflow = '' }
+    return () => {
+      document.body.style.overflow = ''
+    }
   }, [isOpen])
 
   useEffect(() => {
-    if (isOpen && mounted && sheetRef.current) {
+    if (isOpen && mountedRef.current && sheetRef.current) {
       const focusable = sheetRef.current.querySelector<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       )
       focusable?.focus()
     }
-  }, [isOpen, mounted])
+  }, [isOpen])
 
   useEffect(() => {
     if (!isOpen) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [isOpen, onClose])
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY
+    touchStartY.current = e.touches[0]!.clientY
   }, [])
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    const delta = e.touches[0].clientY - touchStartY.current
+    const delta = e.touches[0]!.clientY - touchStartY.current
     if (delta > 0) setTranslateY(delta)
   }, [])
 
@@ -71,11 +75,7 @@ function BottomSheet({ isOpen, onClose, children, height = 'auto' }: BottomSheet
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
-      <div
-        className="absolute inset-0 bg-black/70"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <div className="absolute inset-0 bg-black/70" onClick={onClose} aria-hidden="true" />
 
       <div
         ref={sheetRef}

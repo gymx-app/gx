@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import TopBar from '../components/layout/TopBar'
 import { useAuth } from '../auth/AuthContext'
+import { supabase } from '../lib/supabase'
 import { BottomSheet } from '../components/ui'
 import ProfileEditSheet from '../components/ProfileEditSheet'
 import HealthDetailsSheet from '../components/HealthDetailsSheet'
@@ -14,26 +15,32 @@ const DESTRUCTIVE_COLOR = '#FF3B30'
 function getInitials(email: string, fullName?: string): string {
   if (fullName) {
     const parts = fullName.trim().split(/\s+/)
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    return parts[0][0].toUpperCase()
+    if (parts.length >= 2) return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase()
+    return parts[0]![0]!.toUpperCase()
   }
-  return email[0].toUpperCase()
+  return email[0]!.toUpperCase()
 }
 
 function getDisplayName(email: string, fullName?: string): string {
   if (fullName) return fullName
-  return email.split('@')[0]
+  return email.split('@')[0] ?? email
 }
 
 interface AccountRowProps {
   label: string
   icon: LucideIcon
   onPress: () => void
-  destructive?: boolean
-  showDivider?: boolean
+  destructive?: boolean | undefined
+  showDivider?: boolean | undefined
 }
 
-function AccountRow({ label, icon: Icon, onPress, destructive, showDivider = true }: AccountRowProps) {
+function AccountRow({
+  label,
+  icon: Icon,
+  onPress,
+  destructive,
+  showDivider = true,
+}: AccountRowProps) {
   const iconColor = destructive ? DESTRUCTIVE_COLOR : colors.muted
   const textColor = destructive ? DESTRUCTIVE_COLOR : colors.text
 
@@ -52,10 +59,7 @@ function AccountRow({ label, icon: Icon, onPress, destructive, showDivider = tru
       }}
     >
       <Icon size={20} strokeWidth={1.5} color={iconColor} style={{ flexShrink: 0 }} />
-      <span
-        className="font-['DM_Sans'] text-[14px] flex-1 text-left"
-        style={{ color: textColor }}
-      >
+      <span className="font-['DM_Sans'] text-[14px] flex-1 text-left" style={{ color: textColor }}>
         {label}
       </span>
       <ChevronRight size={16} color={colors.muted} style={{ flexShrink: 0 }} />
@@ -67,7 +71,13 @@ function SectionHeader({ children }: { children: string }) {
   return (
     <p
       className="font-['DM_Sans'] font-bold uppercase tracking-[2px]"
-      style={{ fontSize: 11, color: colors.muted, paddingTop: 24, paddingBottom: 8, paddingLeft: 4 }}
+      style={{
+        fontSize: 11,
+        color: colors.muted,
+        paddingTop: 24,
+        paddingBottom: 8,
+        paddingLeft: 4,
+      }}
     >
       {children}
     </p>
@@ -90,7 +100,10 @@ export default function Account() {
   const [confirmSheet, setConfirmSheet] = useState<'signout' | 'delete' | null>(null)
   const [profileSheetOpen, setProfileSheetOpen] = useState(false)
   const [healthDetailsOpen, setHealthDetailsOpen] = useState(false)
-  const [displayProfile, setDisplayProfile] = useState<{ first_name: string; last_name: string } | null>(null)
+  const [displayProfile, setDisplayProfile] = useState<{
+    first_name: string
+    last_name: string
+  } | null>(null)
 
   const handleSignOut = useCallback(async () => {
     setConfirmSheet(null)
@@ -106,47 +119,87 @@ export default function Account() {
     setConfirmSheet(null)
     setLoggingOut(true)
     try {
+      const uid = user?.id
+      if (!uid) return
+
+      const tables = [
+        'exercise_logs',
+        'warmup_logs',
+        'checklist_logs',
+        'workout_sessions',
+        'body_metrics',
+        'hydration_logs',
+        'inbody_logs',
+        'apple_health_logs',
+        'body_measurements',
+        'programme_config',
+        'user_injuries',
+        'user_chronic_conditions',
+        'fitness_assessments',
+        'programmes',
+        'user_profiles',
+      ] as const
+
+      for (const table of tables) {
+        await supabase.from(table).delete().eq('user_id', uid)
+      }
+
       await signOut()
     } finally {
       setLoggingOut(false)
     }
-  }, [signOut])
+  }, [user?.id, signOut])
 
-  const sections: SectionConfig[] = useMemo(() => [
-    {
-      title: 'APP SETTINGS',
-      items: [
-        { label: 'Health Details', icon: Heart, onPress: () => setHealthDetailsOpen(true) },
-        { label: 'Notifications', icon: Bell, onPress: () => {} },
-        { label: 'Privacy', icon: ShieldCheck, onPress: () => {} },
-      ],
-    },
-    {
-      title: 'CONNECTED',
-      items: [
-        { label: 'Linked Apps', icon: Link, onPress: () => {} },
-      ],
-    },
-    {
-      title: 'ACCOUNT',
-      items: [
-        { label: 'Delete App Data', icon: Trash2, onPress: () => setConfirmSheet('delete'), destructive: true },
-        { label: loggingOut ? 'Signing out…' : 'Sign Out', icon: LogOut, onPress: () => setConfirmSheet('signout'), destructive: true },
-      ],
-    },
-  ], [loggingOut])
+  const sections: SectionConfig[] = useMemo(
+    () => [
+      {
+        title: 'APP SETTINGS',
+        items: [
+          { label: 'Health Details', icon: Heart, onPress: () => setHealthDetailsOpen(true) },
+          { label: 'Notifications', icon: Bell, onPress: () => {} },
+          { label: 'Privacy', icon: ShieldCheck, onPress: () => {} },
+        ],
+      },
+      {
+        title: 'CONNECTED',
+        items: [{ label: 'Linked Apps', icon: Link, onPress: () => {} }],
+      },
+      {
+        title: 'ACCOUNT',
+        items: [
+          {
+            label: 'Delete App Data',
+            icon: Trash2,
+            onPress: () => setConfirmSheet('delete'),
+            destructive: true,
+          },
+          {
+            label: loggingOut ? 'Signing out…' : 'Sign Out',
+            icon: LogOut,
+            onPress: () => setConfirmSheet('signout'),
+            destructive: true,
+          },
+        ],
+      },
+    ],
+    [loggingOut]
+  )
 
   const email = user?.email ?? ''
-  const profileFullName = displayProfile ? `${displayProfile.first_name} ${displayProfile.last_name}`.trim() : undefined
-  const fullName = profileFullName || (user?.user_metadata?.full_name as string | undefined)
+  const profileFullName = displayProfile
+    ? `${displayProfile.first_name} ${displayProfile.last_name}`.trim()
+    : undefined
+  const fullName = profileFullName ?? (user?.user_metadata?.full_name as string | undefined)
   const initials = getInitials(email, fullName)
   const displayName = getDisplayName(email, fullName)
 
   return (
     <>
       <TopBar title="ACCOUNT" />
-      <div className="flex-1 overflow-y-auto px-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
-
+      <div
+        className="flex-1 overflow-y-auto px-4"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}
+      >
         {/* Profile card */}
         <button
           onClick={() => setProfileSheetOpen(true)}
@@ -170,13 +223,22 @@ export default function Account() {
           ) : (
             <div
               className="flex items-center justify-center rounded-full font-['Bebas_Neue'] text-[20px] tracking-[1px]"
-              style={{ width: 48, height: 48, background: colors.accent, color: '#ffffff', flexShrink: 0 }}
+              style={{
+                width: 48,
+                height: 48,
+                background: colors.accent,
+                color: '#ffffff',
+                flexShrink: 0,
+              }}
             >
               {initials}
             </div>
           )}
           <div className="flex-1 text-left min-w-0">
-            <p className="font-['DM_Sans'] text-[16px] font-medium truncate" style={{ color: colors.text }}>
+            <p
+              className="font-['DM_Sans'] text-[16px] font-medium truncate"
+              style={{ color: colors.text }}
+            >
               {displayName}
             </p>
             <p className="font-['DM_Sans'] text-[13px] truncate" style={{ color: colors.muted }}>
@@ -190,7 +252,14 @@ export default function Account() {
         {sections.map((section) => (
           <div key={section.title}>
             <SectionHeader>{section.title}</SectionHeader>
-            <div style={{ background: colors.surface, borderRadius: 14, overflow: 'hidden', border: `1px solid ${colors.border}` }}>
+            <div
+              style={{
+                background: colors.surface,
+                borderRadius: 14,
+                overflow: 'hidden',
+                border: `1px solid ${colors.border}`,
+              }}
+            >
               {section.items.map((item, i) => (
                 <AccountRow
                   key={item.label}
@@ -217,7 +286,9 @@ export default function Account() {
       <BottomSheet isOpen={confirmSheet === 'signout'} onClose={() => setConfirmSheet(null)}>
         <div className="p-6 text-center">
           <LogOut size={32} color={colors.muted} className="mx-auto mb-3" />
-          <h3 className="font-['Bebas_Neue'] text-[22px] tracking-[2px] text-[#f0ede8] mb-2">SIGN OUT</h3>
+          <h3 className="font-['Bebas_Neue'] text-[22px] tracking-[2px] text-[#f0ede8] mb-2">
+            SIGN OUT
+          </h3>
           <p className="text-[13px] text-[#888888] mb-6">
             Are you sure you want to sign out? Your cached data will be cleared.
           </p>
@@ -230,7 +301,7 @@ export default function Account() {
               CANCEL
             </button>
             <button
-              onClick={handleSignOut}
+              onClick={() => void handleSignOut()}
               className="flex-1 py-3 font-['Bebas_Neue'] text-[16px] tracking-[1px] text-[#f0ede8] active:opacity-70"
               style={{ background: DESTRUCTIVE_COLOR, borderRadius: 12, border: 'none' }}
             >
@@ -244,9 +315,12 @@ export default function Account() {
       <BottomSheet isOpen={confirmSheet === 'delete'} onClose={() => setConfirmSheet(null)}>
         <div className="p-6 text-center">
           <Trash2 size={32} color={colors.error} className="mx-auto mb-3" />
-          <h3 className="font-['Bebas_Neue'] text-[22px] tracking-[2px] text-[#f0ede8] mb-2">DELETE ALL DATA</h3>
+          <h3 className="font-['Bebas_Neue'] text-[22px] tracking-[2px] text-[#f0ede8] mb-2">
+            DELETE ALL DATA
+          </h3>
           <p className="text-[13px] text-[#888888] mb-6">
-            This will permanently delete all your workout logs, programme data and body measurements. This cannot be undone.
+            This will permanently delete all your workout logs, programme data and body
+            measurements. This cannot be undone.
           </p>
           <div className="flex gap-3">
             <button
@@ -257,7 +331,7 @@ export default function Account() {
               CANCEL
             </button>
             <button
-              onClick={handleDeleteData}
+              onClick={() => void handleDeleteData()}
               className="flex-1 py-3 font-['Bebas_Neue'] text-[16px] tracking-[1px] text-[#f0ede8] active:opacity-70"
               style={{ background: colors.error, borderRadius: 12, border: 'none' }}
             >
@@ -275,10 +349,7 @@ export default function Account() {
       />
 
       {/* Health Details Sheet */}
-      <HealthDetailsSheet
-        open={healthDetailsOpen}
-        onClose={() => setHealthDetailsOpen(false)}
-      />
+      <HealthDetailsSheet open={healthDetailsOpen} onClose={() => setHealthDetailsOpen(false)} />
     </>
   )
 }

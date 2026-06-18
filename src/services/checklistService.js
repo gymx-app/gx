@@ -34,16 +34,19 @@ export async function upsertChecklistLog(userId, logData) {
   try {
     const { data, error } = await supabase
       .from('checklist_logs')
-      .upsert({ user_id: userId, ...logData }, {
-        onConflict: 'user_id,date,item_key',
-      })
+      .upsert(
+        { user_id: userId, ...logData },
+        {
+          onConflict: 'user_id,date,item_key',
+        }
+      )
       .select()
       .single()
     if (error) throw error
 
     // Invalidate day cache
     if (logData.date) {
-      idbCache.invalidate('workout-data', `${userId}_${logData.date}`)
+      void idbCache.invalidate('workout-data', `${userId}_${logData.date}`)
     }
 
     return { data, error: null }
@@ -85,16 +88,19 @@ export async function upsertWarmupLog(userId, logData) {
   try {
     const { data, error } = await supabase
       .from('warmup_logs')
-      .upsert({ user_id: userId, ...logData }, {
-        onConflict: 'user_id,date,item_key',
-      })
+      .upsert(
+        { user_id: userId, ...logData },
+        {
+          onConflict: 'user_id,date,item_key',
+        }
+      )
       .select()
       .single()
     if (error) throw error
 
     // Invalidate day cache
     if (logData.date) {
-      idbCache.invalidate('workout-data', `${userId}_${logData.date}`)
+      void idbCache.invalidate('workout-data', `${userId}_${logData.date}`)
     }
 
     return { data, error: null }

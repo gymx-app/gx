@@ -1,5 +1,4 @@
 import { useMemo, memo } from 'react'
-import { SectionLabel, Badge } from '../ui'
 import { colors, radius } from '../../styles/tokens'
 
 const EQ_NAMES: Record<string, string> = {
@@ -53,7 +52,15 @@ interface ExerciseCardProps {
   previousBest: PreviousBest | null
   isExpanded: boolean
   onToggleExpand: () => void
-  onTapSet: (exercise: Exercise, setNum: number, totalSets: number, previousBest: PreviousBest | null, log: ExerciseLog | undefined, exerciseIndex: number, restSec: number) => void
+  onTapSet: (
+    exercise: Exercise,
+    setNum: number,
+    totalSets: number,
+    previousBest: PreviousBest | null,
+    log: ExerciseLog | undefined,
+    exerciseIndex: number,
+    restSec: number
+  ) => void
 }
 
 const ExerciseCard = memo(function ExerciseCard({
@@ -65,8 +72,8 @@ const ExerciseCard = memo(function ExerciseCard({
   onToggleExpand,
   onTapSet,
 }: ExerciseCardProps) {
-  const totalSets = parseInt(exercise.s.split('×')[0])
-  const targetReps = exercise.s.split('×')[1]
+  const totalSets = parseInt(exercise.s.split('×')[0] ?? '0')
+  const targetReps = exercise.s.split('×')[1] ?? ''
   const restSec = parseInt(exercise.r) || 60
 
   const setMap = useMemo(() => {
@@ -98,27 +105,32 @@ const ExerciseCard = memo(function ExerciseCard({
         aria-label={`${exercise.n} — ${completedCount} of ${totalSets} sets done`}
       >
         <div className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center text-[17px] shrink-0 bg-[#1c1c1c]">
-          {exercise.icon || '💪'}
+          {exercise.icon ?? '💪'}
         </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className={`text-[14px] font-semibold truncate ${allDone ? 'text-[#666666] line-through' : 'text-[#f0ede8]'}`}>
+          <h3
+            className={`text-[14px] font-semibold truncate ${allDone ? 'text-[#666666] line-through' : 'text-[#f0ede8]'}`}
+          >
             {exercise.n}
           </h3>
           <div className="flex items-center gap-1 mt-[1px]">
-            <span className="text-[12px] text-[#666666]">{exercise.s} · {exercise.r} rest</span>
+            <span className="text-[12px] text-[#666666]">
+              {exercise.s} · {exercise.r} rest
+            </span>
           </div>
           {exercise.eq && exercise.eq.length > 0 && (
             <div className="flex gap-[3px] mt-1 flex-wrap">
-              {exercise.eq.map(eq => {
-                const eqColor = EQ_COLORS[eq?.toUpperCase()] || EQ_COLORS.BW
+              {exercise.eq.map((eq) => {
+                const eqColor = EQ_COLORS[eq?.toUpperCase()] ??
+                  EQ_COLORS.BW ?? { bg: 'transparent', color: '#9ca3af' }
                 return (
                   <span
                     key={eq}
                     className="text-[9px] font-bold tracking-[0.3px] uppercase px-[5px] py-[2px] rounded-[4px]"
                     style={{ background: eqColor.bg, color: eqColor.color }}
                   >
-                    {EQ_NAMES[eq] || eq}
+                    {EQ_NAMES[eq] ?? eq}
                   </span>
                 )
               })}
@@ -126,9 +138,11 @@ const ExerciseCard = memo(function ExerciseCard({
           )}
         </div>
 
-        <span className={`text-[12px] shrink-0 transition-transform duration-200 ${
-          isExpanded ? 'rotate-180' : ''
-        } ${allDone ? 'text-[#666666] opacity-40' : 'text-[#666666]'}`}>
+        <span
+          className={`text-[12px] shrink-0 transition-transform duration-200 ${
+            isExpanded ? 'rotate-180' : ''
+          } ${allDone ? 'text-[#666666] opacity-40' : 'text-[#666666]'}`}
+        >
           ▾
         </span>
       </button>
@@ -145,7 +159,10 @@ const ExerciseCard = memo(function ExerciseCard({
 
           {exercise.warn && (
             <div className="px-4 py-2">
-              <p className="text-[12px] text-[#ff8c00] leading-relaxed bg-[rgba(255,140,0,0.08)] border-l-[3px] border-l-[#ff8c00] px-[10px] py-[6px] rounded-r-[6px]" role="alert">
+              <p
+                className="text-[12px] text-[#ff8c00] leading-relaxed bg-[rgba(255,140,0,0.08)] border-l-[3px] border-l-[#ff8c00] px-[10px] py-[6px] rounded-r-[6px]"
+                role="alert"
+              >
                 {exercise.warn}
               </p>
             </div>
@@ -153,7 +170,9 @@ const ExerciseCard = memo(function ExerciseCard({
 
           {previousBest && (
             <div className="px-4 py-2 border-t border-[#2a2a2a] flex items-center gap-1.5">
-              <span className="text-[10px] text-[#666666] uppercase tracking-[1px] font-bold">Prev best</span>
+              <span className="text-[10px] text-[#666666] uppercase tracking-[1px] font-bold">
+                Prev best
+              </span>
               <span className="text-[12px] text-[#666666] font-semibold">
                 {previousBest.weight_kg}kg × {previousBest.reps}
               </span>
@@ -175,17 +194,35 @@ const ExerciseCard = memo(function ExerciseCard({
                         ? 'bg-[rgba(34,197,94,0.15)] border border-[#22c55e]'
                         : 'bg-[#242424] border border-[#2a2a2a]'
                     }`}
-                    onClick={() => onTapSet(exercise, setNum, totalSets, previousBest, log, exerciseIndex, restSec)}
-                    aria-label={isDone ? `Set ${setNum}: ${log.weight_kg}kg × ${log.reps}` : `Log set ${setNum}`}
+                    onClick={() =>
+                      onTapSet(
+                        exercise,
+                        setNum,
+                        totalSets,
+                        previousBest,
+                        log,
+                        exerciseIndex,
+                        restSec
+                      )
+                    }
+                    aria-label={
+                      isDone
+                        ? `Set ${setNum}: ${log.weight_kg}kg × ${log.reps}`
+                        : `Log set ${setNum}`
+                    }
                   >
-                    <span className={`font-['Bebas_Neue'] text-[15px] leading-none ${
-                      isDone ? 'text-[#22c55e]' : 'text-[#666666]'
-                    }`}>
+                    <span
+                      className={`font-['Bebas_Neue'] text-[15px] leading-none ${
+                        isDone ? 'text-[#22c55e]' : 'text-[#666666]'
+                      }`}
+                    >
                       S{setNum}
                     </span>
-                    <span className={`block text-[10px] mt-[1px] ${
-                      isDone ? 'text-[#22c55e] opacity-70' : 'text-[#666666]'
-                    }`}>
+                    <span
+                      className={`block text-[10px] mt-[1px] ${
+                        isDone ? 'text-[#22c55e] opacity-70' : 'text-[#666666]'
+                      }`}
+                    >
                       {isDone ? `${log.weight_kg}×${log.reps}` : `${targetReps}`}
                     </span>
                     {isDone && log.rpe && (

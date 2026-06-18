@@ -7,7 +7,11 @@ interface RestTimerHUDProps {
   onDismiss: () => void
 }
 
-const RestTimerHUD = memo(function RestTimerHUD({ durationSec, exerciseName, onDismiss }: RestTimerHUDProps) {
+const RestTimerHUD = memo(function RestTimerHUD({
+  durationSec,
+  exerciseName: _exerciseName,
+  onDismiss,
+}: RestTimerHUDProps) {
   const [remaining, setRemaining] = useState(durationSec)
   const startRef = useRef(Date.now())
 
@@ -44,9 +48,13 @@ const RestTimerHUD = memo(function RestTimerHUD({ durationSec, exerciseName, onD
       }}
     >
       <div>
-        <span className="font-['Bebas_Neue'] text-[13px] tracking-[1px] text-[#666666] block">REST</span>
+        <span className="font-['Bebas_Neue'] text-[13px] tracking-[1px] text-[#666666] block">
+          REST
+        </span>
       </div>
-      <span className={`font-['Bebas_Neue'] text-[28px] tracking-[2px] min-w-[52px] text-center ${isDone ? 'text-[#22c55e]' : 'text-[#f0ede8]'}`}>
+      <span
+        className={`font-['Bebas_Neue'] text-[28px] tracking-[2px] min-w-[52px] text-center ${isDone ? 'text-[#22c55e]' : 'text-[#f0ede8]'}`}
+      >
         {isDone ? 'GO' : timeStr}
       </span>
       <div className="w-[80px] h-1 bg-[#2a2a2a] rounded-[4px] overflow-hidden">

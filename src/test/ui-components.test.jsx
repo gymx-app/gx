@@ -14,7 +14,11 @@ describe('Text component', () => {
   })
 
   it('applies custom className', () => {
-    render(<Text variant="body" className="mt-4">Styled</Text>)
+    render(
+      <Text variant="body" className="mt-4">
+        Styled
+      </Text>
+    )
     const el = screen.getByText('Styled')
     expect(el.className).toContain('mt-4')
   })

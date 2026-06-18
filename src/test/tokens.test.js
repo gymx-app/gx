@@ -24,7 +24,7 @@ describe('Design tokens', () => {
   })
 
   it('has consistent surface hierarchy (darker → lighter)', () => {
-    const toNum = hex => parseInt(hex.replace('#', ''), 16)
+    const toNum = (hex) => parseInt(hex.replace('#', ''), 16)
     expect(toNum(colors.bg)).toBeLessThan(toNum(colors.surface))
     expect(toNum(colors.surface)).toBeLessThan(toNum(colors.surface2))
     expect(toNum(colors.surface2)).toBeLessThan(toNum(colors.surface3))

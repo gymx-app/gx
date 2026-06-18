@@ -34,16 +34,19 @@ export async function upsertExerciseLog(userId, logData) {
   try {
     const { data, error } = await supabase
       .from('exercise_logs')
-      .upsert({ user_id: userId, ...logData }, {
-        onConflict: 'user_id,date,exercise_id,set_number,is_mm_set',
-      })
+      .upsert(
+        { user_id: userId, ...logData },
+        {
+          onConflict: 'user_id,date,exercise_id,set_number,is_mm_set',
+        }
+      )
       .select()
       .single()
     if (error) throw error
 
     // Invalidate day cache so next revalidation fetches fresh
     if (logData.date) {
-      idbCache.invalidate('workout-data', `${userId}_${logData.date}`)
+      void idbCache.invalidate('workout-data', `${userId}_${logData.date}`)
     }
 
     return { data, error: null }
@@ -63,9 +66,12 @@ export async function upsertWorkoutSession(userId, sessionData) {
   try {
     const { data, error } = await supabase
       .from('workout_sessions')
-      .upsert({ user_id: userId, ...sessionData }, {
-        onConflict: 'user_id,date,day_of_week',
-      })
+      .upsert(
+        { user_id: userId, ...sessionData },
+        {
+          onConflict: 'user_id,date,day_of_week',
+        }
+      )
       .select('id')
       .single()
     if (error) throw error
@@ -97,10 +103,8 @@ export async function getPreviousBests(userId, fromDate, beforeDate) {
     if (error) throw error
 
     const bests = {}
-    for (const log of (data || [])) {
-      if (!bests[log.exercise_name]) {
-        bests[log.exercise_name] = { weight_kg: log.weight_kg, reps: log.reps }
-      }
+    for (const log of data ?? []) {
+      bests[log.exercise_name] ??= { weight_kg: log.weight_kg, reps: log.reps }
     }
     return { data: bests, error: null }
   } catch (err) {

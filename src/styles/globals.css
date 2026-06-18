@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --bg: #0a0a0a;
@@ -23,7 +23,9 @@
   box-sizing: border-box;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   overflow: hidden;
 }
@@ -47,7 +49,8 @@ body {
   height: 100dvh;
 }
 
-button, [role="button"] {
+button,
+[role='button'] {
   touch-action: manipulation;
 }
 
@@ -59,7 +62,9 @@ button, [role="button"] {
   display: none;
 }
 
-input, textarea, select {
+input,
+textarea,
+select {
   -webkit-appearance: none;
   appearance: none;
   outline: none;
@@ -67,8 +72,12 @@ input, textarea, select {
 
 /* Sheet slide-up animation */
 @keyframes slide-up {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 .animate-slide-up {
   animation: slide-up 0.28s cubic-bezier(0.32, 1.1, 0.5, 1);

@@ -13,9 +13,11 @@ function TopBar({ title, rightContent }: TopBarProps) {
           G<span className="text-[#ff4520]">x</span>
         </span>
         {title && (
-          <span className="text-[10px] font-bold tracking-[2px] uppercase text-[#666666]">{title}</span>
+          <span className="text-[10px] font-bold tracking-[2px] uppercase text-[#666666]">
+            {title}
+          </span>
         )}
-        {rightContent || <div className="w-10" />}
+        {rightContent ?? <div className="w-10" />}
       </div>
     </div>
   )

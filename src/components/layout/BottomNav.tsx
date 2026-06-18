@@ -35,7 +35,7 @@ function BottomNav() {
           return (
             <button
               key={item.path}
-              onClick={() => navigate(item.path)}
+              onClick={() => void navigate(item.path)}
               style={{
                 flex: 1,
                 display: 'flex',

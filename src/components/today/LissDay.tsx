@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, memo } from 'react'
 import { useAuth } from '../../auth/AuthContext'
 import { upsertChecklistLog } from '../../services/checklistService'
 import { supabase } from '../../lib/supabase'
-import { logger } from '../../lib/logger'
 import { Text, Button, Badge, SectionLabel } from '../ui'
 import CooldownSection from './CooldownSection'
 import { colors, radius } from '../../styles/tokens'
@@ -170,15 +169,15 @@ const LissDay = memo(function LissDay({
 
   const cooldown = useMemo(() => {
     if (dbCooldownItems && dbCooldownItems.length > 0) {
-      return dbCooldownItems.map(ci => ci.label || ci.item_key)
+      return dbCooldownItems.map((ci) => ci.label ?? ci.item_key)
     }
     return []
   }, [dbCooldownItems])
 
-  const title = dayData?.title || workout?.title || 'LISS + RECOVERY'
-  const subtitle = dayData?.subtitle || workout?.sub
+  const title = dayData?.title ?? workout?.title ?? 'LISS + RECOVERY'
+  const subtitle = dayData?.subtitle ?? workout?.sub
   const duration = dayData?.duration_min ? String(dayData.duration_min) : workout?.dur
-  const tags = dayData?.tags || workout?.tags
+  const tags = dayData?.tags ?? workout?.tags
 
   const equipmentOptions = GYM_OPTIONS
   const defaultEquipment = 'treadmill'
@@ -188,28 +187,30 @@ const LissDay = memo(function LissDay({
   const [isLogged, setIsLogged] = useState(false)
   const [previousLog, setPreviousLog] = useState<Record<string, unknown> | null>(null)
 
-  const config = EQUIPMENT_CONFIG[selectedEquipment]
+  const config = EQUIPMENT_CONFIG[selectedEquipment]!
 
   const dateContext = useMemo(() => {
     const d = new Date(dateStr + 'T00:00:00')
-    return `${d.getDate()} ${MONTHS[d.getMonth()]} · WEEK ${totalWeek || 1} · PHASE ${phase || 1}`
+    return `${d.getDate()} ${MONTHS[d.getMonth()]} · WEEK ${totalWeek ?? 1} · PHASE ${phase ?? 1}`
   }, [dateStr, totalWeek, phase])
 
-  const hasDuration = !!(inputValues.duration || inputValues.laps || inputValues.distance)
+  const hasDuration = !!(inputValues.duration ?? inputValues.laps ?? inputValues.distance)
 
   useEffect(() => {
-    const existing = checklistLogs.find(l => l.item_key === 'liss' && l.item_type === 'cardio')
+    const existing = checklistLogs.find((l) => l.item_key === 'liss' && l.item_type === 'cardio')
     if (existing?.completed) {
       setIsLogged(true)
       try {
-        const data = JSON.parse(existing.notes || '{}')
+        const data = JSON.parse(existing.notes ?? '{}')
         if (data.equipment && EQUIPMENT_CONFIG[data.equipment]) {
           setSelectedEquipment(data.equipment)
         }
         const vals = { ...data }
         delete vals.equipment
         setInputValues(vals)
-      } catch { /* ignore parse errors */ }
+      } catch {
+        /* ignore parse errors */
+      }
     }
 
     let cancelled = false
@@ -217,7 +218,7 @@ const LissDay = memo(function LissDay({
       const { data } = await supabase
         .from('checklist_logs')
         .select('notes, date')
-        .eq('user_id', user.id)
+        .eq('user_id', user!.id)
         .eq('item_key', 'liss')
         .eq('item_type', 'cardio')
         .eq('completed', true)
@@ -226,15 +227,22 @@ const LissDay = memo(function LissDay({
         .limit(1)
 
       if (!cancelled && data?.[0]?.notes) {
-        try { setPreviousLog(JSON.parse(data[0].notes)) } catch { /* ignore */ }
+        try {
+          setPreviousLog(JSON.parse(data[0].notes))
+        } catch {
+          /* ignore */
+        }
       }
     }
-    fetchPrev()
-    return () => { cancelled = true }
-  }, [checklistLogs, dateStr, user.id])
+    void fetchPrev()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- user is stable when authenticated
+  }, [checklistLogs, dateStr, user?.id])
 
   function handleInputChange(name: string, value: string) {
-    setInputValues(prev => ({ ...prev, [name]: value }))
+    setInputValues((prev) => ({ ...prev, [name]: value }))
   }
 
   function handleSelectEquipment(key: string) {
@@ -253,16 +261,16 @@ const LissDay = memo(function LissDay({
     }
     const notesStr = JSON.stringify(notes)
 
-    execute({
+    void execute({
       optimisticUpdate: () => {
         setIsLogged(true)
         if (navigator.vibrate) navigator.vibrate(50)
       },
       idbWrite: async () => {
-        await idbCache.invalidate('workout-data', `${user.id}_${dateStr}`)
+        await idbCache.invalidate('workout-data', `${user!.id}_${dateStr}`)
       },
       supabaseWrite: async () => {
-        const { error } = await upsertChecklistLog(user.id, {
+        const { error } = await upsertChecklistLog(user!.id, {
           date: dateStr,
           item_type: 'cardio',
           item_key: 'liss',
@@ -280,7 +288,9 @@ const LissDay = memo(function LissDay({
   }
 
   const showPrevious = previousLog && previousLog.equipment === selectedEquipment
-  const prevConfig = showPrevious ? EQUIPMENT_CONFIG[previousLog.equipment as string] : null
+  const prevConfig = showPrevious
+    ? (EQUIPMENT_CONFIG[previousLog.equipment as string] ?? null)
+    : null
 
   return (
     <div>
@@ -293,7 +303,8 @@ const LissDay = memo(function LissDay({
           className="text-[11px] tracking-[0.08em] uppercase text-[#555555] px-3 py-1 inline-flex mb-2"
           style={{ background: '#111111', border: '1px solid #1a1a1a' }}
         >
-          UPCOMING · {(() => {
+          UPCOMING ·{' '}
+          {(() => {
             const d = new Date(dateStr + 'T00:00:00')
             const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
             return `${days[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`
@@ -311,11 +322,13 @@ const LissDay = memo(function LissDay({
       </div>
 
       {subtitle && (
-        <Text variant="bodyMuted" className="mt-0.5">{subtitle}</Text>
+        <Text variant="bodyMuted" className="mt-0.5">
+          {subtitle}
+        </Text>
       )}
 
       <div className="flex items-center gap-2 mt-2">
-        {tags?.map(tag => (
+        {tags?.map((tag) => (
           <Badge key={tag} label={tag} />
         ))}
       </div>
@@ -323,8 +336,8 @@ const LissDay = memo(function LissDay({
       <div className="mt-5">
         <SectionLabel label="Equipment" className="mb-2" />
         <div className="flex flex-wrap gap-2">
-          {equipmentOptions.map(key => {
-            const eq = EQUIPMENT_CONFIG[key]
+          {equipmentOptions.map((key) => {
+            const eq = EQUIPMENT_CONFIG[key]!
             const isActive = selectedEquipment === key
             return (
               <button
@@ -336,8 +349,11 @@ const LissDay = memo(function LissDay({
                   borderRadius: radius.pill,
                   ...(isActive
                     ? { background: colors.accent, color: '#fff', border: 'none' }
-                    : { background: colors.surface, border: `1.5px solid ${colors.border}`, color: '#666666' }
-                  ),
+                    : {
+                        background: colors.surface,
+                        border: `1.5px solid ${colors.border}`,
+                        color: '#666666',
+                      }),
                 }}
               >
                 <span className="text-[14px]">{eq.icon}</span>
@@ -351,18 +367,24 @@ const LissDay = memo(function LissDay({
       <div className="mt-5">
         <SectionLabel label="How to" className="mb-3" />
         {config.instructions.map((line, i) => (
-          <p key={i} className="text-[14px] text-[#f0ede8] leading-[1.9]">{line}</p>
+          <p key={i} className="text-[14px] text-[#f0ede8] leading-[1.9]">
+            {line}
+          </p>
         ))}
       </div>
 
       {!readOnly && (
         <>
           <div className="flex gap-2 mt-6">
-            {config.inputs.map(name => (
+            {config.inputs.map((name) => (
               <div
                 key={name}
                 className="flex-1 focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-colors"
-                style={{ background: colors.surface2, border: `1.5px solid ${colors.border}`, borderRadius: radius.input }}
+                style={{
+                  background: colors.surface2,
+                  border: `1.5px solid ${colors.border}`,
+                  borderRadius: radius.input,
+                }}
               >
                 <label className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#555555] mb-2">
                   {name.charAt(0).toUpperCase() + name.slice(1)}
@@ -371,11 +393,11 @@ const LissDay = memo(function LissDay({
                   type="number"
                   inputMode="decimal"
                   step={name === 'speed' || name === 'rpm' || name === 'distance' ? '0.1' : '1'}
-                  value={inputValues[name] || ''}
-                  onChange={e => handleInputChange(name, e.target.value)}
+                  value={inputValues[name] ?? ''}
+                  onChange={(e) => handleInputChange(name, e.target.value)}
                   readOnly={isLogged}
                   className="w-full bg-transparent text-center text-[24px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] placeholder-[#555555] focus:outline-none"
-                  placeholder={config.placeholders[name] || ''}
+                  placeholder={config.placeholders[name] ?? ''}
                   aria-label={`${name} value`}
                 />
                 <span className="text-[10px] text-[#444444] mt-1">{config.units[name]}</span>
@@ -386,10 +408,13 @@ const LissDay = memo(function LissDay({
           {showPrevious && prevConfig && (
             <Text variant="caption" className="mt-3 text-center tracking-wide uppercase">
               Last session
-              {prevConfig.inputs.map(name => {
-                const val = previousLog![name]
-                return val != null ? ` · ${val}${prevConfig.units[name]}` : ''
-              }).join('')}
+              {prevConfig.inputs
+                .map((name) => {
+                  const val = previousLog[name]
+                  // eslint-disable-next-line @typescript-eslint/no-base-to-string -- numeric values from DB
+                  return val != null ? ` · ${String(val)}${String(prevConfig.units[name])}` : ''
+                })
+                .join('')}
             </Text>
           )}
 
@@ -405,10 +430,12 @@ const LissDay = memo(function LissDay({
           {isLogged && (
             <Text variant="caption" className="text-center mt-2 font-medium">
               {config.icon} {config.label}
-              {config.inputs.map(name => {
-                const val = inputValues[name]
-                return val ? ` · ${val} ${config.units[name]}` : ''
-              }).join('')}
+              {config.inputs
+                .map((name) => {
+                  const val = inputValues[name]
+                  return val ? ` · ${val} ${config.units[name]}` : ''
+                })
+                .join('')}
             </Text>
           )}
         </>

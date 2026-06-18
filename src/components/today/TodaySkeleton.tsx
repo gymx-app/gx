@@ -13,7 +13,15 @@ const TodaySkeleton = memo(function TodaySkeleton() {
       </div>
 
       <div className="flex-1 overflow-hidden">
-        <div className="mx-4 mt-3" style={{ background: '#141414', border: '1px solid #2a2a2a', borderRadius: '14px', padding: '14px' }}>
+        <div
+          className="mx-4 mt-3"
+          style={{
+            background: '#141414',
+            border: '1px solid #2a2a2a',
+            borderRadius: '14px',
+            padding: '14px',
+          }}
+        >
           <div className="flex items-baseline justify-between">
             <Skeleton width={128} height={20} />
             <Skeleton width={80} height={14} />
@@ -21,14 +29,25 @@ const TodaySkeleton = memo(function TodaySkeleton() {
           <Skeleton width="100%" height={4} className="mt-3" />
           <div className="flex gap-[6px] mt-3">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="flex-1 h-[32px] rounded-[8px]" style={{ background: '#1c1c1c', border: '1px solid #2a2a2a' }} />
+              <div
+                key={i}
+                className="flex-1 h-[32px] rounded-[8px]"
+                style={{ background: '#1c1c1c', border: '1px solid #2a2a2a' }}
+              />
             ))}
           </div>
         </div>
 
-        <div className="px-4 py-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+        <div
+          className="px-4 py-3"
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}
+        >
           {[...Array(7)].map((_, i) => (
-            <div key={i} className="rounded-[12px]" style={{ minHeight: 72, background: '#141414', border: '1.5px solid #2a2a2a' }} />
+            <div
+              key={i}
+              className="rounded-[12px]"
+              style={{ minHeight: 72, background: '#141414', border: '1.5px solid #2a2a2a' }}
+            />
           ))}
         </div>
 
@@ -44,7 +63,15 @@ const TodaySkeleton = memo(function TodaySkeleton() {
 
         <div className="px-4 mt-4 flex flex-col gap-3">
           {[160, 128, 144].map((titleW, i) => (
-            <div key={i} style={{ background: '#141414', border: '1px solid #2a2a2a', borderRadius: '16px', padding: '11px 16px' }}>
+            <div
+              key={i}
+              style={{
+                background: '#141414',
+                border: '1px solid #2a2a2a',
+                borderRadius: '16px',
+                padding: '11px 16px',
+              }}
+            >
               <div className="flex items-center gap-[10px]">
                 <Skeleton width={34} height={34} />
                 <div className="flex-1">

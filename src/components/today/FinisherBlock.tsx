@@ -32,13 +32,19 @@ interface FinisherBlockProps {
 function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }: FinisherBlockProps) {
   const { user } = useAuth()
   const { execute } = useOptimisticUpdate()
-  const existing = checklistLogs.find(l => l.item_key === 'fin-main' && l.item_type === 'finisher')
+  const existing = checklistLogs.find(
+    (l) => l.item_key === 'fin-main' && l.item_type === 'finisher'
+  )
   const [localLogged, setLocalLogged] = useState<boolean | null>(null)
-  const isLogged = localLogged !== null ? localLogged : (existing?.completed || false)
+  const isLogged = localLogged ?? existing?.completed ?? false
 
   const [finInputs, setFinInputs] = useState<Record<string, string>>(() => {
     if (isLogged && existing?.notes) {
-      try { return JSON.parse(existing.notes) } catch { return {} }
+      try {
+        return JSON.parse(existing.notes)
+      } catch {
+        return {}
+      }
     }
     return {}
   })
@@ -57,16 +63,16 @@ function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }: FinisherBlockP
     }
     const notesStr = JSON.stringify(notes)
 
-    execute({
+    void execute({
       optimisticUpdate: () => {
         setLocalLogged(true)
         if (navigator.vibrate) navigator.vibrate(50)
       },
       idbWrite: async () => {
-        await idbCache.invalidate('workout-data', `${user.id}_${dateStr}`)
+        await idbCache.invalidate('workout-data', `${user!.id}_${dateStr}`)
       },
       supabaseWrite: async () => {
-        const { error } = await upsertChecklistLog(user.id, {
+        const { error } = await upsertChecklistLog(user!.id, {
           date: dateStr,
           item_type: 'finisher',
           item_key: 'fin-main',
@@ -87,20 +93,37 @@ function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }: FinisherBlockP
     <div className="mt-6">
       <SectionLabel label="Finisher" className="mb-3" />
 
-      <h4 className="font-['Bebas_Neue'] text-[18px] tracking-[1.5px] text-[#ff4520] mb-[5px]">{fin.title}</h4>
-      {fin.desc && <p className="text-[13px] leading-[1.6] mt-1" style={{ color: colors.textSecondary }}>{fin.desc}</p>}
+      <h4 className="font-['Bebas_Neue'] text-[18px] tracking-[1.5px] text-[#ff4520] mb-[5px]">
+        {fin.title}
+      </h4>
+      {fin.desc && (
+        <p className="text-[13px] leading-[1.6] mt-1" style={{ color: colors.textSecondary }}>
+          {fin.desc}
+        </p>
+      )}
 
       {fin.rounds && fin.rounds.length > 0 && (
         <div className="mt-2">
           {fin.rounds.map((round, i) => (
-            <p key={i} className="text-[13px] leading-[1.6]" style={{ color: colors.textSecondary }}>{round}</p>
+            <p
+              key={i}
+              className="text-[13px] leading-[1.6]"
+              style={{ color: colors.textSecondary }}
+            >
+              {round}
+            </p>
           ))}
         </div>
       )}
 
       <div className="flex items-center gap-2 mt-2">
         {fin.dur && <span className="text-[12px] text-[#666666]">{fin.dur}</span>}
-        {fin.kcal && <><span className="text-[12px] text-[#666666]">·</span><span className="text-[12px] text-[#666666]">{fin.kcal}</span></>}
+        {fin.kcal && (
+          <>
+            <span className="text-[12px] text-[#666666]">·</span>
+            <span className="text-[12px] text-[#666666]">{fin.kcal}</span>
+          </>
+        )}
       </div>
 
       {isCardio && (
@@ -113,7 +136,11 @@ function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }: FinisherBlockP
             <div
               key={name}
               className="flex-1 focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-all duration-150"
-              style={{ background: colors.surface2, border: `1.5px solid ${colors.border}`, borderRadius: radius.input }}
+              style={{
+                background: colors.surface2,
+                border: `1.5px solid ${colors.border}`,
+                borderRadius: radius.input,
+              }}
             >
               <label className="text-[9px] font-bold tracking-[1px] uppercase text-[#666666] mb-2">
                 {name.charAt(0).toUpperCase() + name.slice(1)}
@@ -122,15 +149,17 @@ function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }: FinisherBlockP
                 type="number"
                 inputMode="decimal"
                 step={name === 'speed' ? '0.1' : '1'}
-                value={finInputs[name] || ''}
-                onChange={e => setFinInputs(prev => ({ ...prev, [name]: e.target.value }))}
+                value={finInputs[name] ?? ''}
+                onChange={(e) => setFinInputs((prev) => ({ ...prev, [name]: e.target.value }))}
                 readOnly={isLogged}
                 className="w-full bg-transparent text-center text-[24px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] focus:outline-none"
                 style={{ color: colors.text }}
                 placeholder={placeholder}
                 aria-label={`${name} value`}
               />
-              <span className="text-[10px] mt-1" style={{ color: colors.placeholder }}>{unit}</span>
+              <span className="text-[10px] mt-1" style={{ color: colors.placeholder }}>
+                {unit}
+              </span>
             </div>
           ))}
         </div>

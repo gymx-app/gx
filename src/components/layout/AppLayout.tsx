@@ -9,10 +9,7 @@ interface TabPaneProps {
 
 function TabPane({ active, children }: TabPaneProps) {
   return (
-    <div
-      style={{ display: active ? 'contents' : 'none' }}
-      aria-hidden={!active}
-    >
+    <div style={{ display: active ? 'contents' : 'none' }} aria-hidden={!active}>
       {children}
     </div>
   )

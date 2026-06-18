@@ -19,15 +19,15 @@ const STORES = [
 
 /** TTL in milliseconds per store */
 const TTL = {
-  'workout-data': 5 * 60 * 1000,           // 5 minutes
-  'week-sessions': 10 * 60 * 1000,         // 10 minutes
-  'exercises': 7 * 24 * 60 * 60 * 1000,    // 7 days
-  'programme-config': 30 * 60 * 1000,      // 30 minutes
-  'programme-context': 30 * 60 * 1000,     // 30 minutes
-  'programme-day': 60 * 60 * 1000,         // 1 hour
-  'programme-exercises': 60 * 60 * 1000,   // 1 hour
-  'warmup-items': 60 * 60 * 1000,          // 1 hour
-  'cooldown-items': 60 * 60 * 1000,        // 1 hour
+  'workout-data': 5 * 60 * 1000, // 5 minutes
+  'week-sessions': 10 * 60 * 1000, // 10 minutes
+  exercises: 7 * 24 * 60 * 60 * 1000, // 7 days
+  'programme-config': 30 * 60 * 1000, // 30 minutes
+  'programme-context': 30 * 60 * 1000, // 30 minutes
+  'programme-day': 60 * 60 * 1000, // 1 hour
+  'programme-exercises': 60 * 60 * 1000, // 1 hour
+  'warmup-items': 60 * 60 * 1000, // 1 hour
+  'cooldown-items': 60 * 60 * 1000, // 1 hour
 }
 
 let dbPromise = null
@@ -56,7 +56,7 @@ function openDB() {
     request.onerror = () => {
       logger.error('idbCache open error:', request.error)
       dbPromise = null
-      reject(request.error)
+      reject(request.error ?? new Error('IDB open failed'))
     }
   })
 
@@ -84,13 +84,13 @@ export async function get(store, key) {
         const entry = req.result
         if (!entry) return resolve(null)
 
-        const ttl = TTL[store] || 0
+        const ttl = TTL[store] ?? 0
         if (ttl > 0 && Date.now() - entry.timestamp > ttl) {
           resolve(null)
           return
         }
 
-        memCache.set(memKey, entry.data, ttl || 5 * 60 * 1000)
+        memCache.set(memKey, entry.data, ttl ?? 5 * 60 * 1000)
         resolve(entry.data)
       }
       req.onerror = () => resolve(null)
@@ -108,7 +108,7 @@ export async function get(store, key) {
  */
 export async function set(store, key, data) {
   const memKey = `${store}:${key}`
-  const ttl = TTL[store] || 5 * 60 * 1000
+  const ttl = TTL[store] ?? 5 * 60 * 1000
   memCache.set(memKey, data, ttl)
 
   try {

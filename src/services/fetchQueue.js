@@ -50,7 +50,7 @@ function cancelLowPriority() {
   for (let i = heap.length - 1; i >= 0; i--) {
     if (heap[i].priority === PRIORITY.LOW) {
       heap[i].abort.abort()
-      heap[i].reject(new DOMException('Cancelled', 'AbortError'))
+      heap[i].reject(new Error('Cancelled'))
       heap.splice(i, 1)
     }
   }
@@ -76,7 +76,7 @@ async function execute(item) {
       item.reject(err)
     } else if (item.priority <= PRIORITY.HIGH && !item.retried) {
       item.retried = true
-      await new Promise(r => setTimeout(r, 300))
+      await new Promise((r) => setTimeout(r, 300))
       if (!item.abort.signal.aborted) {
         try {
           const result = await item.fn(item.abort.signal)
@@ -102,11 +102,11 @@ function drain() {
   while (running < MAX_CONCURRENCY && heap.length > 0) {
     const item = heapPop()
     if (item.abort.signal.aborted) {
-      item.reject(new DOMException('Cancelled', 'AbortError'))
+      item.reject(new Error('Cancelled'))
       continue
     }
     inFlight.set(item.id, item)
-    execute(item)
+    void execute(item)
   }
 }
 
@@ -116,18 +116,30 @@ export function enqueue(id, priority, fn) {
     return new Promise((resolve, reject) => {
       const origResolve = existing.resolve
       const origReject = existing.reject
-      existing.resolve = (v) => { origResolve(v); resolve(v) }
-      existing.reject = (e) => { origReject(e); reject(e) }
+      existing.resolve = (v) => {
+        origResolve(v)
+        resolve(v)
+      }
+      existing.reject = (e) => {
+        origReject(e)
+        reject(e instanceof Error ? e : new Error(String(e)))
+      }
     })
   }
 
-  const queued = heap.find(item => item.id === id)
+  const queued = heap.find((item) => item.id === id)
   if (queued) {
     return new Promise((resolve, reject) => {
       const origResolve = queued.resolve
       const origReject = queued.reject
-      queued.resolve = (v) => { origResolve(v); resolve(v) }
-      queued.reject = (e) => { origReject(e); reject(e) }
+      queued.resolve = (v) => {
+        origResolve(v)
+        resolve(v)
+      }
+      queued.reject = (e) => {
+        origReject(e)
+        reject(e instanceof Error ? e : new Error(String(e)))
+      }
     })
   }
 
@@ -154,7 +166,7 @@ export function enqueue(id, priority, fn) {
 export function cancelAll() {
   for (const item of heap) {
     item.abort.abort()
-    item.reject(new DOMException('Cancelled', 'AbortError'))
+    item.reject(new Error('Cancelled'))
   }
   heap.length = 0
 

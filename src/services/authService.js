@@ -15,7 +15,7 @@ export async function signIn(email, password) {
     return { data, error: null }
   } catch (err) {
     logger.error('signIn:', err)
-    return { data: null, error: err.message || 'Sign in failed' }
+    return { data: null, error: err.message ?? 'Sign in failed' }
   }
 }
 

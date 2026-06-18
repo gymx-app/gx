@@ -2,7 +2,7 @@ let quality = 'good'
 let listeners = []
 
 function detect() {
-  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection
+  const conn = navigator.connection ?? navigator.mozConnection ?? navigator.webkitConnection
   if (!conn) return 'good'
 
   if (!conn.effectiveType || conn.effectiveType === 'slow-2g' || conn.effectiveType === '2g') {
@@ -18,20 +18,20 @@ function update() {
   const prev = quality
   quality = detect()
   if (prev !== quality) {
-    listeners.forEach(fn => fn(quality))
+    listeners.forEach((fn) => fn(quality))
   }
 }
 
 export function initNetworkQuality() {
   quality = detect()
-  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection
+  const conn = navigator.connection ?? navigator.mozConnection ?? navigator.webkitConnection
   if (conn) {
     conn.addEventListener('change', update)
   }
   window.addEventListener('online', update)
   window.addEventListener('offline', () => {
     quality = 'offline'
-    listeners.forEach(fn => fn(quality))
+    listeners.forEach((fn) => fn(quality))
   })
 }
 
@@ -42,7 +42,7 @@ export function getNetworkQuality() {
 export function onQualityChange(fn) {
   listeners.push(fn)
   return () => {
-    listeners = listeners.filter(l => l !== fn)
+    listeners = listeners.filter((l) => l !== fn)
   }
 }
 

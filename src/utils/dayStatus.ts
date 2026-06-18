@@ -6,7 +6,7 @@ export function getDayStatus(
   restDayIndices: Set<number>,
   programmeStartDate: string | null,
   todayStr: string,
-  dayIndex: number,
+  dayIndex: number
 ): DayStatus {
   if (programmeStartDate && date < programmeStartDate) return 'pre_programme'
   if (restDayIndices.has(dayIndex)) return 'rest'

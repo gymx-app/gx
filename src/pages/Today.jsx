@@ -1,15 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { useLoading } from '../hooks/useLoading'
-import {
-  computePhaseAndWeek,
-  getDayKey,
-  getWeekDays,
-  getMinWeekOffset,
-  isProgrammeWeek1,
-  getProgrammeWeekNumber,
-  toDateStr,
-} from '../utils/programme'
+import { computePhaseAndWeek, getDayKey, getWeekDays, getMinWeekOffset } from '../utils/programme'
 import { useTodayData } from '../hooks/useTodayData'
 import { getSyncState, subscribe as subscribeSyncState } from '../services/syncState'
 import { Text, Button, Badge, SectionLabel } from '../components/ui'
@@ -38,24 +30,20 @@ function SyncIndicator() {
 
   const { activeWrites, pendingQueue, isOnline } = syncState
 
-  let status, dotColor, labelText, shouldPulse
+  let dotColor, labelText, shouldPulse
   if (!isOnline) {
-    status = 'offline'
     dotColor = 'bg-[#666666]'
     labelText = 'offline'
     shouldPulse = false
   } else if (activeWrites > 0) {
-    status = 'saving'
     dotColor = 'bg-[#f59e0b]'
     labelText = 'saving'
     shouldPulse = true
   } else if (pendingQueue > 0) {
-    status = 'pending'
     dotColor = 'bg-[#eab308]'
     labelText = `${pendingQueue} pending`
     shouldPulse = true
   } else {
-    status = 'synced'
     dotColor = 'bg-[#22c55e]'
     labelText = 'synced'
     shouldPulse = false
@@ -64,35 +52,45 @@ function SyncIndicator() {
   return (
     <div className="flex items-center gap-[6px] min-h-[44px] min-w-[44px] justify-end">
       <span className="text-[11px] text-[#666666]">{labelText}</span>
-      <div className={`w-2 h-2 rounded-full shrink-0 ${dotColor} ${shouldPulse ? 'animate-pulse' : ''}`} style={{ transition: 'background .3s' }} />
+      <div
+        className={`w-2 h-2 rounded-full shrink-0 ${dotColor} ${shouldPulse ? 'animate-pulse' : ''}`}
+        style={{ transition: 'background .3s' }}
+      />
     </div>
   )
 }
 
 const TodayTopBar = memo(function TodayTopBar({ phase, totalWeek }) {
-  const now = new Date()
+  const now = useMemo(() => new Date(), [])
   const title = useMemo(
-    () => `${DAYS[now.getDay()]} ${now.getDate()} ${MONTHS[now.getMonth()]} · W${totalWeek} · P${phase}`,
-    [phase, totalWeek]
+    () =>
+      `${DAYS[now.getDay()]} ${now.getDate()} ${MONTHS[now.getMonth()]} · W${totalWeek} · P${phase}`,
+    [now, phase, totalWeek]
   )
-  return (
-    <TopBar
-      title={title}
-      rightContent={<SyncIndicator />}
-    />
-  )
+  return <TopBar title={title} rightContent={<SyncIndicator />} />
 })
 
 const RestDay = memo(function RestDay({ workout }) {
   return (
     <div className="pt-2.5">
-      <Text variant="pageTitle" className="text-[#666666]">{workout?.title || 'REST DAY'}</Text>
-      <Text variant="bodyMuted" className="mt-2">{workout?.sub || 'Recovery · Sleep · Meal Prep'}</Text>
-      <div className="mt-4 p-8 text-center" style={{ background: '#141414', border: '1px solid #2a2a2a', borderRadius: '16px' }}>
+      <Text variant="pageTitle" className="text-[#666666]">
+        {workout?.title ?? 'REST DAY'}
+      </Text>
+      <Text variant="bodyMuted" className="mt-2">
+        {workout?.sub ?? 'Recovery · Sleep · Meal Prep'}
+      </Text>
+      <div
+        className="mt-4 p-8 text-center"
+        style={{ background: '#141414', border: '1px solid #2a2a2a', borderRadius: '16px' }}
+      >
         <p className="text-[48px] mb-3">😴</p>
-        <h2 className="font-['Bebas_Neue'] text-[26px] tracking-[2px] text-[#f0ede8] mb-2">REST DAY</h2>
+        <h2 className="font-['Bebas_Neue'] text-[26px] tracking-[2px] text-[#f0ede8] mb-2">
+          REST DAY
+        </h2>
         <Text variant="bodyMuted">Nothing to log today.</Text>
-        <Text variant="caption" className="mt-1 max-w-[260px] mx-auto leading-[1.6]">Rest is part of the programme.</Text>
+        <Text variant="caption" className="mt-1 max-w-[260px] mx-auto leading-[1.6]">
+          Rest is part of the programme.
+        </Text>
       </div>
     </div>
   )
@@ -102,7 +100,7 @@ const RestDay = memo(function RestDay({ workout }) {
 // TODAY — Main Controller
 // ═══════════════════════════════════════════
 export default function Today() {
-  const { user } = useAuth()
+  useAuth()
   const { startLoading, stopLoading } = useLoading()
 
   // ── Screen state ──
@@ -116,7 +114,7 @@ export default function Today() {
   const [expandedExercise, setExpandedExercise] = useState(null)
   const [activeSheet, setActiveSheet] = useState(null)
   const [restTimer, setRestTimer] = useState(null)
-  const [completedSets, setCompletedSets] = useState({})
+  const [localCompletedSets, setLocalCompletedSets] = useState({})
 
   // ── Swipe navigation ──
   const touchRef = useRef({ startX: 0, startY: 0, startTime: 0, tracking: false, locked: false })
@@ -127,7 +125,7 @@ export default function Today() {
   // ── Computed dates ──
   const weekDays = useMemo(() => getWeekDays(weekOffset), [weekOffset])
   const selectedDay = useMemo(
-    () => weekDays.find(d => d.dayLabel === selectedDayLabel) || weekDays[0],
+    () => weekDays.find((d) => d.dayLabel === selectedDayLabel) ?? weekDays[0],
     [weekDays, selectedDayLabel]
   )
   const dateStr = selectedDay.dateStr
@@ -161,8 +159,8 @@ export default function Today() {
     }
   }, [loading, startLoading, stopLoading])
 
-  const syncRefetch = useCallback(async () => {
-    await refetch()
+  const syncRefetch = useCallback(() => {
+    void refetch()
   }, [refetch])
 
   // ── Phase computation ──
@@ -182,14 +180,14 @@ export default function Today() {
   const workout = useMemo(() => {
     if (!dayData) return null
     return {
-      title: dayData.title || '',
-      sub: dayData.subtitle || '',
+      title: dayData.title ?? '',
+      sub: dayData.subtitle ?? '',
       dur: dayData.duration_min ? String(dayData.duration_min) : null,
-      kcal: dayData.kcal_range || null,
-      tags: dayData.tags || [],
+      kcal: dayData.kcal_range ?? null,
+      tags: dayData.tags ?? [],
       workout_type: dayData.workout_type,
       has_warmup: dayData.has_warmup,
-      fin: dayData.finisher || null,
+      fin: dayData.finisher ?? null,
       isRest: dayData.workout_type === 'rest',
       isLiss: dayData.workout_type === 'liss',
     }
@@ -198,14 +196,14 @@ export default function Today() {
   // ── Map DB programme exercises → ExerciseCard format ──
   const displayExercises = useMemo(() => {
     if (programmeExercises && programmeExercises.length > 0) {
-      return programmeExercises.map(pe => ({
-        n: pe.exercises?.name || 'Unknown',
-        s: pe.sets_reps || '3×12',
-        r: pe.rest || '60s',
-        note: pe.notes || null,
-        warn: pe.warn || null,
+      return programmeExercises.map((pe) => ({
+        n: pe.exercises?.name ?? 'Unknown',
+        s: pe.sets_reps ?? '3×12',
+        r: pe.rest ?? '60s',
+        note: pe.notes ?? null,
+        warn: pe.warn ?? null,
         eq: pe.exercises?.equipment ?? [],
-        icon: pe.icon || null,
+        icon: pe.icon ?? null,
         _bodyPart: pe.exercises?.body_part,
         _targetMuscle: pe.exercises?.target_muscle,
         _gifUrl: pe.exercises?.gif_url,
@@ -213,7 +211,11 @@ export default function Today() {
     }
 
     if (dayData?.workout_type === 'workout' && !loading) {
-      console.warn('[GX] programme_exercises empty for day', dayData?.id, '— seed programme_exercises table')
+      console.warn(
+        '[GX] programme_exercises empty for day',
+        dayData?.id,
+        '— seed programme_exercises table'
+      )
     }
 
     return []
@@ -221,7 +223,7 @@ export default function Today() {
 
   const displayCooldownItems = useMemo(() => {
     if (cooldownItems && cooldownItems.length > 0) {
-      return cooldownItems.map(ci => ci.label || ci.item_key)
+      return cooldownItems.map((ci) => ci.label ?? ci.item_key)
     }
     return []
   }, [cooldownItems])
@@ -230,7 +232,7 @@ export default function Today() {
     const map = {}
     for (const log of logs) {
       const name = log.exercise_name
-      if (!map[name]) map[name] = []
+      map[name] ??= []
       map[name].push(log)
     }
     return map
@@ -240,23 +242,23 @@ export default function Today() {
   const dayType = workout?.isRest
     ? 'rest'
     : workout?.isLiss
-    ? 'liss'
-    : dayData?.workout_type === 'workout'
-    ? 'workout'
-    : 'none'
+      ? 'liss'
+      : dayData?.workout_type === 'workout'
+        ? 'workout'
+        : 'none'
 
   // ── Session for selected date ──
   const sessionForDate = useMemo(
-    () => sessions.find(s => s.date === dateStr),
+    () => sessions.find((s) => s.date === dateStr),
     [sessions, dateStr]
   )
-  const sessionId = sessionForDate?.id || null
+  const sessionId = sessionForDate?.id ?? null
 
   // ── Completed days for week strip ──
   const completedDateStrs = useMemo(() => {
     const set = new Set()
     for (const s of sessions) {
-      const inWeek = weekDays.some(wd => wd.dateStr === s.date)
+      const inWeek = weekDays.some((wd) => wd.dateStr === s.date)
       if (inWeek) set.add(s.date)
     }
     return set
@@ -270,19 +272,19 @@ export default function Today() {
     let count = 0
     for (const s of sessions) {
       if (s.day_of_week === 'SUN') continue
-      if (weekDays.some(wd => wd.dateStr === s.date)) count++
+      if (weekDays.some((wd) => wd.dateStr === s.date)) count++
     }
     return count
   }, [sessions, weekDays])
 
   // ── Week navigation bounds ──
-  const programmeStartDate = config?.start_date || null
+  const programmeStartDate = config?.start_date ?? null
   const minWeekOffset = useMemo(() => getMinWeekOffset(programmeStartDate), [programmeStartDate])
   const canGoBack = weekOffset > minWeekOffset
   const canGoForward = true
 
   // ── Pre-populate completedSets from exercise_logs ──
-  useEffect(() => {
+  const derivedCompletedSets = useMemo(() => {
     const map = {}
     for (const log of logs) {
       if (log.completed && !log.is_mm_set) {
@@ -294,39 +296,48 @@ export default function Today() {
         }
       }
     }
-    setCompletedSets(map)
+    return map
   }, [logs])
 
-  // ── Auto-expand first incomplete exercise ──
+  const completedSets = useMemo(
+    () => ({ ...derivedCompletedSets, ...localCompletedSets }),
+    [derivedCompletedSets, localCompletedSets]
+  )
+
+  /* eslint-disable react-hooks/set-state-in-effect -- sync derived defaults with user-interactive state */
   useEffect(() => {
     if (dayType !== 'workout' || displayExercises.length === 0) return
     const firstIncomplete = displayExercises.findIndex((ex) => {
       const sets = parseInt(ex.s.split('×')[0])
-      const logged = logs.filter(l => l.exercise_name === ex.n && !l.is_mm_set && l.completed)
+      const logged = logs.filter((l) => l.exercise_name === ex.n && !l.is_mm_set && l.completed)
       return logged.length < sets
     })
     setExpandedExercise(firstIncomplete >= 0 ? firstIncomplete : null)
   }, [logs, displayExercises, dayType])
 
-  // ── Check if all exercises complete ──
   useEffect(() => {
     if (dayType !== 'workout' || displayExercises.length === 0 || screenState === 'complete') return
     const allDone = displayExercises.every((ex) => {
       const sets = parseInt(ex.s.split('×')[0])
-      const logged = logs.filter(l => l.exercise_name === ex.n && !l.is_mm_set && l.completed)
+      const logged = logs.filter((l) => l.exercise_name === ex.n && !l.is_mm_set && l.completed)
       return logged.length >= sets
     })
     if (allDone && logs.length > 0) {
       setScreenState('complete')
     }
   }, [logs, displayExercises, dayType, screenState])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // ── Today date for comparisons ──
   const todayDateStr = useMemo(() => {
     const d = new Date()
-    return d.getFullYear() + '-' +
-      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    return (
+      d.getFullYear() +
+      '-' +
+      String(d.getMonth() + 1).padStart(2, '0') +
+      '-' +
       String(d.getDate()).padStart(2, '0')
+    )
   }, [])
 
   const isFutureDate = dateStr > todayDateStr
@@ -340,16 +351,16 @@ export default function Today() {
   }, [])
 
   const handlePrevWeek = useCallback(() => {
-    setWeekOffset(prev => prev - 1)
+    setWeekOffset((prev) => prev - 1)
     setScreenState('orientation')
   }, [])
 
   const handleNextWeek = useCallback(() => {
-    setWeekOffset(prev => {
+    setWeekOffset((prev) => {
       return prev + 1
     })
     setScreenState('orientation')
-  }, [todayDateStr])
+  }, [])
 
   const handleGoToToday = useCallback(() => {
     setWeekOffset(0)
@@ -359,10 +370,21 @@ export default function Today() {
     setScreenState('orientation')
   }, [])
 
-  const handleTapSet = useCallback((exercise, setNumber, totalSets, prevBest, existingLog, exerciseIndex, restSec) => {
-    setActiveSheet({ exercise, setNumber, totalSets, prevBest, existingLog, exerciseIndex, restSec })
-    setScreenState('active')
-  }, [])
+  const handleTapSet = useCallback(
+    (exercise, setNumber, totalSets, prevBest, existingLog, exerciseIndex, restSec) => {
+      setActiveSheet({
+        exercise,
+        setNumber,
+        totalSets,
+        prevBest,
+        existingLog,
+        exerciseIndex,
+        restSec,
+      })
+      setScreenState('active')
+    },
+    []
+  )
 
   // ── Swipe day navigation ──
   const DAY_SEQ = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
@@ -375,7 +397,7 @@ export default function Today() {
       if (idx < 6) {
         setSelectedDayLabel(DAY_SEQ[idx + 1])
       } else {
-        setWeekOffset(prev => prev + 1)
+        setWeekOffset((prev) => prev + 1)
         setSelectedDayLabel('MON')
       }
     } else {
@@ -383,7 +405,7 @@ export default function Today() {
         setSelectedDayLabel(DAY_SEQ[idx - 1])
       } else {
         if (!canGoBack) return
-        setWeekOffset(prev => prev - 1)
+        setWeekOffset((prev) => prev - 1)
         setSelectedDayLabel('SUN')
       }
     }
@@ -396,9 +418,12 @@ export default function Today() {
 
   const scrollRef = useRef(null)
   const navigateDayRef = useRef(navigateDay)
-  navigateDayRef.current = navigateDay
   const swipePhaseRef = useRef(swipePhase)
-  swipePhaseRef.current = swipePhase
+
+  useEffect(() => {
+    navigateDayRef.current = navigateDay
+    swipePhaseRef.current = swipePhase
+  })
 
   useEffect(() => {
     const el = scrollRef.current
@@ -407,7 +432,13 @@ export default function Today() {
     function onTouchStart(e) {
       if (swipePhaseRef.current === 'animating') return
       const t = e.touches[0]
-      touchRef.current = { startX: t.clientX, startY: t.clientY, startTime: Date.now(), tracking: false, locked: false }
+      touchRef.current = {
+        startX: t.clientX,
+        startY: t.clientY,
+        startTime: Date.now(),
+        tracking: false,
+        locked: false,
+      }
     }
 
     function onTouchMove(e) {
@@ -466,24 +497,27 @@ export default function Today() {
     }
   }, [])
 
-  const handleLogged = useCallback((sid, weight = 0) => {
-    const restSec = activeSheet?.restSec || 60
-    const exName = activeSheet?.exercise?.n || ''
-    const setNum = activeSheet?.setNumber
+  const handleLogged = useCallback(
+    (sid, weight = 0) => {
+      const restSec = activeSheet?.restSec ?? 60
+      const exName = activeSheet?.exercise?.n ?? ''
+      const setNum = activeSheet?.setNumber
 
-    setActiveSheet(null)
-    setRestTimer({ duration: restSec, exerciseName: exName })
+      setActiveSheet(null)
+      setRestTimer({ duration: restSec, exerciseName: exName })
 
-    // Update completedSets locally for instant feedback
-    if (exName && setNum) {
-      setCompletedSets(prev => ({
-        ...prev,
-        [`${exName}-${setNum}`]: { weight: weight || 0, reps: 0, rpe: null },
-      }))
-    }
+      // Update completedSets locally for instant feedback
+      if (exName && setNum) {
+        setLocalCompletedSets((prev) => ({
+          ...prev,
+          [`${exName}-${setNum}`]: { weight: weight || 0, reps: 0, rpe: null },
+        }))
+      }
 
-    syncRefetch()
-  }, [activeSheet, syncRefetch])
+      void syncRefetch()
+    },
+    [activeSheet, syncRefetch]
+  )
 
   function handleRestTimerDismiss() {
     setRestTimer(null)
@@ -500,17 +534,14 @@ export default function Today() {
     <>
       <TodayTopBar phase={phase} totalWeek={totalWeek} />
 
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto pb-8"
-      >
+      <div ref={scrollRef} className="flex-1 overflow-y-auto pb-8">
         {/* Phase card + day pills */}
         <PhaseCard
           phase={phase}
           weekInPhase={phaseInfo.weekInPhase}
           totalWeek={totalWeek}
-          phaseWeeks={config?.phase_weeks || [4, 4, 5, 4, 999]}
-          minActiveDays={config?.min_active_days || 4}
+          phaseWeeks={config?.phase_weeks ?? [4, 4, 5, 4, 999]}
+          minActiveDays={config?.min_active_days ?? 4}
           currentWeekActiveDays={currentWeekActiveDays}
           weekOffset={weekOffset}
           onPrevWeek={handlePrevWeek}
@@ -534,13 +565,17 @@ export default function Today() {
           className="px-4 mt-6"
           style={{
             background: 'linear-gradient(180deg, #1a1a1a, #0a0a0a)',
-            transform: swipePhase === 'tracking'
-              ? `translateX(${Math.sign(swipeX) * Math.min(Math.abs(swipeX) * 0.3, 40)}px)`
-              : swipePhase === 'animating'
-              ? `translateX(${swipeX}px)`
-              : 'translateX(0)',
+            transform:
+              swipePhase === 'tracking'
+                ? `translateX(${Math.sign(swipeX) * Math.min(Math.abs(swipeX) * 0.3, 40)}px)`
+                : swipePhase === 'animating'
+                  ? `translateX(${swipeX}px)`
+                  : 'translateX(0)',
             opacity: swipePhase === 'tracking' ? Math.max(0.7, 1 - Math.abs(swipeX) / 800) : 1,
-            transition: swipePhase === 'tracking' ? 'none' : 'transform 120ms ease-out, opacity 120ms ease-out',
+            transition:
+              swipePhase === 'tracking'
+                ? 'none'
+                : 'transform 120ms ease-out, opacity 120ms ease-out',
           }}
         >
           {/* Error */}
@@ -587,7 +622,8 @@ export default function Today() {
                   className="text-[11px] tracking-[0.08em] uppercase text-[#555555] px-3 py-1 inline-flex mb-2"
                   style={{ background: '#111111', border: '1px solid #1a1a1a' }}
                 >
-                  UPCOMING · {(() => {
+                  UPCOMING ·{' '}
+                  {(() => {
                     const d = new Date(dateStr + 'T00:00:00')
                     return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`
                   })()}
@@ -604,16 +640,16 @@ export default function Today() {
               </div>
 
               {workout.sub && (
-                <Text variant="bodyMuted" className="mt-0.5">{workout.sub}</Text>
+                <Text variant="bodyMuted" className="mt-0.5">
+                  {workout.sub}
+                </Text>
               )}
 
               <div className="flex items-center gap-2 mt-2">
                 {workout.kcal && (
-                  <span className="text-[11px] text-[#666666]">
-                    {workout.kcal} kcal
-                  </span>
+                  <span className="text-[11px] text-[#666666]">{workout.kcal} kcal</span>
                 )}
-                {workout.tags?.map(tag => (
+                {workout.tags?.map((tag) => (
                   <Badge key={tag} label={tag} />
                 ))}
               </div>
@@ -641,18 +677,29 @@ export default function Today() {
                       key={`${ex.n}-${idx}`}
                       exercise={ex}
                       exerciseIndex={idx}
-                      exerciseLogs={logsByExercise[ex.n] || []}
+                      exerciseLogs={logsByExercise[ex.n] ?? []}
                       previousBest={previousBests[ex.n]}
                       isExpanded={expandedExercise === idx}
-                      onToggleExpand={() => setExpandedExercise(expandedExercise === idx ? null : idx)}
+                      onToggleExpand={() =>
+                        setExpandedExercise(expandedExercise === idx ? null : idx)
+                      }
                       onTapSet={isFutureDate ? () => {} : handleTapSet}
                     />
                   ))}
                 </div>
               ) : (
-                <div className="py-6 text-center" style={{ background: '#141414', border: '1px solid #2a2a2a', borderRadius: '16px' }}>
+                <div
+                  className="py-6 text-center"
+                  style={{
+                    background: '#141414',
+                    border: '1px solid #2a2a2a',
+                    borderRadius: '16px',
+                  }}
+                >
                   <Text variant="bodyMuted">No exercises configured for this day.</Text>
-                  <Text variant="caption" className="mt-1">Seed the programme_exercises table to populate.</Text>
+                  <Text variant="caption" className="mt-1">
+                    Seed the programme_exercises table to populate.
+                  </Text>
                 </div>
               )}
 
@@ -682,7 +729,9 @@ export default function Today() {
           {/* No data */}
           {dayType === 'none' && (
             <div className="mt-8 pt-2.5">
-              <Text variant="pageTitle" className="text-[#2a2a2a]">NO DATA</Text>
+              <Text variant="pageTitle" className="text-[#2a2a2a]">
+                NO DATA
+              </Text>
               <Text variant="bodyMuted" className="mt-2">
                 No workout defined for this day in phase {phase}.
               </Text>
@@ -712,7 +761,10 @@ export default function Today() {
           phase={phase}
           exerciseIndex={activeSheet.exerciseIndex}
           exerciseMap={exerciseMap}
-          onClose={() => { setActiveSheet(null); setScreenState('orientation') }}
+          onClose={() => {
+            setActiveSheet(null)
+            setScreenState('orientation')
+          }}
           onLogged={handleLogged}
         />
       )}

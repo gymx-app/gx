@@ -12,7 +12,10 @@ function Toggle({ value, onChange, disabled = false }: ToggleProps) {
     <button
       role="switch"
       aria-checked={value}
-      onClick={(e) => { e.stopPropagation(); if (!disabled) onChange() }}
+      onClick={(e) => {
+        e.stopPropagation()
+        if (!disabled) onChange()
+      }}
       disabled={disabled}
       className={`w-[44px] h-[26px] relative transition-all duration-200 ${
         disabled ? 'opacity-40' : ''

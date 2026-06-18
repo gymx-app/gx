@@ -23,6 +23,12 @@ dist-ssr
 *.sln
 *.sw?
 
+# Test coverage
+coverage/
+
+# Supabase CLI temp
+supabase/.temp/
+
 # Environment files
 .env.development
 .env.staging

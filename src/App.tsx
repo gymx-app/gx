@@ -40,7 +40,6 @@ const Account = lazyWithRetry(() => import('./pages/Account'))
 
 function AppRoutes() {
   const { user, loading } = useAuth()
-  const [showSplash, setShowSplash] = useState(true)
   const [timerDone, setTimerDone] = useState(false)
 
   useEffect(() => {
@@ -48,13 +47,7 @@ function AppRoutes() {
     return () => clearTimeout(t)
   }, [])
 
-  useEffect(() => {
-    if (timerDone && !loading) {
-      setShowSplash(false)
-    }
-  }, [timerDone, loading])
-
-  if (showSplash) {
+  if (!timerDone || loading) {
     return <SplashScreen />
   }
 
@@ -63,22 +56,24 @@ function AppRoutes() {
       <LoadingBar />
       <PWAUpdatePrompt />
       <Suspense fallback={null}>
-      <Routes>
-        <Route
-          path="/login"
-          element={user ? <Navigate to="/" replace /> : <Login />}
-        />
-        <Route path="/*" element={
-          <ProtectedRoute>
-            <AppLayout tabs={[
-              { path: '/', element: <Today /> },
-              { path: '/program', element: <Program /> },
-              { path: '/progress', element: <Progress /> },
-              { path: '/account', element: <Account /> },
-            ]} />
-          </ProtectedRoute>
-        } />
-      </Routes>
+        <Routes>
+          <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <AppLayout
+                  tabs={[
+                    { path: '/', element: <Today /> },
+                    { path: '/program', element: <Program /> },
+                    { path: '/progress', element: <Progress /> },
+                    { path: '/account', element: <Account /> },
+                  ]}
+                />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
       </Suspense>
     </>
   )

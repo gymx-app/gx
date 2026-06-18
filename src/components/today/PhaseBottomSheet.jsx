@@ -7,10 +7,10 @@ function PhaseBottomSheet({
   programme,
   phases,
   currentPhase,
-  weekInPhase,
+  weekInPhase: _weekInPhase,
   phaseWeeks,
 }) {
-  const totalPhases = phases?.length || phaseWeeks?.length || 5
+  const totalPhases = phases?.length ?? phaseWeeks?.length ?? 5
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} height="90vh">
@@ -20,12 +20,10 @@ function PhaseBottomSheet({
           <div className="px-6 pt-2">
             <SectionLabel label="YOUR PROGRAMME" />
             <h2 className="text-[20px] font-black tracking-[-0.03em] text-white mt-1">
-              {programme?.name || 'Programme'}
+              {programme?.name ?? 'Programme'}
             </h2>
             {programme?.goal && (
-              <p className="text-[13px] text-[#555555] mt-1 leading-relaxed">
-                {programme.goal}
-              </p>
+              <p className="text-[13px] text-[#555555] mt-1 leading-relaxed">{programme.goal}</p>
             )}
           </div>
 
@@ -33,18 +31,18 @@ function PhaseBottomSheet({
           <div className="px-6 mt-6">
             {Array.from({ length: totalPhases }, (_, i) => {
               const p = i + 1
-              const phaseDef = phases?.find(ph => ph.phase_number === p)
+              const phaseDef = phases?.find((ph) => ph.phase_number === p)
               const isCurrent = p === currentPhase
               const isCompleted = p < currentPhase
               const isFuture = p > currentPhase
-              const name = phaseDef?.name || `Phase ${p}`
-              const goal = phaseDef?.description || ''
-              const wks = phaseDef?.weeks_count || phaseWeeks?.[i] || 4
+              const name = phaseDef?.name ?? `Phase ${p}`
+              const goal = phaseDef?.description ?? ''
+              const wks = phaseDef?.weeks_count ?? phaseWeeks?.[i] ?? 4
               const isOngoing = wks === 999
 
               let startWk = 1
               for (let j = 0; j < i; j++) {
-                const pw = phaseWeeks?.[j] || 4
+                const pw = phaseWeeks?.[j] ?? 4
                 if (pw !== 999) startWk += pw
               }
               const weekRange = isOngoing ? 'ONGOING' : `WK ${startWk}–${startWk + wks - 1}`

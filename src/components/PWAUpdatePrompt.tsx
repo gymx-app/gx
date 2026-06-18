@@ -8,15 +8,15 @@ export default function PWAUpdatePrompt() {
     updateServiceWorker,
   } = useRegisterSW()
 
-  const [showOffline, setShowOffline] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
-    if (offlineReady) {
-      setShowOffline(true)
-      const t = setTimeout(() => setShowOffline(false), 3000)
-      return () => clearTimeout(t)
-    }
+    if (!offlineReady) return
+    const t = setTimeout(() => setDismissed(true), 3000)
+    return () => clearTimeout(t)
   }, [offlineReady])
+
+  const showOffline = offlineReady && !dismissed
 
   return (
     <>
@@ -27,7 +27,7 @@ export default function PWAUpdatePrompt() {
         >
           <span className="text-[13px] text-white">Update available</span>
           <button
-            onClick={() => updateServiceWorker(true)}
+            onClick={() => void updateServiceWorker(true)}
             className="text-[13px] font-semibold text-[#ff4520] active:opacity-70"
           >
             UPDATE NOW

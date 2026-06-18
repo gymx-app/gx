@@ -78,11 +78,11 @@ export const typography = {
   pageTitle: "font-['Bebas_Neue'] text-[32px] tracking-[2px] text-[#f0ede8] leading-none",
   sectionTitle: "font-['Bebas_Neue'] text-[24px] tracking-[2px] text-[#f0ede8] leading-none",
   cardTitle: "font-['Bebas_Neue'] text-[20px] tracking-[1.5px] text-[#f0ede8]",
-  body: "text-[14px] text-[#f0ede8] leading-relaxed",
-  bodyMuted: "text-[13px] text-[#666666] leading-relaxed",
-  caption: "text-[12px] text-[#666666]",
-  label: "text-[10px] font-bold tracking-[2px] uppercase text-[#666666]",
-  micro: "text-[9px] font-bold tracking-[0.5px] uppercase text-[#666666]",
+  body: 'text-[14px] text-[#f0ede8] leading-relaxed',
+  bodyMuted: 'text-[13px] text-[#666666] leading-relaxed',
+  caption: 'text-[12px] text-[#666666]',
+  label: 'text-[10px] font-bold tracking-[2px] uppercase text-[#666666]',
+  micro: 'text-[9px] font-bold tracking-[0.5px] uppercase text-[#666666]',
   stat: "font-['Bebas_Neue'] text-[26px] text-[#f0ede8] leading-none",
 } as const
 

@@ -65,9 +65,11 @@ const SetLogSheet = memo(function SetLogSheet({
   const { execute } = useOptimisticUpdate()
   const weightRef = useRef<HTMLInputElement>(null)
 
-  const [weight, setWeight] = useState(existingLog?.weight_kg?.toString() || previousBest?.weight_kg?.toString() || '')
-  const [reps, setReps] = useState(existingLog?.reps?.toString() || '')
-  const [rpe, setRpe] = useState<number | null>(existingLog?.rpe || null)
+  const [weight, setWeight] = useState(
+    existingLog?.weight_kg?.toString() ?? previousBest?.weight_kg?.toString() ?? ''
+  )
+  const [reps, setReps] = useState(existingLog?.reps?.toString() ?? '')
+  const [rpe, setRpe] = useState<number | null>(existingLog?.rpe ?? null)
   const [isMM, setIsMM] = useState(false)
 
   useEffect(() => {
@@ -81,15 +83,15 @@ const SetLogSheet = memo(function SetLogSheet({
     const repsVal = parseInt(reps)
     const exerciseId = exerciseMap[exercise.n]
 
-    const sid = sessionId || crypto.randomUUID()
+    const sid = sessionId ?? crypto.randomUUID()
 
-    execute({
+    void execute({
       optimisticUpdate: () => {
         if (navigator.vibrate) navigator.vibrate(50)
         onLogged(sid, weightVal)
       },
       idbWrite: async () => {
-        await idbCache.invalidate('workout-data', `${user.id}_${dateStr}`)
+        await idbCache.invalidate('workout-data', `${user!.id}_${dateStr}`)
       },
       supabaseWrite: async () => {
         let finalSid = sessionId
@@ -99,19 +101,19 @@ const SetLogSheet = memo(function SetLogSheet({
             .toUpperCase()
             .slice(0, 3)
 
-          const { data: sess, error: sessErr } = await upsertWorkoutSession(user.id, {
+          const { data: sess, error: sessErr } = await upsertWorkoutSession(user!.id, {
             date: dateStr,
             phase,
             day_of_week: dayOfWeek,
             workout_title: exercise.n,
           })
-          if (sessErr) throw new Error(sessErr)
-          finalSid = sess.id
+          if (sessErr || !sess) throw new Error(sessErr ?? 'Session creation failed')
+          finalSid = (sess as { id: string }).id
         }
 
         if (!exerciseId) throw new Error(`No exercise_id for "${exercise.n}"`)
 
-        const { error: logErr } = await upsertExerciseLog(user.id, {
+        const { error: logErr } = await upsertExerciseLog(user!.id, {
           session_id: finalSid,
           exercise_id: exerciseId,
           exercise_name: exercise.n,
@@ -122,7 +124,7 @@ const SetLogSheet = memo(function SetLogSheet({
           is_mm_set: isMM,
           weight_kg: weightVal,
           reps: repsVal,
-          rpe: rpe || null,
+          rpe: rpe ?? null,
           completed: true,
         })
         if (logErr) throw new Error(logErr)
@@ -149,16 +151,26 @@ const SetLogSheet = memo(function SetLogSheet({
         aria-modal="true"
         aria-label={`Log set ${setNumber} for ${exercise.n}`}
       >
-        <div className="w-10 h-1 rounded-[2px] mx-auto mb-4" style={{ background: colors.border }} />
+        <div
+          className="w-10 h-1 rounded-[2px] mx-auto mb-4"
+          style={{ background: colors.border }}
+        />
 
         <div className="flex justify-between items-baseline mb-5">
-          <h3 className="font-['Bebas_Neue'] text-[22px] tracking-[1.5px] text-[#f0ede8]">{exercise.n}</h3>
-          <span className="text-[12px] text-[#666666]">Set {setNumber} of {totalSets}</span>
+          <h3 className="font-['Bebas_Neue'] text-[22px] tracking-[1.5px] text-[#f0ede8]">
+            {exercise.n}
+          </h3>
+          <span className="text-[12px] text-[#666666]">
+            Set {setNumber} of {totalSets}
+          </span>
         </div>
 
         {previousBest && (
           <div className="mb-4 text-[11px] text-[#666666] text-center min-h-[16px]">
-            Previous: <span className="text-[#22c55e] font-semibold">{previousBest.weight_kg}kg × {previousBest.reps}</span>
+            Previous:{' '}
+            <span className="text-[#22c55e] font-semibold">
+              {previousBest.weight_kg}kg × {previousBest.reps}
+            </span>
           </div>
         )}
 
@@ -171,7 +183,7 @@ const SetLogSheet = memo(function SetLogSheet({
               inputMode="decimal"
               step="0.5"
               value={weight}
-              onChange={e => setWeight(e.target.value)}
+              onChange={(e) => setWeight(e.target.value)}
               className="w-full px-[14px] py-3 text-[18px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] text-center transition-all duration-150"
               style={{
                 background: colors.surface2,
@@ -188,7 +200,7 @@ const SetLogSheet = memo(function SetLogSheet({
               type="number"
               inputMode="numeric"
               value={reps}
-              onChange={e => setReps(e.target.value)}
+              onChange={(e) => setReps(e.target.value)}
               className="w-full px-[14px] py-3 text-[18px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] text-center transition-all duration-150"
               style={{
                 background: colors.surface2,
@@ -203,8 +215,12 @@ const SetLogSheet = memo(function SetLogSheet({
 
         <div className="mb-4">
           <SectionLabel label="RPE" className="mb-2" />
-          <div className="grid grid-cols-5 gap-[7px]" role="radiogroup" aria-label="Rate of perceived exertion">
-            {[6, 7, 8, 9, 10].map(val => {
+          <div
+            className="grid grid-cols-5 gap-[7px]"
+            role="radiogroup"
+            aria-label="Rate of perceived exertion"
+          >
+            {[6, 7, 8, 9, 10].map((val) => {
               const rpeColor = RPE_COLORS[val]
               const isActive = rpe === val
               return (
@@ -220,10 +236,16 @@ const SetLogSheet = memo(function SetLogSheet({
                     background: isActive ? `${rpeColor}20` : colors.surface2,
                   }}
                 >
-                  <span className="font-['Bebas_Neue'] text-[22px] tracking-[0.5px] leading-none" style={{ color: rpeColor }}>
+                  <span
+                    className="font-['Bebas_Neue'] text-[22px] tracking-[0.5px] leading-none"
+                    style={{ color: rpeColor }}
+                  >
                     {val}
                   </span>
-                  <span className="text-[9px] font-bold tracking-[0.5px] leading-none" style={{ color: rpeColor }}>
+                  <span
+                    className="text-[9px] font-bold tracking-[0.5px] leading-none"
+                    style={{ color: rpeColor }}
+                  >
                     RPE
                   </span>
                 </button>
@@ -246,12 +268,7 @@ const SetLogSheet = memo(function SetLogSheet({
           {isMM ? 'MIND-MUSCLE SET ✓' : 'MIND-MUSCLE SET'}
         </button>
 
-        <Button
-          variant="primary"
-          label="LOG SET"
-          onPress={handleLog}
-          disabled={!weight || !reps}
-        />
+        <Button variant="primary" label="LOG SET" onPress={handleLog} disabled={!weight || !reps} />
       </div>
     </div>
   )

@@ -475,6 +475,11 @@ create or replace function upsert_exercise_log(
 declare
   v_id uuid;
 begin
+  -- Enforce caller owns the row
+  if p_user_id != auth.uid() then
+    raise exception 'Forbidden: user_id does not match authenticated user';
+  end if;
+
   select id into v_id from exercise_logs
   where user_id = p_user_id
     and date = p_date

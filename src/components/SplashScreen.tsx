@@ -23,10 +23,12 @@ export default function SplashScreen() {
     if (needRefresh) return
 
     intervalRef.current = setInterval(() => {
-      setMsgIndex(prev => (prev + 1) % MESSAGES.length)
+      setMsgIndex((prev) => (prev + 1) % MESSAGES.length)
     }, 600)
 
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
   }, [needRefresh])
 
   const statusText = needRefresh ? UPDATE_MESSAGE : MESSAGES[msgIndex]

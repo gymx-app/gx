@@ -19,7 +19,9 @@ function SectionLabel({ label, rightContent, className = '' }: SectionLabelProps
   }
 
   return (
-    <span className={`text-[10px] font-bold tracking-[2px] uppercase text-[#666666] block ${className}`}>
+    <span
+      className={`text-[10px] font-bold tracking-[2px] uppercase text-[#666666] block ${className}`}
+    >
       {label}
     </span>
   )

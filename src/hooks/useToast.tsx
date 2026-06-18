@@ -1,4 +1,13 @@
-import { createContext, useContext, useState, useCallback, useRef, useEffect, memo, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  memo,
+  type ReactNode,
+} from 'react'
 
 type ToastType = 'success' | 'error' | 'warning' | 'info'
 
@@ -31,28 +40,40 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const timersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
 
   useEffect(() => {
+    const timers = timersRef.current
     return () => {
-      timersRef.current.forEach(tid => clearTimeout(tid))
-      timersRef.current.clear()
+      timers.forEach((tid) => clearTimeout(tid))
+      timers.clear()
     }
   }, [])
 
-  const show = useCallback(({ message, type = 'info', duration = 3000 }: { message: string; type?: ToastType; duration?: number }) => {
-    const id = ++idRef.current
-    setToasts(prev => [...prev.slice(-(MAX_TOASTS - 1)), { id, message, type, duration }])
+  const show = useCallback(
+    ({
+      message,
+      type = 'info',
+      duration = 3000,
+    }: {
+      message: string
+      type?: ToastType
+      duration?: number
+    }) => {
+      const id = ++idRef.current
+      setToasts((prev) => [...prev.slice(-(MAX_TOASTS - 1)), { id, message, type, duration }])
 
-    if (duration > 0) {
-      const tid = setTimeout(() => {
-        setToasts(prev => prev.filter(t => t.id !== id))
-        timersRef.current.delete(id)
-      }, duration)
-      timersRef.current.set(id, tid)
-    }
-    return id
-  }, [])
+      if (duration > 0) {
+        const tid = setTimeout(() => {
+          setToasts((prev) => prev.filter((t) => t.id !== id))
+          timersRef.current.delete(id)
+        }, duration)
+        timersRef.current.set(id, tid)
+      }
+      return id
+    },
+    []
+  )
 
   const dismiss = useCallback((id: number) => {
-    setToasts(prev => prev.filter(t => t.id !== id))
+    setToasts((prev) => prev.filter((t) => t.id !== id))
   }, [])
 
   return (
@@ -63,12 +84,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   )
 }
 
-const ToastStack = memo(function ToastStack({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: number) => void }) {
+const ToastStack = memo(function ToastStack({
+  toasts,
+  onDismiss,
+}: {
+  toasts: Toast[]
+  onDismiss: (id: number) => void
+}) {
   if (toasts.length === 0) return null
 
   return (
     <div className="fixed bottom-20 left-4 right-4 z-[95] flex flex-col items-center gap-2 pointer-events-none">
-      {toasts.map(toast => (
+      {toasts.map((toast) => (
         <div
           key={toast.id}
           onClick={() => onDismiss(toast.id)}
@@ -83,6 +110,7 @@ const ToastStack = memo(function ToastStack({ toasts, onDismiss }: { toasts: Toa
   )
 })
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useToast() {
   const context = useContext(ToastContext)
   if (!context) throw new Error('useToast must be used within ToastProvider')

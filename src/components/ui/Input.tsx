@@ -3,14 +3,20 @@ import SectionLabel from './SectionLabel'
 import { colors, radius } from '../../styles/tokens'
 
 const VARIANT_CLASSES = {
-  field: "h-[52px] w-full px-[14px] text-[#f0ede8] text-[16px] font-['DM_Sans'] placeholder:text-[#444444] focus:border-[#ff4520] transition-all duration-150",
-  large: "text-[24px] font-black text-[#f0ede8] text-center bg-transparent focus:outline-none w-full placeholder-[#555555] font-['Bebas_Neue'] tracking-[1px]",
+  field:
+    "h-[52px] w-full px-[14px] text-[#f0ede8] text-[16px] font-['DM_Sans'] placeholder:text-[#444444] focus:border-[#ff4520] transition-all duration-150",
+  large:
+    "text-[24px] font-black text-[#f0ede8] text-center bg-transparent focus:outline-none w-full placeholder-[#555555] font-['Bebas_Neue'] tracking-[1px]",
 } as const
 
 type InputVariant = keyof typeof VARIANT_CLASSES
 
 const VARIANT_STYLES: Record<InputVariant, React.CSSProperties> = {
-  field: { background: colors.surface2, border: `1.5px solid ${colors.border}`, borderRadius: radius.input },
+  field: {
+    background: colors.surface2,
+    border: `1.5px solid ${colors.border}`,
+    borderRadius: radius.input,
+  },
   large: {},
 }
 
@@ -48,16 +54,15 @@ function Input({
   const ref = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (autoFocus && ref.current) {
-      const t = setTimeout(() => {
-        ref.current!.focus()
-        if (ref.current!.value) ref.current!.select()
-      }, 100)
-      return () => clearTimeout(t)
-    }
+    if (!autoFocus || !ref.current) return
+    const t = setTimeout(() => {
+      ref.current!.focus()
+      if (ref.current!.value) ref.current!.select()
+    }, 100)
+    return () => clearTimeout(t)
   }, [autoFocus])
 
-  const inputId = id || (label ? `input-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined)
+  const inputId = id ?? (label ? `input-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined)
 
   return (
     <div className={className}>
@@ -76,9 +81,7 @@ function Input({
         style={VARIANT_STYLES[variant]}
         aria-label={label}
       />
-      {unit && (
-        <span className="text-[10px] text-[#666666] mt-1 block text-center">{unit}</span>
-      )}
+      {unit && <span className="text-[10px] text-[#666666] mt-1 block text-center">{unit}</span>}
     </div>
   )
 }

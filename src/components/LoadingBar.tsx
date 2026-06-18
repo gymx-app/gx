@@ -8,6 +8,7 @@ export default function LoadingBar() {
   const crawlRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const fadeRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- imperative animation state machine; `visible` intentionally excluded */
   useEffect(() => {
     if (crawlRef.current) clearInterval(crawlRef.current)
     if (fadeRef.current) clearTimeout(fadeRef.current)
@@ -19,7 +20,7 @@ export default function LoadingBar() {
       requestAnimationFrame(() => setWidth(85))
 
       crawlRef.current = setInterval(() => {
-        setWidth(prev => {
+        setWidth((prev) => {
           if (prev >= 95) return prev
           return prev + 0.5
         })
@@ -39,6 +40,7 @@ export default function LoadingBar() {
       if (fadeRef.current) clearTimeout(fadeRef.current)
     }
   }, [isLoading])
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   if (!visible) return null
 
@@ -54,8 +56,8 @@ export default function LoadingBar() {
           transition: done
             ? 'width 150ms ease-out, opacity 200ms 100ms ease-out'
             : width <= 85
-            ? 'width 300ms ease-out'
-            : 'width 200ms linear',
+              ? 'width 300ms ease-out'
+              : 'width 200ms linear',
         }}
       />
     </div>

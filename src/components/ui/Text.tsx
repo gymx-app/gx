@@ -23,7 +23,7 @@ interface TextProps {
 
 function Text({ variant = 'body', children, className = '', as }: TextProps) {
   const { tag, cls } = VARIANT_MAP[variant] || VARIANT_MAP.body
-  const Tag = as || tag
+  const Tag = as ?? tag
   return <Tag className={`${cls} ${className}`}>{children}</Tag>
 }
 

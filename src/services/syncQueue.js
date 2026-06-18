@@ -2,7 +2,7 @@ const QUEUE_KEY = 'gx-sync-queue'
 
 function loadQueue() {
   try {
-    return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]')
+    return JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]')
   } catch {
     return []
   }

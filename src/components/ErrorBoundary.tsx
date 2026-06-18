@@ -25,7 +25,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
   }
 
   isChunkError() {
-    const msg = this.state.error?.message || ''
+    const msg = this.state.error?.message ?? ''
     return (
       msg.includes('Failed to fetch dynamically imported module') ||
       msg.includes('Importing a module script failed') ||
@@ -51,7 +51,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
           <p className="text-[13px] text-[#555555] mt-2 text-center">
             {isChunk
               ? 'A new version is available. Tap to reload.'
-              : (this.state.error?.message || 'An unexpected error occurred.')}
+              : (this.state.error?.message ?? 'An unexpected error occurred.')}
           </p>
           <button
             onClick={this.handleReset}

@@ -32,7 +32,9 @@ export const memCache = {
     })
   },
 
-  delete(key) { store.delete(key) },
+  delete(key) {
+    store.delete(key)
+  },
 
   invalidatePrefix(prefix) {
     for (const key of store.keys()) {
@@ -40,7 +42,11 @@ export const memCache = {
     }
   },
 
-  clear() { store.clear() },
+  clear() {
+    store.clear()
+  },
 
-  size() { return store.size },
+  size() {
+    return store.size
+  },
 }

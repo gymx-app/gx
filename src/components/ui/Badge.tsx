@@ -1,6 +1,15 @@
 import { memo, type ReactNode } from 'react'
 
-type BadgeVariant = 'default' | 'elevated' | 'accent' | 'push' | 'pull' | 'legs' | 'liss' | 'success' | 'warning'
+type BadgeVariant =
+  | 'default'
+  | 'elevated'
+  | 'accent'
+  | 'push'
+  | 'pull'
+  | 'legs'
+  | 'liss'
+  | 'success'
+  | 'warning'
 
 const VARIANTS: Record<BadgeVariant, string> = {
   default: 'border border-[#2a2a2a] text-[#666666]',
@@ -28,10 +37,12 @@ interface BadgeProps {
 }
 
 function Badge({ label, variant = 'default', icon }: BadgeProps) {
-  const resolvedVariant = TAG_MAP[label?.toUpperCase()] || variant
-  const cls = VARIANTS[resolvedVariant] || VARIANTS.default
+  const resolvedVariant = TAG_MAP[label?.toUpperCase()] ?? variant
+  const cls = VARIANTS[resolvedVariant] ?? VARIANTS.default
   return (
-    <span className={`${cls} px-[7px] py-[2px] text-[10px] tracking-[0.3px] uppercase font-bold rounded-[4px] flex items-center gap-1`}>
+    <span
+      className={`${cls} px-[7px] py-[2px] text-[10px] tracking-[0.3px] uppercase font-bold rounded-[4px] flex items-center gap-1`}
+    >
       {icon}
       {label}
     </span>

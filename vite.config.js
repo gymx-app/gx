@@ -14,6 +14,14 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setup.js',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      include: ['src/**'],
+      thresholds: {
+        'src/utils/': { statements: 80, branches: 80 },
+      },
+    },
   },
   plugins: [
     react(),
@@ -24,6 +32,17 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
+        navigateFallback: null,
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages',
+              networkTimeoutSeconds: 3,
+            },
+          },
+        ],
       },
       manifest: {
         id: '/gx/',

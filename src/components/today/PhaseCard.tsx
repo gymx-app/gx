@@ -106,7 +106,7 @@ const PhaseCard = memo(function PhaseCard({
   onPrevWeek,
   onNextWeek,
   canGoBack,
-  canGoForward,
+  canGoForward: _canGoForward,
   programme,
   phases,
   weekDays,
@@ -119,20 +119,24 @@ const PhaseCard = memo(function PhaseCard({
 }: PhaseCardProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
 
-  const currentPhase = phases?.find(p => p.phase_number === phase)
-  const totalWeeksInPhase = currentPhase?.weeks_count || phaseWeeks?.[phase - 1] || 4
+  const currentPhase = phases?.find((p) => p.phase_number === phase)
+  const totalWeeksInPhase = currentPhase?.weeks_count ?? phaseWeeks?.[phase - 1] ?? 4
   const isOngoing = totalWeeksInPhase === 999
-  const totalPhases = phases?.length || phaseWeeks?.length || 5
-  const phaseName = currentPhase?.name || `Phase ${phase}`
+  const totalPhases = phases?.length ?? phaseWeeks?.length ?? 5
+  const phaseName = currentPhase?.name ?? `Phase ${phase}`
 
   const qualifyPct = Math.min(100, (currentWeekActiveDays / minActiveDays) * 100)
   const qualified = currentWeekActiveDays >= minActiveDays
 
   const todayDateStr = useMemo(() => {
     const d = new Date()
-    return d.getFullYear() + '-' +
-      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    return (
+      d.getFullYear() +
+      '-' +
+      String(d.getMonth() + 1).padStart(2, '0') +
+      '-' +
       String(d.getDate()).padStart(2, '0')
+    )
   }, [])
 
   const showTodayPill = weekOffset !== 0
@@ -147,7 +151,8 @@ const PhaseCard = memo(function PhaseCard({
         {/* Line 1 */}
         <div className="flex justify-between items-center">
           <span className="text-[13px] font-semibold tracking-[-0.01em] text-white">
-            {phaseName.toUpperCase()} · WK {weekInPhase}{isOngoing ? '' : ` OF ${totalWeeksInPhase}`}
+            {phaseName.toUpperCase()} · WK {weekInPhase}
+            {isOngoing ? '' : ` OF ${totalWeeksInPhase}`}
           </span>
           <button
             onClick={() => setSheetOpen(true)}
@@ -185,16 +190,24 @@ const PhaseCard = memo(function PhaseCard({
             disabled={!canGoBack}
             aria-label="Previous week"
             className={`w-[44px] h-[44px] flex items-center justify-center rounded-[12px] shrink-0 transition-all duration-150 ${
-              canGoBack ? 'bg-[#1c1c1c] active:bg-[#242424] active:scale-[0.93]' : 'pointer-events-none cursor-default'
+              canGoBack
+                ? 'bg-[#1c1c1c] active:bg-[#242424] active:scale-[0.93]'
+                : 'pointer-events-none cursor-default'
             }`}
             style={{ border: `1.5px solid ${colors.border}` }}
           >
-            <span className="text-[16px] leading-none" style={{ color: canGoBack ? '#f0ede8' : '#1a1a1a' }}>&lt;</span>
+            <span
+              className="text-[16px] leading-none"
+              style={{ color: canGoBack ? '#f0ede8' : '#1a1a1a' }}
+            >
+              &lt;
+            </span>
           </button>
 
           <div className="flex-1 text-center">
             <span className="font-['Bebas_Neue'] text-[18px] tracking-[1px] text-[#f0ede8]">
-              Wk {totalWeek} · {weekDays[0].date.getDate()} {MONTHS[weekDays[0].date.getMonth()]} – {weekDays[6].date.getDate()} {MONTHS[weekDays[6].date.getMonth()]}
+              Wk {totalWeek} · {weekDays[0]!.date.getDate()} {MONTHS[weekDays[0]!.date.getMonth()]}{' '}
+              – {weekDays[6]!.date.getDate()} {MONTHS[weekDays[6]!.date.getMonth()]}
             </span>
             {showTodayPill && (
               <button
@@ -219,8 +232,12 @@ const PhaseCard = memo(function PhaseCard({
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
           {weekDays.map(({ dayLabel, date, dateStr: dayDateStr }, idx) => {
             const status = getDayStatus(
-              dayDateStr, completedDateStrs, restDayIndices,
-              programmeStartDate, todayDateStr, idx,
+              dayDateStr,
+              completedDateStrs,
+              restDayIndices,
+              programmeStartDate,
+              todayDateStr,
+              idx
             )
             const isSelected = dayDateStr === selectedDateStr
             const dayNum = date.getDate()
@@ -237,7 +254,10 @@ const PhaseCard = memo(function PhaseCard({
                     cursor: 'default',
                   }}
                 >
-                  <span className="text-[10px] font-semibold" style={{ color: 'var(--muted)', letterSpacing: '0.06em', opacity: 0.4 }}>
+                  <span
+                    className="text-[10px] font-semibold"
+                    style={{ color: 'var(--muted)', letterSpacing: '0.06em', opacity: 0.4 }}
+                  >
                     {dayLabel}
                   </span>
                 </div>
@@ -256,9 +276,15 @@ const PhaseCard = memo(function PhaseCard({
                   transition: 'transform 120ms ease, background 120ms ease',
                 }}
                 onClick={() => onSelectDay(dayLabel, dayDateStr, date)}
-                onPointerDown={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(0.95)' }}
-                onPointerUp={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
-                onPointerLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
+                onPointerDown={(e) => {
+                  ;(e.currentTarget as HTMLElement).style.transform = 'scale(0.95)'
+                }}
+                onPointerUp={(e) => {
+                  ;(e.currentTarget as HTMLElement).style.transform = 'scale(1)'
+                }}
+                onPointerLeave={(e) => {
+                  ;(e.currentTarget as HTMLElement).style.transform = 'scale(1)'
+                }}
                 aria-label={`${dayLabel} ${dayNum}${status === 'today' ? ' (today)' : ''}${status === 'rest' ? ' rest day' : ''}${status === 'completed' ? ' completed' : ''}${status === 'skipped' ? ' skipped' : ''}`}
                 aria-pressed={isSelected}
               >
@@ -287,9 +313,14 @@ const PhaseCard = memo(function PhaseCard({
 
                 <div className="mt-[6px] h-[10px] flex items-center justify-center">
                   {status === 'completed' ? (
-                    <span className="text-[10px] leading-none" style={{ color: 'var(--success)' }}>✓</span>
+                    <span className="text-[10px] leading-none" style={{ color: 'var(--success)' }}>
+                      ✓
+                    </span>
                   ) : status === 'skipped' ? (
-                    <div className="w-[5px] h-[5px] rounded-full" style={{ background: 'var(--danger)' }} />
+                    <div
+                      className="w-[5px] h-[5px] rounded-full"
+                      style={{ background: 'var(--danger)' }}
+                    />
                   ) : (
                     <div className="w-[5px] h-[5px]" />
                   )}

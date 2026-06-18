@@ -15,7 +15,12 @@ interface ProgressBarProps {
   height?: number
 }
 
-function ProgressBar({ progress, animated = false, color = 'accent', height = 3 }: ProgressBarProps) {
+function ProgressBar({
+  progress,
+  animated = false,
+  color = 'accent',
+  height = 3,
+}: ProgressBarProps) {
   const fill = COLOR_MAP[color] || COLOR_MAP.accent
   return (
     <div className="bg-[#2a2a2a] w-full relative overflow-hidden rounded-[3px]" style={{ height }}>

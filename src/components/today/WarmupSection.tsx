@@ -1,7 +1,6 @@
 import { useState, useMemo, memo } from 'react'
 import { useAuth } from '../../auth/AuthContext'
 import { upsertWarmupLog } from '../../services/checklistService'
-import { logger } from '../../lib/logger'
 import { SectionLabel, ProgressBar, Checkbox } from '../ui'
 import { radius } from '../../styles/tokens'
 import useOptimisticUpdate from '../../hooks/useOptimisticUpdate'
@@ -35,24 +34,31 @@ interface WarmupSectionProps {
   readOnly?: boolean
 }
 
-const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, warmupItems: dbWarmupItems, onUpdate, readOnly = false }: WarmupSectionProps) {
+const WarmupSection = memo(function WarmupSection({
+  dateStr,
+  phase,
+  warmupLogs,
+  warmupItems: dbWarmupItems,
+  onUpdate,
+  readOnly = false,
+}: WarmupSectionProps) {
   const { user } = useAuth()
   const { execute } = useOptimisticUpdate()
 
   const items: WarmupItem[] = useMemo(() => {
     if (!dbWarmupItems || dbWarmupItems.length === 0) return []
-    return dbWarmupItems.map(item => ({
+    return dbWarmupItems.map((item) => ({
       k: item.item_key,
       label: item.label,
-      detail: item.detail || '',
-      ic: item.icon || '',
+      detail: item.detail ?? '',
+      ic: item.icon ?? '',
     }))
   }, [dbWarmupItems])
 
   const [localOverrides, setLocalOverrides] = useState<Record<string, boolean>>({})
 
   const completedKeys = useMemo(() => {
-    const set = new Set(warmupLogs.filter(l => l.completed).map(l => l.item_key))
+    const set = new Set(warmupLogs.filter((l) => l.completed).map((l) => l.item_key))
     for (const [k, v] of Object.entries(localOverrides)) {
       if (v) set.add(k)
       else set.delete(k)
@@ -68,16 +74,16 @@ const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, 
     const isCompleted = completedKeys.has(item.k)
     const newValue = !isCompleted
 
-    execute({
+    void execute({
       optimisticUpdate: () => {
-        setLocalOverrides(prev => ({ ...prev, [item.k]: newValue }))
+        setLocalOverrides((prev) => ({ ...prev, [item.k]: newValue }))
         if (navigator.vibrate) navigator.vibrate(30)
       },
       idbWrite: async () => {
-        await idbCache.invalidate('workout-data', `${user.id}_${dateStr}`)
+        await idbCache.invalidate('workout-data', `${user!.id}_${dateStr}`)
       },
       supabaseWrite: async () => {
-        const { error } = await upsertWarmupLog(user.id, {
+        const { error } = await upsertWarmupLog(user!.id, {
           date: dateStr,
           phase,
           item_key: item.k,
@@ -88,7 +94,7 @@ const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, 
         onUpdate()
       },
       rollback: () => {
-        setLocalOverrides(prev => ({ ...prev, [item.k]: isCompleted }))
+        setLocalOverrides((prev) => ({ ...prev, [item.k]: isCompleted }))
       },
       syncKey: `warmup_${dateStr}_${item.k}`,
     })
@@ -111,9 +117,11 @@ const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, 
               onClick={() => setCollapsed(!collapsed)}
               aria-label={collapsed ? 'Expand warmup' : 'Collapse warmup'}
             >
-              <span className={`text-[10px] text-[#666666] transition-transform duration-200 inline-block ${
-                collapsed ? '' : 'rotate-180'
-              }`}>
+              <span
+                className={`text-[10px] text-[#666666] transition-transform duration-200 inline-block ${
+                  collapsed ? '' : 'rotate-180'
+                }`}
+              >
                 ▾
               </span>
             </button>
@@ -122,11 +130,7 @@ const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, 
         className="mb-2"
       />
 
-      <ProgressBar
-        progress={(completedCount / items.length) * 100}
-        color="yellow"
-        animated
-      />
+      <ProgressBar progress={(completedCount / items.length) * 100} color="yellow" animated />
 
       {!collapsed && (
         <div
@@ -150,7 +154,9 @@ const WarmupSection = memo(function WarmupSection({ dateStr, phase, warmupLogs, 
               >
                 <Checkbox checked={done} />
                 <div className="flex-1 min-w-0">
-                  <p className={`text-[13px] leading-tight ${done ? 'text-[#666666] line-through opacity-40' : 'text-[#aaa]'}`}>
+                  <p
+                    className={`text-[13px] leading-tight ${done ? 'text-[#666666] line-through opacity-40' : 'text-[#aaa]'}`}
+                  >
                     {item.label}
                   </p>
                   {item.detail && (

@@ -10,12 +10,14 @@ const VARIANTS: Record<ButtonVariant, VariantClasses> = {
   primary: {
     base: 'w-full py-4 text-[#f0ede8] font-bold text-[18px] tracking-[2px] active:opacity-80 transition-opacity duration-150',
     disabled: 'w-full py-4 text-[#666666] pointer-events-none',
-    loading: 'w-full py-4 text-[#f0ede8]/70 font-bold text-[18px] animate-pulse pointer-events-none',
+    loading:
+      'w-full py-4 text-[#f0ede8]/70 font-bold text-[18px] animate-pulse pointer-events-none',
   },
   secondary: {
     base: 'w-full py-[13px] border border-[#2a2a2a] text-[#666666] text-[13px] font-bold tracking-[0.5px] active:bg-[#242424] transition-all duration-150',
     disabled: 'w-full py-[13px] border border-[#1c1c1c] text-[#444444] pointer-events-none',
-    loading: 'w-full py-[13px] border border-[#2a2a2a] text-[#555555] animate-pulse pointer-events-none',
+    loading:
+      'w-full py-[13px] border border-[#2a2a2a] text-[#555555] animate-pulse pointer-events-none',
   },
   ghost: {
     base: 'text-[#ff4520] text-[12px] font-bold active:opacity-60',

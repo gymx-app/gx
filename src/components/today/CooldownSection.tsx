@@ -19,13 +19,19 @@ interface CooldownSectionProps {
   readOnly?: boolean
 }
 
-function CooldownSection({ items, dateStr, checklistLogs, onUpdate, readOnly = false }: CooldownSectionProps) {
+function CooldownSection({
+  items,
+  dateStr,
+  checklistLogs,
+  onUpdate,
+  readOnly = false,
+}: CooldownSectionProps) {
   const { user } = useAuth()
   const { execute } = useOptimisticUpdate()
   const [localOverrides, setLocalOverrides] = useState<Record<string, boolean>>({})
 
   const completedKeys = useMemo(() => {
-    const set = new Set(checklistLogs.filter(l => l.completed).map(l => l.item_key))
+    const set = new Set(checklistLogs.filter((l) => l.completed).map((l) => l.item_key))
     for (const [k, v] of Object.entries(localOverrides)) {
       if (v) set.add(k)
       else set.delete(k)
@@ -37,16 +43,16 @@ function CooldownSection({ items, dateStr, checklistLogs, onUpdate, readOnly = f
     const done = completedKeys.has(key)
     const newValue = !done
 
-    execute({
+    void execute({
       optimisticUpdate: () => {
-        setLocalOverrides(prev => ({ ...prev, [key]: newValue }))
+        setLocalOverrides((prev) => ({ ...prev, [key]: newValue }))
         if (navigator.vibrate) navigator.vibrate(30)
       },
       idbWrite: async () => {
-        await idbCache.invalidate('workout-data', `${user.id}_${dateStr}`)
+        await idbCache.invalidate('workout-data', `${user!.id}_${dateStr}`)
       },
       supabaseWrite: async () => {
-        const { error } = await upsertChecklistLog(user.id, {
+        const { error } = await upsertChecklistLog(user!.id, {
           date: dateStr,
           item_type: 'cooldown',
           item_key: key,
@@ -56,7 +62,7 @@ function CooldownSection({ items, dateStr, checklistLogs, onUpdate, readOnly = f
         onUpdate()
       },
       rollback: () => {
-        setLocalOverrides(prev => ({ ...prev, [key]: done }))
+        setLocalOverrides((prev) => ({ ...prev, [key]: done }))
       },
       syncKey: `cooldown_${dateStr}_${key}`,
     })
@@ -67,7 +73,14 @@ function CooldownSection({ items, dateStr, checklistLogs, onUpdate, readOnly = f
   return (
     <div className="mt-6 mb-4">
       <SectionLabel label="Cooldown" className="mb-2" />
-      <div className="overflow-hidden" style={{ background: 'rgba(6,182,212,0.05)', border: '1px solid rgba(6,182,212,0.18)', borderRadius: radius.button }}>
+      <div
+        className="overflow-hidden"
+        style={{
+          background: 'rgba(6,182,212,0.05)',
+          border: '1px solid rgba(6,182,212,0.18)',
+          borderRadius: radius.button,
+        }}
+      >
         {items.map((item, idx) => {
           const key = `cd-${idx}`
           const done = completedKeys.has(key)
@@ -81,7 +94,10 @@ function CooldownSection({ items, dateStr, checklistLogs, onUpdate, readOnly = f
               aria-label={`${item} — ${done ? 'completed' : 'not completed'}`}
             >
               <Checkbox checked={done} />
-              <span className={`text-[13px] ${done ? 'text-[#666666] line-through opacity-40' : ''}`} style={done ? {} : { color: '#aaaaaa' }}>
+              <span
+                className={`text-[13px] ${done ? 'text-[#666666] line-through opacity-40' : ''}`}
+                style={done ? {} : { color: '#aaaaaa' }}
+              >
                 {item}
               </span>
             </button>

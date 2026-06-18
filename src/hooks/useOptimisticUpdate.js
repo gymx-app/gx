@@ -1,9 +1,19 @@
-import { incrementActiveWrites, decrementActiveWrites, updatePendingQueue } from '../services/syncState'
+import {
+  incrementActiveWrites,
+  decrementActiveWrites,
+  updatePendingQueue,
+} from '../services/syncState'
 import { getPendingCount } from '../services/syncQueue'
 import { logger } from '../lib/logger'
 
 export default function useOptimisticUpdate() {
-  const execute = async ({ optimisticUpdate, idbWrite, supabaseWrite, rollback, syncKey }) => {
+  const execute = async ({
+    optimisticUpdate,
+    idbWrite,
+    supabaseWrite,
+    rollback: _rollback,
+    syncKey,
+  }) => {
     optimisticUpdate()
 
     try {

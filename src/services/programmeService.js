@@ -36,9 +36,12 @@ export async function upsertProgrammeConfig(userId, configData) {
   try {
     const { data, error } = await supabase
       .from('programme_config')
-      .upsert({ user_id: userId, ...configData }, {
-        onConflict: 'user_id',
-      })
+      .upsert(
+        { user_id: userId, ...configData },
+        {
+          onConflict: 'user_id',
+        }
+      )
       .select()
       .single()
     if (error) throw error
@@ -69,7 +72,7 @@ export async function getActiveProgramme(userId) {
       .maybeSingle()
     if (error) throw error
     if (data && data.user_id !== userId) return { data: null, error: null }
-    return { data: data || null, error: null }
+    return { data: data ?? null, error: null }
   } catch (err) {
     logger.error('getActiveProgramme:', err)
     return { data: null, error: 'Failed to load programme' }
@@ -128,7 +131,8 @@ export async function getProgrammeDayExercises(dayId) {
   try {
     const { data, error } = await supabase
       .from('programme_exercises')
-      .select(`
+      .select(
+        `
         *,
         exercises:exercise_id (
           name,
@@ -137,7 +141,8 @@ export async function getProgrammeDayExercises(dayId) {
           body_part,
           target_muscle
         )
-      `)
+      `
+      )
       .eq('day_id', dayId)
       .order('display_order', { ascending: true })
     if (error) throw error
@@ -218,7 +223,7 @@ export async function getFullProgrammeContext(userId) {
     const result = { programme, phases }
 
     // Cache (fire-and-forget)
-    idbCache.set('programme-context', userId, result)
+    void idbCache.set('programme-context', userId, result)
 
     return { data: result, error: null }
   } catch (err) {

@@ -41,9 +41,9 @@ const Login = memo(function Login() {
         setSuccess('Account created! Check your email to confirm, then sign in.')
         setMode('login')
       } else {
-        const { user } = await signIn(email, password) as { user: { id: string } }
+        const { user } = (await signIn(email, password)) as { user: { id: string } }
         await ensureProgrammeConfig(user.id)
-        navigate('/', { replace: true })
+        void navigate('/', { replace: true })
       }
     } catch (err: unknown) {
       logger.error(`${mode} error:`, err)
@@ -90,21 +90,30 @@ const Login = memo(function Login() {
         />
 
         {error && (
-          <Text variant="body" className="text-[#ef4444] text-[13px] -mt-1" role="alert">{error}</Text>
+          <Text variant="body" className="text-[#ef4444] text-[13px] -mt-1" role="alert">
+            {error}
+          </Text>
         )}
 
         {success && (
-          <Text variant="body" className="text-[#22c55e] text-[13px] -mt-1" role="status">{success}</Text>
+          <Text variant="body" className="text-[#22c55e] text-[13px] -mt-1" role="status">
+            {success}
+          </Text>
         )}
 
         <div className="mt-2">
           <Button
             variant="primary"
-            label={submitting
-              ? (mode === 'signup' ? 'Creating Account...' : 'Signing In...')
-              : (mode === 'signup' ? 'Create Account' : 'Sign In')
+            label={
+              submitting
+                ? mode === 'signup'
+                  ? 'Creating Account...'
+                  : 'Signing In...'
+                : mode === 'signup'
+                  ? 'Create Account'
+                  : 'Sign In'
             }
-            onPress={handleSubmit}
+            onPress={() => void handleSubmit()}
             disabled={!email || !password}
             loading={submitting}
           />
@@ -114,10 +123,15 @@ const Login = memo(function Login() {
           onClick={switchMode}
           className="text-[13px] text-[#666666] mt-2 text-center active:text-[#f0ede8] transition-colors"
         >
-          {mode === 'login'
-            ? <>Don&apos;t have an account? <span className="text-[#ff4520] font-bold">Sign Up</span></>
-            : <>Already have an account? <span className="text-[#ff4520] font-bold">Sign In</span></>
-          }
+          {mode === 'login' ? (
+            <>
+              Don&apos;t have an account? <span className="text-[#ff4520] font-bold">Sign Up</span>
+            </>
+          ) : (
+            <>
+              Already have an account? <span className="text-[#ff4520] font-bold">Sign In</span>
+            </>
+          )}
         </button>
       </div>
 
