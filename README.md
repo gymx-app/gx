@@ -1,16 +1,29 @@
-# React + Vite
+# GX Fitness
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+![Quality](https://github.com/gymx-app/gx/actions/workflows/quality.yml/badge.svg)
 
-Currently, two official plugins are available:
+## Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+## Quality Gates
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Gate | Command | Runs on |
+|------|---------|---------|
+| Lint | `npm run lint` | pre-commit, CI |
+| Format | `npm run format:check` | pre-commit, CI |
+| Type check | `npm run typecheck` | pre-commit, CI |
+| Test + coverage | `npm run test:coverage` | pre-push, CI |
+| Security audit | `npm audit --audit-level=high` | CI |
 
-## Expanding the ESLint configuration
+See [CONTRIBUTING.md](CONTRIBUTING.md) for git hook details.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Branch Protection
+
+Configure in GitHub Settings > Branches > Add rule for `main`:
+- Require status checks: **Lint & Format**, **Type Check**, **Test & Coverage**
+- Require branches to be up to date before merging
+- Do not allow bypassing the above settings
