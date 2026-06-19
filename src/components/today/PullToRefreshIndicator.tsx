@@ -20,7 +20,7 @@ const PullToRefreshIndicator = memo(function PullToRefreshIndicator({
 
   return (
     <div
-      className="fixed left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-[6px]"
+      className="fixed left-1/2 z-50 flex items-center gap-2 px-4 py-[6px]"
       style={{
         top: 52,
         width: 120,
