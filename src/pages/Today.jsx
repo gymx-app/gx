@@ -425,82 +425,90 @@ export default function Today() {
   const scrollRef = useRef(null)
   const { pullProgress, ptrState } = usePullToRefresh(scrollRef, syncRefetch)
   const navigateDayRef = useRef(navigateDay)
-  const swipePhaseRef = useRef(swipePhase)
+  const activeSheetRef = useRef(activeSheet)
+  const screenStateRef = useRef(screenState)
 
   useEffect(() => {
     navigateDayRef.current = navigateDay
-    swipePhaseRef.current = swipePhase
+    activeSheetRef.current = activeSheet
+    screenStateRef.current = screenState
   })
 
   useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-
     function onTouchStart(e) {
-      if (swipePhaseRef.current === 'animating') return
+      if (activeSheetRef.current || screenStateRef.current === 'complete') return
       const t = e.touches[0]
       touchRef.current = {
         startX: t.clientX,
         startY: t.clientY,
         startTime: Date.now(),
-        tracking: false,
         locked: false,
+        tracking: false,
       }
     }
 
     function onTouchMove(e) {
-      if (swipePhaseRef.current === 'animating') return
       const ref = touchRef.current
       const t = e.touches[0]
       const dx = t.clientX - ref.startX
       const dy = t.clientY - ref.startY
 
       if (!ref.locked) {
-        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
         ref.locked = true
-        ref.tracking = Math.abs(dx) > Math.abs(dy) * 1.2
-        if (!ref.tracking) return
+        ref.tracking = Math.abs(dx) > Math.abs(dy) * 1.1
       }
 
       if (!ref.tracking) return
-      e.preventDefault()
+
       setSwipeX(dx)
       setSwipePhase('tracking')
     }
 
     function onTouchEnd(e) {
       const ref = touchRef.current
-      if (!ref.tracking) {
+      if (!ref.locked || !ref.tracking) {
+        setSwipeX(0)
+        setSwipePhase('idle')
         return
       }
 
       const dx = e.changedTouches[0].clientX - ref.startX
       const elapsed = Date.now() - ref.startTime
       const velocity = Math.abs(dx) / Math.max(elapsed, 1)
-      const triggered = Math.abs(dx) > 50 || (Math.abs(dx) > 20 && velocity > 0.3)
+      const triggered = Math.abs(dx) > 48 || (Math.abs(dx) > 20 && velocity > 0.35)
       const direction = dx < 0 ? 'next' : 'prev'
 
+      touchRef.current = {
+        startX: 0,
+        startY: 0,
+        startTime: 0,
+        locked: false,
+        tracking: false,
+      }
+
       if (triggered) {
+        setSwipeX(dx < 0 ? -20 : 20)
         setSwipePhase('animating')
-        setSwipeX(dx < 0 ? -16 : 16)
         setTimeout(() => {
           navigateDayRef.current(direction)
           setSwipeX(0)
           setSwipePhase('idle')
-        }, 120)
+        }, 100)
       } else {
         setSwipeX(0)
         setSwipePhase('idle')
       }
     }
 
-    el.addEventListener('touchstart', onTouchStart, { passive: true })
-    el.addEventListener('touchmove', onTouchMove, { passive: false })
-    el.addEventListener('touchend', onTouchEnd, { passive: true })
+    document.addEventListener('touchstart', onTouchStart, { passive: true })
+    document.addEventListener('touchmove', onTouchMove, { passive: true })
+    document.addEventListener('touchend', onTouchEnd, { passive: true })
+
     return () => {
-      el.removeEventListener('touchstart', onTouchStart)
-      el.removeEventListener('touchmove', onTouchMove)
-      el.removeEventListener('touchend', onTouchEnd)
+      document.removeEventListener('touchstart', onTouchStart)
+      document.removeEventListener('touchmove', onTouchMove)
+      document.removeEventListener('touchend', onTouchEnd)
     }
   }, [])
 
@@ -580,14 +588,9 @@ export default function Today() {
                   : swipePhase === 'animating'
                     ? `translateX(${swipeX}px)`
                     : 'translateX(0)',
-              opacity:
-                swipePhase === 'tracking'
-                  ? Math.max(0.7, 1 - Math.abs(swipeX) / 800)
-                  : dayLoading
-                    ? 0.4
-                    : 1,
+              opacity: dayLoading ? 0.4 : 1,
               transition:
-                swipePhase === 'tracking' ? 'none' : 'transform 120ms ease-out, opacity 150ms ease',
+                swipePhase === 'tracking' ? 'none' : 'transform 80ms ease-out, opacity 150ms ease',
             }}
           >
             {/* Error */}
