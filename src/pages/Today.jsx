@@ -17,6 +17,8 @@ import WorkoutCompleteSheet from '../components/today/WorkoutCompleteSheet'
 import CooldownSection from '../components/today/CooldownSection'
 import FinisherBlock from '../components/today/FinisherBlock'
 import TodaySkeleton, { DayContentSkeleton } from '../components/today/TodaySkeleton'
+import PullToRefreshIndicator from '../components/today/PullToRefreshIndicator'
+import { usePullToRefresh } from '../hooks/usePullToRefresh'
 import { Moon } from 'lucide-react'
 
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
@@ -421,6 +423,7 @@ export default function Today() {
   }
 
   const scrollRef = useRef(null)
+  const { pullProgress, ptrState } = usePullToRefresh(scrollRef, syncRefetch)
   const navigateDayRef = useRef(navigateDay)
   const swipePhaseRef = useRef(swipePhase)
 
@@ -538,218 +541,221 @@ export default function Today() {
     <>
       <TodayTopBar phase={phase} totalWeek={totalWeek} />
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto pb-8">
-        {/* Phase card + day pills */}
-        <PhaseCard
-          phase={phase}
-          weekInPhase={phaseInfo.weekInPhase}
-          totalWeek={totalWeek}
-          phaseWeeks={config?.phase_weeks ?? [4, 4, 5, 4, 999]}
-          minActiveDays={config?.min_active_days ?? 4}
-          currentWeekActiveDays={currentWeekActiveDays}
-          weekOffset={weekOffset}
-          onPrevWeek={handlePrevWeek}
-          onNextWeek={handleNextWeek}
-          canGoBack={canGoBack}
-          canGoForward={canGoForward}
-          programme={programme}
-          phases={phases}
-          weekDays={weekDays}
-          selectedDateStr={dateStr}
-          completedDateStrs={completedDateStrs}
-          restDayIndices={restDayIndices}
-          onSelectDay={handleSelectDay}
-          onGoToToday={handleGoToToday}
-          programmeStartDate={programmeStartDate}
-        />
+      <div className="flex-1 relative overflow-hidden">
+        <PullToRefreshIndicator pullProgress={pullProgress} ptrState={ptrState} />
+        <div ref={scrollRef} className="w-full h-full overflow-y-auto pb-8">
+          {/* Phase card + day pills */}
+          <PhaseCard
+            phase={phase}
+            weekInPhase={phaseInfo.weekInPhase}
+            totalWeek={totalWeek}
+            phaseWeeks={config?.phase_weeks ?? [4, 4, 5, 4, 999]}
+            minActiveDays={config?.min_active_days ?? 4}
+            currentWeekActiveDays={currentWeekActiveDays}
+            weekOffset={weekOffset}
+            onPrevWeek={handlePrevWeek}
+            onNextWeek={handleNextWeek}
+            canGoBack={canGoBack}
+            canGoForward={canGoForward}
+            programme={programme}
+            phases={phases}
+            weekDays={weekDays}
+            selectedDateStr={dateStr}
+            completedDateStrs={completedDateStrs}
+            restDayIndices={restDayIndices}
+            onSelectDay={handleSelectDay}
+            onGoToToday={handleGoToToday}
+            programmeStartDate={programmeStartDate}
+          />
 
-        {/* Content — with swipe slide animation */}
-        <div
-          ref={contentRef}
-          className="px-4 mt-6"
-          style={{
-            background: 'linear-gradient(180deg, #1a1a1a, #0a0a0a)',
-            transform:
-              swipePhase === 'tracking'
-                ? `translateX(${Math.sign(swipeX) * Math.min(Math.abs(swipeX) * 0.3, 40)}px)`
-                : swipePhase === 'animating'
-                  ? `translateX(${swipeX}px)`
-                  : 'translateX(0)',
-            opacity:
-              swipePhase === 'tracking'
-                ? Math.max(0.7, 1 - Math.abs(swipeX) / 800)
-                : dayLoading
-                  ? 0.4
-                  : 1,
-            transition:
-              swipePhase === 'tracking' ? 'none' : 'transform 120ms ease-out, opacity 150ms ease',
-          }}
-        >
-          {/* Error */}
-          {error && (
-            <Button
-              variant="danger"
-              label="Failed to load — tap to retry"
-              onPress={syncRefetch}
-              className="mb-4 h-auto py-2 text-[13px]"
-            />
-          )}
+          {/* Content — with swipe slide animation */}
+          <div
+            ref={contentRef}
+            className="px-4 mt-6"
+            style={{
+              background: 'linear-gradient(180deg, #1a1a1a, #0a0a0a)',
+              transform:
+                swipePhase === 'tracking'
+                  ? `translateX(${Math.sign(swipeX) * Math.min(Math.abs(swipeX) * 0.3, 40)}px)`
+                  : swipePhase === 'animating'
+                    ? `translateX(${swipeX}px)`
+                    : 'translateX(0)',
+              opacity:
+                swipePhase === 'tracking'
+                  ? Math.max(0.7, 1 - Math.abs(swipeX) / 800)
+                  : dayLoading
+                    ? 0.4
+                    : 1,
+              transition:
+                swipePhase === 'tracking' ? 'none' : 'transform 120ms ease-out, opacity 150ms ease',
+            }}
+          >
+            {/* Error */}
+            {error && (
+              <Button
+                variant="danger"
+                label="Failed to load — tap to retry"
+                onPress={syncRefetch}
+                className="mb-4 h-auto py-2 text-[13px]"
+              />
+            )}
 
-          {dayLoading ? (
-            <DayContentSkeleton />
-          ) : (
-            <>
-              {/* Rest day */}
-              {dayType === 'rest' && <RestDay workout={workout} />}
+            {dayLoading ? (
+              <DayContentSkeleton />
+            ) : (
+              <>
+                {/* Rest day */}
+                {dayType === 'rest' && <RestDay workout={workout} />}
 
-              {/* LISS day */}
-              {dayType === 'liss' && (
-                <LissDay
-                  workout={workout}
-                  dayData={dayData}
-                  dateStr={dateStr}
-                  phase={phase}
-                  totalWeek={totalWeek}
-                  checklistLogs={checklistLogs}
-                  cooldownItems={cooldownItems}
-                  onUpdate={syncRefetch}
-                  readOnly={isFutureDate}
-                />
-              )}
+                {/* LISS day */}
+                {dayType === 'liss' && (
+                  <LissDay
+                    workout={workout}
+                    dayData={dayData}
+                    dateStr={dateStr}
+                    phase={phase}
+                    totalWeek={totalWeek}
+                    checklistLogs={checklistLogs}
+                    cooldownItems={cooldownItems}
+                    onUpdate={syncRefetch}
+                    readOnly={isFutureDate}
+                  />
+                )}
 
-              {/* Workout day */}
-              {dayType === 'workout' && (
-                <>
-                  <p className="text-[11px] text-[#666666] uppercase tracking-[2px] pt-2.5 mb-1">
-                    {(() => {
-                      const d = new Date(dateStr + 'T00:00:00')
-                      return `${d.getDate()} ${MONTHS[d.getMonth()]}`
-                    })()}{' '}
-                    · WEEK {totalWeek} · PHASE {phase}
-                  </p>
-
-                  {isFutureDate && (
-                    <span
-                      className="text-[11px] tracking-[0.08em] uppercase text-[#555555] px-3 py-1 inline-flex mb-2"
-                      style={{ background: '#111111', border: '1px solid #1a1a1a' }}
-                    >
-                      UPCOMING ·{' '}
+                {/* Workout day */}
+                {dayType === 'workout' && (
+                  <>
+                    <p className="text-[11px] text-[#666666] uppercase tracking-[2px] pt-2.5 mb-1">
                       {(() => {
                         const d = new Date(dateStr + 'T00:00:00')
-                        return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`
-                      })()}
-                    </span>
-                  )}
+                        return `${d.getDate()} ${MONTHS[d.getMonth()]}`
+                      })()}{' '}
+                      · WEEK {totalWeek} · PHASE {phase}
+                    </p>
 
-                  <div className="flex items-baseline justify-between">
-                    <Text variant="pageTitle">{workout.title}</Text>
-                    {workout.dur && (
-                      <span className="font-['Bebas_Neue'] text-[20px] text-[#ff4520] shrink-0 ml-3">
-                        {workout.dur}&prime;
+                    {isFutureDate && (
+                      <span
+                        className="text-[11px] tracking-[0.08em] uppercase text-[#555555] px-3 py-1 inline-flex mb-2"
+                        style={{ background: '#111111', border: '1px solid #1a1a1a' }}
+                      >
+                        UPCOMING ·{' '}
+                        {(() => {
+                          const d = new Date(dateStr + 'T00:00:00')
+                          return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`
+                        })()}
                       </span>
                     )}
-                  </div>
 
-                  {workout.sub && (
-                    <Text variant="bodyMuted" className="mt-0.5">
-                      {workout.sub}
-                    </Text>
-                  )}
+                    <div className="flex items-baseline justify-between">
+                      <Text variant="pageTitle">{workout.title}</Text>
+                      {workout.dur && (
+                        <span className="font-['Bebas_Neue'] text-[20px] text-[#ff4520] shrink-0 ml-3">
+                          {workout.dur}&prime;
+                        </span>
+                      )}
+                    </div>
 
-                  <div className="flex items-center gap-2 mt-2">
-                    {workout.kcal && (
-                      <span className="text-[11px] text-[#666666]">{workout.kcal} kcal</span>
+                    {workout.sub && (
+                      <Text variant="bodyMuted" className="mt-0.5">
+                        {workout.sub}
+                      </Text>
                     )}
-                    {workout.tags?.map((tag) => (
-                      <Badge key={tag} label={tag} />
-                    ))}
-                  </div>
 
-                  {/* Warmup */}
-                  {workout.has_warmup && (
-                    <WarmupSection
-                      dateStr={dateStr}
-                      phase={phase}
-                      warmupLogs={warmupLogs}
-                      warmupItems={warmupItems}
-                      onUpdate={syncRefetch}
-                      readOnly={isFutureDate}
-                    />
-                  )}
-
-                  {/* Exercises */}
-                  <div className="mt-4">
-                    <SectionLabel label="Exercises" className="mb-2" />
-                  </div>
-                  {displayExercises.length > 0 ? (
-                    <div className="flex flex-col gap-3">
-                      {displayExercises.map((ex, idx) => (
-                        <ExerciseCard
-                          key={`${ex.n}-${idx}`}
-                          exercise={ex}
-                          exerciseIndex={idx}
-                          exerciseLogs={logsByExercise[ex.n] ?? []}
-                          previousBest={previousBests[ex.n]}
-                          isExpanded={expandedExercise === idx}
-                          onToggleExpand={() =>
-                            setExpandedExercise(expandedExercise === idx ? null : idx)
-                          }
-                          onTapSet={isFutureDate ? () => {} : handleTapSet}
-                        />
+                    <div className="flex items-center gap-2 mt-2">
+                      {workout.kcal && (
+                        <span className="text-[11px] text-[#666666]">{workout.kcal} kcal</span>
+                      )}
+                      {workout.tags?.map((tag) => (
+                        <Badge key={tag} label={tag} />
                       ))}
                     </div>
-                  ) : (
-                    <div
-                      className="py-6 text-center"
-                      style={{
-                        background: '#141414',
-                        border: '1px solid #2a2a2a',
-                        borderRadius: '16px',
-                      }}
-                    >
-                      <Text variant="bodyMuted">No exercises configured for this day.</Text>
-                      <Text variant="caption" className="mt-1">
-                        Seed the programme_exercises table to populate.
-                      </Text>
+
+                    {/* Warmup */}
+                    {workout.has_warmup && (
+                      <WarmupSection
+                        dateStr={dateStr}
+                        phase={phase}
+                        warmupLogs={warmupLogs}
+                        warmupItems={warmupItems}
+                        onUpdate={syncRefetch}
+                        readOnly={isFutureDate}
+                      />
+                    )}
+
+                    {/* Exercises */}
+                    <div className="mt-4">
+                      <SectionLabel label="Exercises" className="mb-2" />
                     </div>
-                  )}
+                    {displayExercises.length > 0 ? (
+                      <div className="flex flex-col gap-3">
+                        {displayExercises.map((ex, idx) => (
+                          <ExerciseCard
+                            key={`${ex.n}-${idx}`}
+                            exercise={ex}
+                            exerciseIndex={idx}
+                            exerciseLogs={logsByExercise[ex.n] ?? []}
+                            previousBest={previousBests[ex.n]}
+                            isExpanded={expandedExercise === idx}
+                            onToggleExpand={() =>
+                              setExpandedExercise(expandedExercise === idx ? null : idx)
+                            }
+                            onTapSet={isFutureDate ? () => {} : handleTapSet}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div
+                        className="py-6 text-center"
+                        style={{
+                          background: '#141414',
+                          border: '1px solid #2a2a2a',
+                          borderRadius: '16px',
+                        }}
+                      >
+                        <Text variant="bodyMuted">No exercises configured for this day.</Text>
+                        <Text variant="caption" className="mt-1">
+                          Seed the programme_exercises table to populate.
+                        </Text>
+                      </div>
+                    )}
 
-                  {/* Finisher */}
-                  {workout.fin && !isFutureDate && (
-                    <FinisherBlock
-                      fin={workout.fin}
-                      dateStr={dateStr}
-                      checklistLogs={checklistLogs}
-                      onUpdate={syncRefetch}
-                    />
-                  )}
+                    {/* Finisher */}
+                    {workout.fin && !isFutureDate && (
+                      <FinisherBlock
+                        fin={workout.fin}
+                        dateStr={dateStr}
+                        checklistLogs={checklistLogs}
+                        onUpdate={syncRefetch}
+                      />
+                    )}
 
-                  {/* Cooldown */}
-                  {displayCooldownItems.length > 0 && (
-                    <CooldownSection
-                      items={displayCooldownItems}
-                      dateStr={dateStr}
-                      checklistLogs={checklistLogs}
-                      onUpdate={syncRefetch}
-                      readOnly={isFutureDate}
-                    />
-                  )}
-                </>
-              )}
+                    {/* Cooldown */}
+                    {displayCooldownItems.length > 0 && (
+                      <CooldownSection
+                        items={displayCooldownItems}
+                        dateStr={dateStr}
+                        checklistLogs={checklistLogs}
+                        onUpdate={syncRefetch}
+                        readOnly={isFutureDate}
+                      />
+                    )}
+                  </>
+                )}
 
-              {/* No data */}
-              {dayType === 'none' && (
-                <div className="mt-8 pt-2.5">
-                  <Text variant="pageTitle" className="text-[#2a2a2a]">
-                    NO DATA
-                  </Text>
-                  <Text variant="bodyMuted" className="mt-2">
-                    No workout defined for this day in phase {phase}.
-                  </Text>
-                </div>
-              )}
-            </>
-          )}
+                {/* No data */}
+                {dayType === 'none' && (
+                  <div className="mt-8 pt-2.5">
+                    <Text variant="pageTitle" className="text-[#2a2a2a]">
+                      NO DATA
+                    </Text>
+                    <Text variant="bodyMuted" className="mt-2">
+                      No workout defined for this day in phase {phase}.
+                    </Text>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
