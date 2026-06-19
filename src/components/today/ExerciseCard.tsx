@@ -1,4 +1,5 @@
 import { useMemo, memo } from 'react'
+import { Dumbbell, ChevronDown } from 'lucide-react'
 import { colors, radius } from '../../styles/tokens'
 
 const EQ_NAMES: Record<string, string> = {
@@ -90,10 +91,9 @@ const ExerciseCard = memo(function ExerciseCard({
   const allDone = completedCount >= totalSets
 
   const cardStyle = {
-    background: colors.surface,
-    border: `1px solid ${colors.border}`,
+    background: allDone ? '#0f0f0f' : colors.surface,
+    border: allDone ? `1px solid rgba(34, 197, 94, 0.15)` : `1px solid ${colors.border}`,
     borderRadius: radius.card,
-    ...(allDone ? { opacity: 0.5 } : {}),
   }
 
   return (
@@ -104,8 +104,8 @@ const ExerciseCard = memo(function ExerciseCard({
         aria-expanded={isExpanded}
         aria-label={`${exercise.n} — ${completedCount} of ${totalSets} sets done`}
       >
-        <div className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center text-[17px] shrink-0 bg-[#1c1c1c]">
-          {exercise.icon ?? '💪'}
+        <div className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center shrink-0 bg-[#1c1c1c]">
+          <Dumbbell size={16} strokeWidth={1.5} color="#666666" />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -138,13 +138,14 @@ const ExerciseCard = memo(function ExerciseCard({
           )}
         </div>
 
-        <span
-          className={`text-[12px] shrink-0 transition-transform duration-200 ${
-            isExpanded ? 'rotate-180' : ''
-          } ${allDone ? 'text-[#666666] opacity-40' : 'text-[#666666]'}`}
-        >
-          ▾
-        </span>
+        <ChevronDown
+          size={16}
+          strokeWidth={1.5}
+          className={`shrink-0 transition-transform duration-200
+            ${isExpanded ? 'rotate-180' : ''}
+            ${allDone ? 'text-[#666666] opacity-40' : 'text-[#666666]'}`}
+          color={allDone ? '#666666' : '#555555'}
+        />
       </button>
 
       {isExpanded && (

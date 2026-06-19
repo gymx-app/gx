@@ -23,10 +23,10 @@ function BottomNav() {
         borderTop: '1px solid #2a2a2a',
         flexShrink: 0,
         zIndex: 10,
-        paddingBottom: 0,
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
-      <div style={{ height: 60, display: 'flex' }}>
+      <div style={{ height: 60, display: 'flex', alignItems: 'stretch' }}>
         {NAV_ITEMS.map((item) => {
           const isActive = location.pathname === item.path
           const color = isActive ? ACTIVE_COLOR : INACTIVE_COLOR
@@ -47,7 +47,7 @@ function BottomNav() {
                 border: 'none',
                 cursor: 'pointer',
                 fontFamily: "'DM Sans', sans-serif",
-                fontSize: 9,
+                fontSize: 11,
                 fontWeight: 500,
                 letterSpacing: '0.5px',
                 color,

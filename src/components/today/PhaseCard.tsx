@@ -1,4 +1,5 @@
 import { useState, useMemo, memo } from 'react'
+import { ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { colors } from '../../styles/tokens'
 import PhaseBottomSheet from './PhaseBottomSheet'
 import { getDayStatus, type DayStatus } from '../../utils/dayStatus'
@@ -146,7 +147,7 @@ const PhaseCard = memo(function PhaseCard({
       {/* ── Phase card ── */}
       <div
         className="mx-4 mt-3 px-4 py-3"
-        style={{ background: '#141414', border: '1px solid #202020' }}
+        style={{ background: '#141414', border: '1px solid #202020', borderRadius: '16px' }}
       >
         {/* Line 1 */}
         <div className="flex justify-between items-center">
@@ -183,7 +184,7 @@ const PhaseCard = memo(function PhaseCard({
       </div>
 
       {/* ── Week strip — sticky below TopBar ── */}
-      <div className="px-4 mt-3 sticky top-0 z-40 bg-[#0a0a0a] pb-2 border-b border-[#1a1a1a]">
+      <div className="px-4 mt-3 sticky top-0 z-40 bg-[#0a0a0a] pb-2 border-b border-[#222222]">
         <div className="flex items-center gap-[8px] pb-[10px]">
           <button
             onClick={onPrevWeek}
@@ -196,12 +197,7 @@ const PhaseCard = memo(function PhaseCard({
             }`}
             style={{ border: `1.5px solid ${colors.border}` }}
           >
-            <span
-              className="text-[16px] leading-none"
-              style={{ color: canGoBack ? '#f0ede8' : '#1a1a1a' }}
-            >
-              &lt;
-            </span>
+            <ChevronLeft size={18} strokeWidth={1.5} color={canGoBack ? '#f0ede8' : '#1a1a1a'} />
           </button>
 
           <div className="flex-1 text-center">
@@ -225,7 +221,7 @@ const PhaseCard = memo(function PhaseCard({
             className="w-[44px] h-[44px] flex items-center justify-center rounded-[12px] shrink-0 transition-all duration-150 bg-[#1c1c1c] active:bg-[#242424] active:scale-[0.93]"
             style={{ border: `1.5px solid ${colors.border}` }}
           >
-            <span className="text-[16px] leading-none text-[#f0ede8]">&gt;</span>
+            <ChevronRight size={18} strokeWidth={1.5} color="#f0ede8" />
           </button>
         </div>
 
@@ -313,9 +309,7 @@ const PhaseCard = memo(function PhaseCard({
 
                 <div className="mt-[6px] h-[10px] flex items-center justify-center">
                   {status === 'completed' ? (
-                    <span className="text-[10px] leading-none" style={{ color: 'var(--success)' }}>
-                      ✓
-                    </span>
+                    <Check size={10} strokeWidth={2.5} color="var(--success)" />
                   ) : status === 'skipped' ? (
                     <div
                       className="w-[5px] h-[5px] rounded-full"

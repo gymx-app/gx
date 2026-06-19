@@ -9,7 +9,7 @@ interface RestTimerHUDProps {
 
 const RestTimerHUD = memo(function RestTimerHUD({
   durationSec,
-  exerciseName: _exerciseName,
+  exerciseName,
   onDismiss,
 }: RestTimerHUDProps) {
   const [remaining, setRemaining] = useState(durationSec)
@@ -47,9 +47,12 @@ const RestTimerHUD = memo(function RestTimerHUD({
         boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
       }}
     >
-      <div>
-        <span className="font-['Bebas_Neue'] text-[13px] tracking-[1px] text-[#666666] block">
+      <div style={{ maxWidth: 80 }}>
+        <span className="font-['Bebas_Neue'] text-[10px] tracking-[1px] text-[#666666] block uppercase">
           REST
+        </span>
+        <span className="text-[11px] text-[#444444] block truncate leading-tight mt-[2px]">
+          {exerciseName}
         </span>
       </div>
       <span

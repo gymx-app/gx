@@ -13,7 +13,10 @@ function TopBar({ title, rightContent }: TopBarProps) {
           G<span className="text-[#ff4520]">x</span>
         </span>
         {title && (
-          <span className="text-[10px] font-bold tracking-[2px] uppercase text-[#666666]">
+          <span
+            className="text-[10px] font-bold tracking-[2px] uppercase text-[#666666] truncate"
+            style={{ maxWidth: 'calc(100% - 120px)' }}
+          >
             {title}
           </span>
         )}

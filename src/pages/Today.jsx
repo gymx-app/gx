@@ -17,6 +17,7 @@ import WorkoutCompleteSheet from '../components/today/WorkoutCompleteSheet'
 import CooldownSection from '../components/today/CooldownSection'
 import FinisherBlock from '../components/today/FinisherBlock'
 import TodaySkeleton from '../components/today/TodaySkeleton'
+import { Moon } from 'lucide-react'
 
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
@@ -83,7 +84,9 @@ const RestDay = memo(function RestDay({ workout }) {
         className="mt-4 p-8 text-center"
         style={{ background: '#141414', border: '1px solid #2a2a2a', borderRadius: '16px' }}
       >
-        <p className="text-[48px] mb-3">😴</p>
+        <div className="mb-3 flex justify-center">
+          <Moon size={44} strokeWidth={1} color="#2a2a2a" />
+        </div>
         <h2 className="font-['Bebas_Neue'] text-[26px] tracking-[2px] text-[#f0ede8] mb-2">
           REST DAY
         </h2>
@@ -609,14 +612,6 @@ export default function Today() {
           {/* Workout day */}
           {dayType === 'workout' && (
             <>
-              {/* Workout header */}
-              <p className="text-[11px] text-[#666666] uppercase tracking-[2px] pt-2.5 mb-1">
-                {(() => {
-                  const d = new Date(dateStr + 'T00:00:00')
-                  return `${d.getDate()} ${MONTHS[d.getMonth()]} · WEEK ${totalWeek} · PHASE ${phase}`
-                })()}
-              </p>
-
               {isFutureDate && (
                 <span
                   className="text-[11px] tracking-[0.08em] uppercase text-[#555555] px-3 py-1 inline-flex mb-2"
