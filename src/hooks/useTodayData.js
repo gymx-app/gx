@@ -43,6 +43,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
   })
 
   const [loading, setLoading] = useState(true)
+  const [dayLoading, setDayLoading] = useState(true)
   const [error, setError] = useState(null)
   const [hasCachedData, setHasCachedData] = useState(false)
 
@@ -76,16 +77,22 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
     if (!weekData || !selectedDayLabel) return
     let cancelled = false
 
+    /* eslint-disable react-hooks/set-state-in-effect -- dayLoading tracks async resolution of this effect */
+    setDayLoading(true)
+    /* eslint-enable react-hooks/set-state-in-effect */
+
     async function resolveDayMeta() {
       const { config: cfg, sessions: sess, programme: prog, phases: phs } = weekData
       if (!prog || phs.length === 0 || !cfg) {
-        if (!cancelled)
+        if (!cancelled) {
           setDayMeta({
             dayData: null,
             programmeExercises: null,
             warmupItems: null,
             cooldownItems: null,
           })
+          setDayLoading(false)
+        }
         return
       }
 
@@ -96,13 +103,15 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
       })
       const currentPhase = phs.find((p) => p.phase_number === phaseInfo.phase)
       if (!currentPhase) {
-        if (!cancelled)
+        if (!cancelled) {
           setDayMeta({
             dayData: null,
             programmeExercises: null,
             warmupItems: null,
             cooldownItems: null,
           })
+          setDayLoading(false)
+        }
         return
       }
 
@@ -162,6 +171,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
           warmupItems: freshWarmup,
           cooldownItems: freshCooldown,
         })
+        setDayLoading(false)
       }
     }
 
@@ -287,6 +297,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
     warmupItems: dayMeta.warmupItems,
     cooldownItems: dayMeta.cooldownItems,
     loading,
+    dayLoading,
     hasCachedData,
     error,
     refetch,

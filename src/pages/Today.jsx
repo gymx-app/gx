@@ -16,7 +16,7 @@ import LissDay from '../components/today/LissDay'
 import WorkoutCompleteSheet from '../components/today/WorkoutCompleteSheet'
 import CooldownSection from '../components/today/CooldownSection'
 import FinisherBlock from '../components/today/FinisherBlock'
-import TodaySkeleton from '../components/today/TodaySkeleton'
+import TodaySkeleton, { DayContentSkeleton } from '../components/today/TodaySkeleton'
 import { Moon } from 'lucide-react'
 
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
@@ -149,6 +149,7 @@ export default function Today() {
     warmupItems,
     cooldownItems,
     loading,
+    dayLoading,
     hasCachedData,
     error,
     refetch,
@@ -574,11 +575,14 @@ export default function Today() {
                 : swipePhase === 'animating'
                   ? `translateX(${swipeX}px)`
                   : 'translateX(0)',
-            opacity: swipePhase === 'tracking' ? Math.max(0.7, 1 - Math.abs(swipeX) / 800) : 1,
-            transition:
+            opacity:
               swipePhase === 'tracking'
-                ? 'none'
-                : 'transform 120ms ease-out, opacity 120ms ease-out',
+                ? Math.max(0.7, 1 - Math.abs(swipeX) / 800)
+                : dayLoading
+                  ? 0.4
+                  : 1,
+            transition:
+              swipePhase === 'tracking' ? 'none' : 'transform 120ms ease-out, opacity 150ms ease',
           }}
         >
           {/* Error */}
@@ -591,154 +595,160 @@ export default function Today() {
             />
           )}
 
-          {/* Rest day */}
-          {dayType === 'rest' && <RestDay workout={workout} />}
-
-          {/* LISS day */}
-          {dayType === 'liss' && (
-            <LissDay
-              workout={workout}
-              dayData={dayData}
-              dateStr={dateStr}
-              phase={phase}
-              totalWeek={totalWeek}
-              checklistLogs={checklistLogs}
-              cooldownItems={cooldownItems}
-              onUpdate={syncRefetch}
-              readOnly={isFutureDate}
-            />
-          )}
-
-          {/* Workout day */}
-          {dayType === 'workout' && (
+          {dayLoading ? (
+            <DayContentSkeleton />
+          ) : (
             <>
-              <p className="text-[11px] text-[#666666] uppercase tracking-[2px] pt-2.5 mb-1">
-                {(() => {
-                  const d = new Date(dateStr + 'T00:00:00')
-                  return `${d.getDate()} ${MONTHS[d.getMonth()]}`
-                })()}{' '}
-                · WEEK {totalWeek} · PHASE {phase}
-              </p>
+              {/* Rest day */}
+              {dayType === 'rest' && <RestDay workout={workout} />}
 
-              {isFutureDate && (
-                <span
-                  className="text-[11px] tracking-[0.08em] uppercase text-[#555555] px-3 py-1 inline-flex mb-2"
-                  style={{ background: '#111111', border: '1px solid #1a1a1a' }}
-                >
-                  UPCOMING ·{' '}
-                  {(() => {
-                    const d = new Date(dateStr + 'T00:00:00')
-                    return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`
-                  })()}
-                </span>
-              )}
-
-              <div className="flex items-baseline justify-between">
-                <Text variant="pageTitle">{workout.title}</Text>
-                {workout.dur && (
-                  <span className="font-['Bebas_Neue'] text-[20px] text-[#ff4520] shrink-0 ml-3">
-                    {workout.dur}&prime;
-                  </span>
-                )}
-              </div>
-
-              {workout.sub && (
-                <Text variant="bodyMuted" className="mt-0.5">
-                  {workout.sub}
-                </Text>
-              )}
-
-              <div className="flex items-center gap-2 mt-2">
-                {workout.kcal && (
-                  <span className="text-[11px] text-[#666666]">{workout.kcal} kcal</span>
-                )}
-                {workout.tags?.map((tag) => (
-                  <Badge key={tag} label={tag} />
-                ))}
-              </div>
-
-              {/* Warmup */}
-              {workout.has_warmup && (
-                <WarmupSection
+              {/* LISS day */}
+              {dayType === 'liss' && (
+                <LissDay
+                  workout={workout}
+                  dayData={dayData}
                   dateStr={dateStr}
                   phase={phase}
-                  warmupLogs={warmupLogs}
-                  warmupItems={warmupItems}
+                  totalWeek={totalWeek}
+                  checklistLogs={checklistLogs}
+                  cooldownItems={cooldownItems}
                   onUpdate={syncRefetch}
                   readOnly={isFutureDate}
                 />
               )}
 
-              {/* Exercises */}
-              <div className="mt-4">
-                <SectionLabel label="Exercises" className="mb-2" />
-              </div>
-              {displayExercises.length > 0 ? (
-                <div className="flex flex-col gap-3">
-                  {displayExercises.map((ex, idx) => (
-                    <ExerciseCard
-                      key={`${ex.n}-${idx}`}
-                      exercise={ex}
-                      exerciseIndex={idx}
-                      exerciseLogs={logsByExercise[ex.n] ?? []}
-                      previousBest={previousBests[ex.n]}
-                      isExpanded={expandedExercise === idx}
-                      onToggleExpand={() =>
-                        setExpandedExercise(expandedExercise === idx ? null : idx)
-                      }
-                      onTapSet={isFutureDate ? () => {} : handleTapSet}
+              {/* Workout day */}
+              {dayType === 'workout' && (
+                <>
+                  <p className="text-[11px] text-[#666666] uppercase tracking-[2px] pt-2.5 mb-1">
+                    {(() => {
+                      const d = new Date(dateStr + 'T00:00:00')
+                      return `${d.getDate()} ${MONTHS[d.getMonth()]}`
+                    })()}{' '}
+                    · WEEK {totalWeek} · PHASE {phase}
+                  </p>
+
+                  {isFutureDate && (
+                    <span
+                      className="text-[11px] tracking-[0.08em] uppercase text-[#555555] px-3 py-1 inline-flex mb-2"
+                      style={{ background: '#111111', border: '1px solid #1a1a1a' }}
+                    >
+                      UPCOMING ·{' '}
+                      {(() => {
+                        const d = new Date(dateStr + 'T00:00:00')
+                        return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`
+                      })()}
+                    </span>
+                  )}
+
+                  <div className="flex items-baseline justify-between">
+                    <Text variant="pageTitle">{workout.title}</Text>
+                    {workout.dur && (
+                      <span className="font-['Bebas_Neue'] text-[20px] text-[#ff4520] shrink-0 ml-3">
+                        {workout.dur}&prime;
+                      </span>
+                    )}
+                  </div>
+
+                  {workout.sub && (
+                    <Text variant="bodyMuted" className="mt-0.5">
+                      {workout.sub}
+                    </Text>
+                  )}
+
+                  <div className="flex items-center gap-2 mt-2">
+                    {workout.kcal && (
+                      <span className="text-[11px] text-[#666666]">{workout.kcal} kcal</span>
+                    )}
+                    {workout.tags?.map((tag) => (
+                      <Badge key={tag} label={tag} />
+                    ))}
+                  </div>
+
+                  {/* Warmup */}
+                  {workout.has_warmup && (
+                    <WarmupSection
+                      dateStr={dateStr}
+                      phase={phase}
+                      warmupLogs={warmupLogs}
+                      warmupItems={warmupItems}
+                      onUpdate={syncRefetch}
+                      readOnly={isFutureDate}
                     />
-                  ))}
-                </div>
-              ) : (
-                <div
-                  className="py-6 text-center"
-                  style={{
-                    background: '#141414',
-                    border: '1px solid #2a2a2a',
-                    borderRadius: '16px',
-                  }}
-                >
-                  <Text variant="bodyMuted">No exercises configured for this day.</Text>
-                  <Text variant="caption" className="mt-1">
-                    Seed the programme_exercises table to populate.
+                  )}
+
+                  {/* Exercises */}
+                  <div className="mt-4">
+                    <SectionLabel label="Exercises" className="mb-2" />
+                  </div>
+                  {displayExercises.length > 0 ? (
+                    <div className="flex flex-col gap-3">
+                      {displayExercises.map((ex, idx) => (
+                        <ExerciseCard
+                          key={`${ex.n}-${idx}`}
+                          exercise={ex}
+                          exerciseIndex={idx}
+                          exerciseLogs={logsByExercise[ex.n] ?? []}
+                          previousBest={previousBests[ex.n]}
+                          isExpanded={expandedExercise === idx}
+                          onToggleExpand={() =>
+                            setExpandedExercise(expandedExercise === idx ? null : idx)
+                          }
+                          onTapSet={isFutureDate ? () => {} : handleTapSet}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div
+                      className="py-6 text-center"
+                      style={{
+                        background: '#141414',
+                        border: '1px solid #2a2a2a',
+                        borderRadius: '16px',
+                      }}
+                    >
+                      <Text variant="bodyMuted">No exercises configured for this day.</Text>
+                      <Text variant="caption" className="mt-1">
+                        Seed the programme_exercises table to populate.
+                      </Text>
+                    </div>
+                  )}
+
+                  {/* Finisher */}
+                  {workout.fin && !isFutureDate && (
+                    <FinisherBlock
+                      fin={workout.fin}
+                      dateStr={dateStr}
+                      checklistLogs={checklistLogs}
+                      onUpdate={syncRefetch}
+                    />
+                  )}
+
+                  {/* Cooldown */}
+                  {displayCooldownItems.length > 0 && (
+                    <CooldownSection
+                      items={displayCooldownItems}
+                      dateStr={dateStr}
+                      checklistLogs={checklistLogs}
+                      onUpdate={syncRefetch}
+                      readOnly={isFutureDate}
+                    />
+                  )}
+                </>
+              )}
+
+              {/* No data */}
+              {dayType === 'none' && (
+                <div className="mt-8 pt-2.5">
+                  <Text variant="pageTitle" className="text-[#2a2a2a]">
+                    NO DATA
+                  </Text>
+                  <Text variant="bodyMuted" className="mt-2">
+                    No workout defined for this day in phase {phase}.
                   </Text>
                 </div>
               )}
-
-              {/* Finisher */}
-              {workout.fin && !isFutureDate && (
-                <FinisherBlock
-                  fin={workout.fin}
-                  dateStr={dateStr}
-                  checklistLogs={checklistLogs}
-                  onUpdate={syncRefetch}
-                />
-              )}
-
-              {/* Cooldown */}
-              {displayCooldownItems.length > 0 && (
-                <CooldownSection
-                  items={displayCooldownItems}
-                  dateStr={dateStr}
-                  checklistLogs={checklistLogs}
-                  onUpdate={syncRefetch}
-                  readOnly={isFutureDate}
-                />
-              )}
             </>
-          )}
-
-          {/* No data */}
-          {dayType === 'none' && (
-            <div className="mt-8 pt-2.5">
-              <Text variant="pageTitle" className="text-[#2a2a2a]">
-                NO DATA
-              </Text>
-              <Text variant="bodyMuted" className="mt-2">
-                No workout defined for this day in phase {phase}.
-              </Text>
-            </div>
           )}
         </div>
       </div>

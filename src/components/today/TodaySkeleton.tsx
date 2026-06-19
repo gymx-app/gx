@@ -87,4 +87,41 @@ const TodaySkeleton = memo(function TodaySkeleton() {
   )
 })
 
+export const DayContentSkeleton = memo(function DayContentSkeleton() {
+  return (
+    <div className="pt-2.5">
+      <Skeleton width={180} height={10} />
+      <Skeleton width={220} height={32} className="mt-3" />
+      <Skeleton width={160} height={13} className="mt-2" />
+      <div className="flex gap-2 mt-3">
+        <Skeleton width={52} height={20} />
+        <Skeleton width={44} height={20} />
+      </div>
+      <Skeleton width={72} height={10} className="mt-5" />
+      <div className="flex flex-col gap-3 mt-3">
+        {[160, 128, 144].map((w, i) => (
+          <div
+            key={i}
+            style={{
+              background: '#141414',
+              border: '1px solid #2a2a2a',
+              borderRadius: '16px',
+              padding: '11px 16px',
+            }}
+          >
+            <div className="flex items-center gap-[10px]">
+              <Skeleton width={34} height={34} />
+              <div className="flex-1">
+                <Skeleton width={w} height={14} />
+                <Skeleton width={100} height={11} className="mt-1.5" />
+              </div>
+              <Skeleton width={16} height={16} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+})
+
 export default TodaySkeleton
