@@ -185,17 +185,17 @@ const PhaseCard = memo(function PhaseCard({
 
       {/* ── Week strip — sticky below TopBar ── */}
       <div className="px-4 mt-3 sticky top-0 z-40 bg-[#0a0a0a] pb-2 border-b border-[#222222]">
-        <div className="flex items-center gap-[8px] pb-[10px]">
+        <div className="flex items-center gap-[8px] pb-[10px] px-1">
           <button
             onClick={onPrevWeek}
             disabled={!canGoBack}
             aria-label="Previous week"
-            className={`w-[44px] h-[44px] flex items-center justify-center rounded-[12px] shrink-0 transition-all duration-150 ${
+            className={`w-[40px] h-[40px] flex items-center justify-center rounded-[12px] shrink-0 transition-all duration-150 ${
               canGoBack
                 ? 'bg-[#1c1c1c] active:bg-[#242424] active:scale-[0.93]'
                 : 'pointer-events-none cursor-default'
             }`}
-            style={{ border: `1.5px solid ${colors.border}` }}
+            style={{ border: `1.5px solid ${colors.border}`, minWidth: 44, minHeight: 44 }}
           >
             <ChevronLeft size={18} strokeWidth={1.5} color={canGoBack ? '#f0ede8' : '#1a1a1a'} />
           </button>
@@ -218,8 +218,8 @@ const PhaseCard = memo(function PhaseCard({
           <button
             onClick={onNextWeek}
             aria-label="Next week"
-            className="w-[44px] h-[44px] flex items-center justify-center rounded-[12px] shrink-0 transition-all duration-150 bg-[#1c1c1c] active:bg-[#242424] active:scale-[0.93]"
-            style={{ border: `1.5px solid ${colors.border}` }}
+            className="w-[40px] h-[40px] flex items-center justify-center rounded-[12px] shrink-0 transition-all duration-150 bg-[#1c1c1c] active:bg-[#242424] active:scale-[0.93]"
+            style={{ border: `1.5px solid ${colors.border}`, minWidth: 44, minHeight: 44 }}
           >
             <ChevronRight size={18} strokeWidth={1.5} color="#f0ede8" />
           </button>

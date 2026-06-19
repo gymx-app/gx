@@ -612,6 +612,14 @@ export default function Today() {
           {/* Workout day */}
           {dayType === 'workout' && (
             <>
+              <p className="text-[11px] text-[#666666] uppercase tracking-[2px] pt-2.5 mb-1">
+                {(() => {
+                  const d = new Date(dateStr + 'T00:00:00')
+                  return `${d.getDate()} ${MONTHS[d.getMonth()]}`
+                })()}{' '}
+                · WEEK {totalWeek} · PHASE {phase}
+              </p>
+
               {isFutureDate && (
                 <span
                   className="text-[11px] tracking-[0.08em] uppercase text-[#555555] px-3 py-1 inline-flex mb-2"
