@@ -423,7 +423,10 @@ export default function Today() {
   }
 
   const scrollRef = useRef(null)
-  const { pullProgress, ptrState } = usePullToRefresh(scrollRef, syncRefetch)
+  const { pullProgress, pullDistance, ptrState, transitioning } = usePullToRefresh(
+    scrollRef,
+    syncRefetch
+  )
   const navigateDayRef = useRef(navigateDay)
   const activeSheetRef = useRef(activeSheet)
   const screenStateRef = useRef(screenState)
@@ -449,6 +452,7 @@ export default function Today() {
 
     function onTouchMove(e) {
       const ref = touchRef.current
+      if (!ref.startTime) return
       const t = e.touches[0]
       const dx = t.clientX - ref.startX
       const dy = t.clientY - ref.startY
@@ -550,8 +554,24 @@ export default function Today() {
       <TodayTopBar phase={phase} totalWeek={totalWeek} />
 
       <div className="flex-1 relative overflow-hidden">
-        <PullToRefreshIndicator pullProgress={pullProgress} ptrState={ptrState} />
-        <div ref={scrollRef} className="w-full h-full overflow-y-auto pb-8">
+        <PullToRefreshIndicator
+          pullProgress={pullProgress}
+          pullDistance={pullDistance}
+          ptrState={ptrState}
+        />
+        <div
+          ref={scrollRef}
+          className="w-full h-full overflow-y-auto pb-8"
+          style={{
+            touchAction: 'pan-y',
+            transform: pullDistance > 0 ? `translateY(${pullDistance}px)` : 'translateY(0)',
+            transition: transitioning
+              ? 'transform 320ms cubic-bezier(0.25, 1, 0.5, 1)'
+              : pullDistance > 0
+                ? 'none'
+                : undefined,
+          }}
+        >
           {/* Phase card + day pills */}
           <PhaseCard
             phase={phase}

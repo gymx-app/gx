@@ -3,27 +3,38 @@ import { Check } from 'lucide-react'
 
 interface Props {
   pullProgress: number
+  pullDistance: number
   ptrState: 'idle' | 'pulling' | 'triggered' | 'refreshing' | 'done'
 }
 
 const PullToRefreshIndicator = memo(function PullToRefreshIndicator({
   pullProgress,
+  pullDistance,
   ptrState,
 }: Props) {
   if (ptrState === 'idle' && pullProgress === 0) return null
 
+  const visible = ptrState !== 'idle'
+  const yOffset =
+    ptrState === 'refreshing' || ptrState === 'done' ? 8 : Math.min(pullDistance - 40, 8)
+
   return (
     <div
-      className="absolute left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-[6px]"
+      className="fixed left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-[6px]"
       style={{
-        top: -40,
+        top: 52,
         width: 120,
         height: 32,
         background: '#141414',
         border: '1px solid #2a2a2a',
         borderRadius: 20,
-        opacity: ptrState === 'idle' ? 0 : 1,
-        transition: 'opacity 150ms ease',
+        opacity: visible ? 1 : 0,
+        transform: `translateX(-50%) translateY(${yOffset}px)`,
+        transition:
+          ptrState === 'pulling' || ptrState === 'triggered'
+            ? 'opacity 150ms ease'
+            : 'opacity 150ms ease, transform 320ms cubic-bezier(0.25, 1, 0.5, 1)',
+        pointerEvents: 'none',
       }}
     >
       <svg width={18} height={18} viewBox="0 0 18 18">
