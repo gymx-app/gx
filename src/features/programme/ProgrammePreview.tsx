@@ -2,8 +2,8 @@ import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
 import { useSaveProgramme } from '../../hooks/useSaveProgramme'
-import { colors } from '../../styles/tokens'
-import { ChevronRight, ChevronDown } from 'lucide-react'
+import { colors, radius } from '../../styles/tokens'
+import { ChevronDown } from 'lucide-react'
 import type { GenerateResult } from './GenerateProgrammeView'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -14,19 +14,39 @@ interface ProgrammePreviewProps {
   onRegenerate: () => void
 }
 
+const PHASE_ACCENT: Record<string, string> = {
+  foundation: colors.blue,
+  accumulation: colors.orange,
+  intensification: colors.accent,
+  realization: colors.purple,
+  recovery: colors.success,
+  maintenance: colors.muted,
+}
+
+function phaseColor(phase: AnyData): string {
+  const t = (phase.phase_type ?? phase.name ?? '').toLowerCase()
+  for (const key of Object.keys(PHASE_ACCENT)) {
+    if (t.includes(key)) return PHASE_ACCENT[key] as string
+  }
+  return colors.accent
+}
+
 export default function ProgrammePreview({ result, onRegenerate }: ProgrammePreviewProps) {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { save, saving, error: saveError } = useSaveProgramme()
 
   const odinResult = result.odinResult as AnyData
-  // V2 response: odinResult.programme.phases
   const programme: AnyData = odinResult?.programme ?? {}
   const phases: AnyData[] = programme?.phases ?? []
   const programmeName: string = programme?.programme?.name ?? programme?.name ?? 'Your Programme'
+  const totalWeeks: number = phases.reduce(
+    (s: number, p: AnyData) => s + (p.weeks_count ?? p.weeks?.length ?? 0),
+    0
+  )
   const summary: string =
     odinResult?.rationale?.combined?.[0] ?? programme?.programme?.goal_description ?? ''
-  const subtitle = summary.length > 120 ? summary.slice(0, 120) + '…' : summary
+  const subtitle = summary.length > 140 ? summary.slice(0, 140) + '…' : summary
 
   const [openPhase, setOpenPhase] = useState<number | null>(null)
   const [openWeek, setOpenWeek] = useState<number | null>(null)
@@ -63,177 +83,342 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
 
   return (
     <div className="fixed inset-0 flex flex-col" style={{ background: colors.bg, zIndex: 50 }}>
-      {/* ── Header ── */}
+      {/* ── Hero header ── */}
       <div
-        className="flex-shrink-0 px-4 pt-[env(safe-area-inset-top,0px)] pb-3"
+        className="flex-shrink-0 px-4 pt-[env(safe-area-inset-top,0px)]"
         style={{ background: colors.bg, borderBottom: `1px solid ${colors.border}` }}
       >
-        <div className="pt-3">
-          <h1 className="font-['Bebas_Neue'] text-[24px] tracking-[2px] text-white uppercase">
+        <div className="pt-4 pb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span
+              className="text-[10px] font-['DM_Sans'] font-bold tracking-[2px] uppercase px-2 py-1"
+              style={{
+                background: colors.accentMuted,
+                color: colors.accent,
+                borderRadius: radius.pill,
+              }}
+            >
+              AI Generated
+            </span>
+            {totalWeeks > 0 && (
+              <span
+                className="text-[10px] font-['DM_Sans'] font-bold tracking-[2px] uppercase px-2 py-1"
+                style={{
+                  background: colors.surface2,
+                  color: colors.textSecondary,
+                  borderRadius: radius.pill,
+                }}
+              >
+                {totalWeeks} weeks
+              </span>
+            )}
+          </div>
+          <h1 className="font-['Bebas_Neue'] text-[28px] tracking-[2px] text-white uppercase leading-none">
             {programmeName}
           </h1>
           {subtitle && (
-            <p className="text-[12px] font-['DM_Sans'] text-[#999] mt-1 line-clamp-2">{subtitle}</p>
+            <p
+              className="text-[13px] font-['DM_Sans'] mt-1.5 leading-relaxed"
+              style={{ color: colors.muted }}
+            >
+              {subtitle}
+            </p>
           )}
         </div>
       </div>
 
       {/* ── Scrollable body ── */}
-      <div className="flex-1 overflow-y-auto pb-[120px]">
+      <div className="flex-1 overflow-y-auto pb-[120px] px-4 pt-3 space-y-3">
         {phases.length === 0 && (
-          <p className="px-4 pt-8 text-[12px] font-['DM_Sans'] text-[#666]">No data</p>
+          <p
+            className="pt-8 text-[13px] font-['DM_Sans'] text-center"
+            style={{ color: colors.muted }}
+          >
+            No programme data
+          </p>
         )}
 
-        {phases.map((phase: AnyData, pi: number) => (
-          <div key={pi}>
-            {/* Phase row */}
-            <button
-              onClick={() => togglePhase(pi)}
-              className="w-full flex items-center justify-between py-3 px-4 active:opacity-70"
+        {phases.map((phase: AnyData, pi: number) => {
+          const accent = phaseColor(phase)
+          const isOpen = openPhase === pi
+
+          return (
+            <div
+              key={pi}
               style={{
-                background: 'none',
-                border: 'none',
-                borderBottom: `1px solid ${colors.border}`,
-                cursor: 'pointer',
+                background: colors.surface,
+                border: `1px solid ${isOpen ? accent : colors.border}`,
+                borderRadius: radius.card,
+                overflow: 'hidden',
+                transition: 'border-color 0.2s',
               }}
             >
-              <div className="flex items-baseline gap-2 text-left">
-                <span className="font-['Bebas_Neue'] text-[18px] text-white">
-                  {phase.name ?? `Phase ${pi + 1}`}
-                </span>
-                {phase.weeks_count != null && (
-                  <span className="text-[13px] font-['DM_Sans'] text-[#888]">
-                    ({phase.weeks_count} weeks)
+              {/* Phase header */}
+              <button
+                onClick={() => togglePhase(pi)}
+                className="w-full flex items-center gap-3 p-4 active:opacity-70"
+                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                {/* Phase number pill */}
+                <div
+                  className="flex-shrink-0 w-8 h-8 flex items-center justify-center"
+                  style={{ background: `${accent}22`, borderRadius: '50%' }}
+                >
+                  <span
+                    className="font-['Bebas_Neue'] text-[15px] leading-none"
+                    style={{ color: accent }}
+                  >
+                    {pi + 1}
                   </span>
-                )}
-              </div>
-              {openPhase === pi ? (
-                <ChevronDown size={18} color="#888" />
-              ) : (
-                <ChevronRight size={18} color="#888" />
-              )}
-            </button>
+                </div>
 
-            {openPhase === pi && (
-              <div>
-                {(!phase.weeks || phase.weeks.length === 0) && (
-                  <p className="pl-8 py-2 text-[12px] font-['DM_Sans'] text-[#666]">No data</p>
-                )}
-                {(phase.weeks ?? []).map((week: AnyData, wi: number) => (
-                  <div key={wi}>
-                    {/* Week row */}
-                    <button
-                      onClick={() => toggleWeek(wi)}
-                      className="w-full flex items-center justify-between py-2.5 pl-8 pr-4 active:opacity-70"
+                <div className="flex-1 text-left">
+                  <p
+                    className="font-['Bebas_Neue'] text-[17px] tracking-[1px] leading-none"
+                    style={{ color: colors.text }}
+                  >
+                    {phase.name ?? `Phase ${pi + 1}`}
+                  </p>
+                  {phase.objective && (
+                    <p
+                      className="text-[12px] font-['DM_Sans'] mt-0.5"
+                      style={{ color: colors.muted }}
+                    >
+                      {phase.objective.length > 60
+                        ? phase.objective.slice(0, 60) + '…'
+                        : phase.objective}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {phase.weeks_count != null && (
+                    <span
+                      className="text-[11px] font-['DM_Sans'] font-medium px-2 py-0.5"
                       style={{
-                        background: 'none',
-                        border: 'none',
-                        borderBottom: `1px solid #1a1a1a`,
-                        cursor: 'pointer',
+                        background: colors.surface3,
+                        color: colors.textSecondary,
+                        borderRadius: radius.chip,
                       }}
                     >
-                      <span className="text-[14px] font-['DM_Sans'] text-[#ddd] text-left">
-                        Week {week.week_number ?? wi + 1}
-                        {week.week_type ? ` — ${week.week_type}` : ''}
-                      </span>
-                      {openWeek === wi ? (
-                        <ChevronDown size={16} color="#888" />
-                      ) : (
-                        <ChevronRight size={16} color="#888" />
-                      )}
-                    </button>
+                      {phase.weeks_count}w
+                    </span>
+                  )}
+                  <ChevronDown
+                    size={16}
+                    color={colors.muted}
+                    style={{
+                      transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+                      transition: 'transform 0.2s',
+                    }}
+                  />
+                </div>
+              </button>
 
-                    {openWeek === wi && (
-                      <div>
-                        {(!week.days || week.days.length === 0) && (
-                          <p className="pl-12 py-2 text-[12px] font-['DM_Sans'] text-[#666]">
-                            No data
-                          </p>
-                        )}
-                        {(week.days ?? []).map((day: AnyData, di: number) => (
-                          <div key={di}>
-                            {/* Day row */}
-                            <button
-                              onClick={() => toggleDay(di)}
-                              className="w-full flex items-center justify-between py-2.5 pl-12 pr-4 active:opacity-70"
+              {/* Weeks */}
+              {isOpen && (
+                <div style={{ borderTop: `1px solid ${colors.border}` }}>
+                  {(!phase.weeks || phase.weeks.length === 0) && (
+                    <p
+                      className="px-4 py-3 text-[12px] font-['DM_Sans']"
+                      style={{ color: colors.muted }}
+                    >
+                      No weeks
+                    </p>
+                  )}
+                  {(phase.weeks ?? []).map((week: AnyData, wi: number) => {
+                    const isWeekOpen = openWeek === wi
+                    const isDeload = (week.week_type ?? '').toLowerCase().includes('deload')
+
+                    return (
+                      <div
+                        key={wi}
+                        style={{
+                          borderBottom:
+                            wi < (phase.weeks?.length ?? 0) - 1
+                              ? `1px solid ${colors.borderSubtle}`
+                              : 'none',
+                        }}
+                      >
+                        <button
+                          onClick={() => toggleWeek(wi)}
+                          className="w-full flex items-center gap-3 py-3 px-4 active:opacity-70"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                        >
+                          <div
+                            className="flex-shrink-0 w-1.5 h-1.5 rounded-full"
+                            style={{ background: isDeload ? colors.warning : accent }}
+                          />
+                          <span
+                            className="flex-1 text-left text-[13px] font-['DM_Sans'] font-medium"
+                            style={{ color: colors.text }}
+                          >
+                            Week {week.week_number ?? wi + 1}
+                            {week.week_type ? (
+                              <span className="font-normal" style={{ color: colors.muted }}>
+                                {' '}
+                                — {week.week_type}
+                              </span>
+                            ) : null}
+                          </span>
+                          {week.days?.length > 0 && (
+                            <span
+                              className="text-[11px] font-['DM_Sans'] px-1.5 py-0.5"
                               style={{
-                                background: 'none',
-                                border: 'none',
-                                borderBottom: `1px solid #1a1a1a`,
-                                cursor: 'pointer',
+                                background: colors.surface3,
+                                color: colors.muted,
+                                borderRadius: radius.chip,
                               }}
                             >
-                              <span className="text-[14px] font-['DM_Sans'] text-[#ccc] text-left">
-                                {day.title ?? day.day_type ?? `Day ${di + 1}`}
-                                {day.day_of_week ? ` — ${day.day_of_week}` : ''}
-                              </span>
-                              {openDay === di ? (
-                                <ChevronDown size={16} color="#888" />
-                              ) : (
-                                <ChevronRight size={16} color="#888" />
-                              )}
-                            </button>
+                              {week.days.length}d
+                            </span>
+                          )}
+                          <ChevronDown
+                            size={14}
+                            color={colors.muted}
+                            style={{
+                              transform: isWeekOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+                              transition: 'transform 0.2s',
+                              flexShrink: 0,
+                            }}
+                          />
+                        </button>
 
-                            {openDay === di && (
-                              <div>
-                                {(!day.exercises || day.exercises.length === 0) && (
-                                  <p className="pl-16 py-2 text-[12px] font-['DM_Sans'] text-[#666]">
-                                    Rest day
-                                  </p>
-                                )}
-                                {(day.exercises ?? []).map((ex: AnyData, ei: number) => {
-                                  const firstSet = ex.sets?.[0]
-                                  const details: string[] = []
-                                  if (ex.sets?.length)
-                                    details.push(
-                                      `${ex.sets.length}×${firstSet?.target_reps ?? '?'}`
-                                    )
-                                  if (firstSet?.target_rpe != null)
-                                    details.push(`RPE ${firstSet.target_rpe}`)
-                                  if (firstSet?.rest_seconds != null)
-                                    details.push(`${firstSet.rest_seconds}s rest`)
+                        {/* Days */}
+                        {isWeekOpen && (
+                          <div className="pb-2" style={{ background: colors.bgSubtle }}>
+                            {(week.days ?? []).map((day: AnyData, di: number) => {
+                              const isDayOpen = openDay === di
+                              const exCount = day.exercises?.length ?? 0
+                              const isRest = exCount === 0
 
-                                  return (
-                                    <div
-                                      key={ei}
-                                      className="pl-16 pr-4 py-2"
-                                      style={{ borderBottom: `1px solid #111` }}
+                              return (
+                                <div key={di}>
+                                  <button
+                                    onClick={() => toggleDay(di)}
+                                    className="w-full flex items-center gap-3 py-2.5 px-5 active:opacity-70"
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    <span
+                                      className="flex-shrink-0 text-[10px] font-['DM_Sans'] font-bold tracking-[1px] w-8 text-center py-0.5"
+                                      style={{
+                                        background: isRest ? colors.surface3 : `${accent}22`,
+                                        color: isRest ? colors.muted : accent,
+                                        borderRadius: 4,
+                                      }}
                                     >
-                                      <p className="text-[14px] font-['DM_Sans'] font-medium text-white">
-                                        {ex.exercise_name}
-                                      </p>
-                                      {details.length > 0 && (
-                                        <p className="text-[12px] font-['DM_Sans'] text-[#888] mt-0.5">
-                                          {details.join(' · ')}
-                                        </p>
-                                      )}
-                                      {ex.coaching_cues?.[0] && (
-                                        <p className="text-[12px] font-['DM_Sans'] text-[#666] italic mt-0.5">
-                                          {ex.coaching_cues[0]}
-                                        </p>
-                                      )}
+                                      {day.day_of_week?.slice(0, 3) ?? `D${di + 1}`}
+                                    </span>
+                                    <span
+                                      className="flex-1 text-left text-[13px] font-['DM_Sans']"
+                                      style={{ color: isRest ? colors.muted : colors.text }}
+                                    >
+                                      {day.title ??
+                                        day.day_type ??
+                                        (isRest ? 'Rest' : `Day ${di + 1}`)}
+                                    </span>
+                                    {!isRest && (
+                                      <span
+                                        className="text-[11px] font-['DM_Sans']"
+                                        style={{ color: colors.muted }}
+                                      >
+                                        {exCount} ex
+                                      </span>
+                                    )}
+                                    {!isRest && (
+                                      <ChevronDown
+                                        size={13}
+                                        color={colors.muted}
+                                        style={{
+                                          transform: isDayOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                          transition: 'transform 0.2s',
+                                          flexShrink: 0,
+                                        }}
+                                      />
+                                    )}
+                                  </button>
+
+                                  {/* Exercises */}
+                                  {isDayOpen && !isRest && (
+                                    <div className="pb-1">
+                                      {(day.exercises ?? []).map((ex: AnyData, ei: number) => {
+                                        const firstSet = ex.sets?.[0]
+                                        const setsReps = ex.sets?.length
+                                          ? `${ex.sets.length}×${firstSet?.target_reps ?? '?'}`
+                                          : null
+                                        const rpe =
+                                          firstSet?.target_rpe != null
+                                            ? `RPE ${firstSet.target_rpe}`
+                                            : null
+                                        const rest =
+                                          firstSet?.rest_seconds != null
+                                            ? `${firstSet.rest_seconds}s`
+                                            : null
+
+                                        return (
+                                          <div
+                                            key={ei}
+                                            className="flex items-start gap-3 py-2 px-7"
+                                            style={{
+                                              borderBottom:
+                                                ei < (day.exercises?.length ?? 0) - 1
+                                                  ? `1px solid ${colors.borderSubtle}`
+                                                  : 'none',
+                                            }}
+                                          >
+                                            <span
+                                              className="flex-shrink-0 text-[10px] font-['DM_Sans'] font-bold mt-0.5 w-4 text-right"
+                                              style={{ color: colors.muted }}
+                                            >
+                                              {ei + 1}
+                                            </span>
+                                            <div className="flex-1 min-w-0">
+                                              <p
+                                                className="text-[13px] font-['DM_Sans'] font-medium leading-snug"
+                                                style={{ color: colors.text }}
+                                              >
+                                                {ex.exercise_name}
+                                              </p>
+                                              {(setsReps ?? rpe ?? rest) && (
+                                                <p
+                                                  className="text-[11px] font-['DM_Sans'] mt-0.5"
+                                                  style={{ color: colors.muted }}
+                                                >
+                                                  {[setsReps, rpe, rest]
+                                                    .filter(Boolean)
+                                                    .join(' · ')}
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )
+                                      })}
                                     </div>
-                                  )
-                                })}
-                              </div>
-                            )}
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
-                        ))}
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {/* ── Footer ── */}
       <div
-        className="flex-shrink-0 flex gap-3 p-4"
+        className="flex-shrink-0 flex gap-3 px-4 pt-3"
         style={{
-          background: '#0c0c0c',
+          background: colors.bg,
           borderTop: `1px solid ${colors.border}`,
           paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
         }}
@@ -241,13 +426,13 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
         <button
           onClick={onRegenerate}
           disabled={saving}
-          className="py-3 text-[14px] font-['DM_Sans'] font-medium active:opacity-60"
+          className="py-3.5 text-[14px] font-['DM_Sans'] font-medium active:opacity-60"
           style={{
-            width: '40%',
-            borderRadius: 12,
-            border: '1px solid #555',
+            width: '38%',
+            borderRadius: radius.button,
+            border: `1px solid ${colors.border}`,
             background: 'none',
-            color: '#ccc',
+            color: colors.textSecondary,
             cursor: saving ? 'default' : 'pointer',
             opacity: saving ? 0.4 : 1,
           }}
@@ -257,15 +442,14 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
         <button
           onClick={() => void handleActivate()}
           disabled={saving || !user}
-          className="py-3 text-[14px] font-['DM_Sans'] font-bold active:scale-[0.98] transition-transform"
+          className="py-3.5 text-[14px] font-['DM_Sans'] font-bold active:scale-[0.98] transition-transform"
           style={{
-            width: '60%',
-            borderRadius: 12,
+            width: '62%',
+            borderRadius: radius.button,
             border: 'none',
-            background: '#fff',
-            color: '#000',
+            background: saving ? colors.surface3 : colors.accent,
+            color: saving ? colors.muted : '#fff',
             cursor: saving ? 'default' : 'pointer',
-            opacity: saving ? 0.7 : 1,
           }}
         >
           {saving ? 'Saving…' : 'ACTIVATE PROGRAMME'}
@@ -276,8 +460,8 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
         <div
           className="absolute left-4 right-4 p-3 text-[13px] font-['DM_Sans']"
           style={{
-            bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
-            background: 'rgba(239,68,68,0.15)',
+            bottom: 'calc(88px + env(safe-area-inset-bottom, 0px))',
+            background: 'rgba(239,68,68,0.12)',
             border: `1px solid ${colors.error}`,
             borderRadius: 10,
             color: colors.error,
