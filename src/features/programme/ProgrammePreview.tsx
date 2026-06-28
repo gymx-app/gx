@@ -82,10 +82,10 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
   }, [user, result, save, navigate])
 
   return (
-    <div className="fixed inset-0 flex flex-col" style={{ background: colors.bg, zIndex: 50 }}>
+    <div className="flex-1 flex flex-col" style={{ background: colors.bg }}>
       {/* ── Hero header ── */}
       <div
-        className="flex-shrink-0 px-4 pt-[env(safe-area-inset-top,0px)]"
+        className="flex-shrink-0 px-4"
         style={{ background: colors.bg, borderBottom: `1px solid ${colors.border}` }}
       >
         <div className="pt-4 pb-4">
@@ -128,7 +128,7 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
       </div>
 
       {/* ── Scrollable body ── */}
-      <div className="flex-1 overflow-y-auto pb-[120px] px-4 pt-3 space-y-3">
+      <div className="flex-1 overflow-y-auto pb-4 px-4 pt-3 space-y-3">
         {phases.length === 0 && (
           <p
             className="pt-8 text-[13px] font-['DM_Sans'] text-center"
