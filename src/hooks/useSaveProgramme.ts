@@ -1,0 +1,120 @@
+import { useState, useCallback } from 'react'
+import { supabase } from '../lib/supabase'
+import { hydrateProgramme } from '../services/programmeHydrator'
+
+interface SaveParams {
+  odinResult: Record<string, unknown>
+  userId: string
+  goal: string
+  equipment: string
+  startDate: string
+}
+
+interface UseSaveProgrammeReturn {
+  save: (params: SaveParams) => Promise<{ success: boolean }>
+  saving: boolean
+  error: string | null
+}
+
+const VALID_GOALS = [
+  'fat_loss',
+  'muscle_gain',
+  'body_recomposition',
+  'strength',
+  'endurance',
+  'maintenance',
+  'general_fitness',
+]
+const VALID_EQUIP = ['full_gym', 'home_gym', 'minimal', 'bodyweight_only', 'dumbbells_only']
+
+export function useSaveProgramme(): UseSaveProgrammeReturn {
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const save = useCallback(async (params: SaveParams): Promise<{ success: boolean }> => {
+    const { odinResult, userId, goal, equipment, startDate } = params
+    setSaving(true)
+    setError(null)
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = (odinResult as any).data
+      const programme = data?.programme
+      const phases = programme?.phases ?? []
+
+      const goalType = VALID_GOALS.includes(goal) ? goal : 'general_fitness'
+      const equipType = VALID_EQUIP.includes(equipment) ? equipment : 'full_gym'
+
+      // 1. Deactivate existing active programmes
+      await supabase
+        .from('programmes')
+        .update({ is_active: false })
+        .eq('user_id', userId)
+        .eq('is_active', true)
+
+      // 2. Insert new programme row
+      const totalWeeks = phases.reduce(
+        (sum: number, p: { duration_weeks?: number }) => sum + (p.duration_weeks ?? 0),
+        0
+      )
+
+      const { data: inserted, error: insertError } = await supabase
+        .from('programmes')
+        .insert({
+          user_id: userId,
+          name: programme?.name ?? 'My Programme',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          goal_type: goalType as any,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          equipment: equipType as any,
+          created_by_ai: true,
+          ai_model: data?.planner_version ?? 'ai_agent_v1',
+          ai_prompt: JSON.stringify(odinResult),
+          programme_data: data,
+          is_active: true,
+          available_days: data?.athlete?.available_days_per_week ?? null,
+          target_weeks: totalWeeks ?? null,
+          started_at: startDate,
+        })
+        .select('id')
+        .single()
+
+      if (insertError || !inserted) {
+        setError(insertError?.message ?? 'Failed to create programme')
+        setSaving(false)
+        return { success: false }
+      }
+
+      // 3. Hydrate child tables (phases → days → exercises)
+      const hydrateResult = await hydrateProgramme(inserted.id, data, userId)
+      if (!hydrateResult.success) {
+        setError(hydrateResult.error ?? 'Failed to populate programme structure')
+        setSaving(false)
+        return { success: false }
+      }
+
+      // 4. Update programme_config with new phase_weeks and start_date
+      const phaseWeeks = phases.map((p: { duration_weeks?: number }) => p.duration_weeks ?? 4)
+      if (phaseWeeks.length === 0) phaseWeeks.push(4)
+
+      await supabase
+        .from('programme_config')
+        .update({
+          programme_id: inserted.id,
+          start_date: startDate,
+          phase_weeks: phaseWeeks,
+        })
+        .eq('user_id', userId)
+
+      setSaving(false)
+      return { success: true }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to save programme'
+      setError(msg)
+      setSaving(false)
+      return { success: false }
+    }
+  }, [])
+
+  return { save, saving, error }
+}

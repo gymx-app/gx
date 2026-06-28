@@ -1,8 +1,9 @@
-import { useState, useEffect, lazy, Suspense, type ComponentType } from 'react'
+import { useState, useEffect, lazy, Suspense, type ComponentType, type ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import { LoadingProvider } from './hooks/useLoading'
 import { ToastProvider } from './hooks/useToast'
+import { useProfileCompletion } from './hooks/useProfileCompletion'
 import ProtectedRoute from './auth/ProtectedRoute'
 import ErrorBoundary from './components/ErrorBoundary'
 import SplashScreen from './components/SplashScreen'
@@ -37,6 +38,32 @@ const Today = lazyWithRetry(() => import('./pages/Today'))
 const Progress = lazyWithRetry(() => import('./pages/Progress'))
 const Program = lazyWithRetry(() => import('./pages/Program'))
 const Account = lazyWithRetry(() => import('./pages/Account'))
+const OnboardingWizard = lazyWithRetry(() => import('./features/onboarding/OnboardingWizard'))
+
+function OnboardingGate({ children }: { children: ReactNode }) {
+  const { profileComplete, healthComplete, loading } = useProfileCompletion()
+
+  if (loading) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: '#0a0a0a' }}
+      >
+        <div className="w-8 h-8 border-2 border-[#ff4520] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!profileComplete) {
+    return <Navigate to="/onboarding" replace />
+  }
+
+  if (!healthComplete) {
+    return <Navigate to="/onboarding?step=2" replace />
+  }
+
+  return children
+}
 
 function AppRoutes() {
   const { user, loading } = useAuth()
@@ -59,17 +86,27 @@ function AppRoutes() {
         <Routes>
           <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
           <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <OnboardingWizard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/*"
             element={
               <ProtectedRoute>
-                <AppLayout
-                  tabs={[
-                    { path: '/', element: <Today /> },
-                    { path: '/program', element: <Program /> },
-                    { path: '/progress', element: <Progress /> },
-                    { path: '/account', element: <Account /> },
-                  ]}
-                />
+                <OnboardingGate>
+                  <AppLayout
+                    tabs={[
+                      { path: '/', element: <Today /> },
+                      { path: '/program', element: <Program /> },
+                      { path: '/progress', element: <Progress /> },
+                      { path: '/account', element: <Account /> },
+                    ]}
+                  />
+                </OnboardingGate>
               </ProtectedRoute>
             }
           />

@@ -702,6 +702,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          programme_data: Record<string, unknown> | null
           start_weight_kg: number | null
           started_at: string | null
           target_weeks: number | null
@@ -723,6 +724,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          programme_data?: Record<string, unknown> | null
           start_weight_kg?: number | null
           started_at?: string | null
           target_weeks?: number | null
@@ -744,6 +746,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          programme_data?: Record<string, unknown> | null
           start_weight_kg?: number | null
           started_at?: string | null
           target_weeks?: number | null
@@ -791,6 +794,45 @@ export type Database = {
           severity?: Database['public']['Enums']['condition_severity']
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_health: {
+        Row: {
+          id: string
+          user_id: string
+          fitness_level: string | null
+          goal: string | null
+          available_days_per_week: number | null
+          session_duration_min: number | null
+          equipment: string | null
+          injuries: string[] | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          fitness_level?: string | null
+          goal?: string | null
+          available_days_per_week?: number | null
+          session_duration_min?: number | null
+          equipment?: string | null
+          injuries?: string[] | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          fitness_level?: string | null
+          goal?: string | null
+          available_days_per_week?: number | null
+          session_duration_min?: number | null
+          equipment?: string | null
+          injuries?: string[] | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1064,7 +1106,7 @@ export type Database = {
         | 'vegan'
         | 'pescatarian'
         | 'other'
-      equipment_type: 'full_gym' | 'home_gym' | 'minimal' | 'bodyweight_only'
+      equipment_type: 'full_gym' | 'home_gym' | 'minimal' | 'bodyweight_only' | 'dumbbells_only'
       fitness_level: 'beginner' | 'intermediate' | 'advanced'
       gender_type: 'male' | 'female' | 'other' | 'prefer_not_to_say'
       goal_type:
@@ -1238,7 +1280,7 @@ export const Constants = {
         'pescatarian',
         'other',
       ],
-      equipment_type: ['full_gym', 'home_gym', 'minimal', 'bodyweight_only'],
+      equipment_type: ['full_gym', 'home_gym', 'minimal', 'bodyweight_only', 'dumbbells_only'],
       fitness_level: ['beginner', 'intermediate', 'advanced'],
       gender_type: ['male', 'female', 'other', 'prefer_not_to_say'],
       goal_type: [
