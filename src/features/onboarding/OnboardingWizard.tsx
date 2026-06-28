@@ -10,10 +10,21 @@ import { ChevronLeft, X, Loader2 } from 'lucide-react'
 const ftInToCm = (ft: number, inches: number) => Math.round(ft * 30.48 + inches * 2.54)
 const lbsToKg = (lbs: number) => Math.round((lbs / 2.205) * 10) / 10
 
+function calcAge(dob: string): number | null {
+  if (!dob) return null
+  const birth = new Date(dob)
+  if (isNaN(birth.getTime())) return null
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const m = today.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+  return age
+}
+
 // ── Types ──
 interface ProfileForm {
   full_name: string
-  age: string
+  dob: string
   sex: 'male' | 'female' | ''
   height_value: string
   height_ft: string
@@ -167,8 +178,8 @@ function Step1ProfileForm({
   onUpdate: <K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) => void
   attempted: boolean
 }) {
-  const ageNum = parseInt(form.age)
-  const validAge = form.age === '' || (!isNaN(ageNum) && ageNum >= 13 && ageNum <= 80)
+  const dobAge = calcAge(form.dob)
+  const validDob = form.dob === '' || (dobAge !== null && dobAge >= 13 && dobAge <= 80)
 
   return (
     <>
@@ -200,28 +211,24 @@ function Step1ProfileForm({
         )}
       </div>
 
-      {/* Age */}
+      {/* Date of Birth */}
       <div className="mb-4">
-        <SectionLabel label="AGE" className="mb-2" />
+        <SectionLabel label="DATE OF BIRTH" className="mb-2" />
         <input
-          type="number"
-          inputMode="numeric"
-          value={form.age}
-          onChange={(e) => onUpdate('age', e.target.value)}
-          placeholder="25"
-          min={13}
-          max={80}
-          className="h-[52px] w-full px-[14px] text-[#f0ede8] text-[16px] font-['DM_Sans'] placeholder:text-[#444444]"
-          style={INPUT_STYLE}
+          type="date"
+          value={form.dob}
+          onChange={(e) => onUpdate('dob', e.target.value)}
+          className="h-[52px] w-full px-[14px] text-[#f0ede8] text-[16px] font-['DM_Sans']"
+          style={{ ...INPUT_STYLE, colorScheme: 'dark' }}
         />
-        {attempted && !form.age && (
+        {attempted && !form.dob && (
           <p className="text-[11px] mt-1 pl-1" style={{ color: colors.error }}>
-            Age is required
+            Date of birth is required
           </p>
         )}
-        {form.age && !validAge && (
+        {form.dob && !validDob && (
           <p className="text-[11px] mt-1 pl-1" style={{ color: colors.error }}>
-            Must be between 13 and 80
+            Age must be between 13 and 80
           </p>
         )}
       </div>
@@ -628,7 +635,7 @@ export default function OnboardingWizard() {
 
   const [profileForm, setProfileForm] = useState<ProfileForm>({
     full_name: '',
-    age: '',
+    dob: '',
     sex: '',
     height_value: '',
     height_ft: '',
@@ -669,15 +676,15 @@ export default function OnboardingWizard() {
   )
 
   // ── Step 1 validation ──
-  const ageNum = parseInt(profileForm.age)
-  const validAge = !isNaN(ageNum) && ageNum >= 13 && ageNum <= 80
+  const dobAge = calcAge(profileForm.dob)
+  const validDob = dobAge !== null && dobAge >= 13 && dobAge <= 80
   const heightCm = getHeightCm(profileForm)
   const weightKg = getWeightKg(profileForm.weight_value, profileForm.weight_unit)
 
   const step1Valid =
     profileForm.full_name.trim().length > 0 &&
-    profileForm.age.length > 0 &&
-    validAge &&
+    profileForm.dob.length > 0 &&
+    validDob &&
     profileForm.sex !== '' &&
     heightCm > 0 &&
     weightKg > 0
@@ -708,7 +715,8 @@ export default function OnboardingWizard() {
         full_name: profileForm.full_name.trim(),
         first_name: firstName,
         last_name: lastName,
-        age: ageNum,
+        date_of_birth: profileForm.dob,
+        age: dobAge,
         gender: profileForm.sex as 'male' | 'female',
         height_cm: heightCm,
         current_weight_kg: weightKg,
@@ -728,7 +736,7 @@ export default function OnboardingWizard() {
 
     setAttempted(false)
     setStep(2)
-  }, [step1Valid, user, profileForm, ageNum, heightCm, weightKg])
+  }, [step1Valid, user, profileForm, dobAge, heightCm, weightKg])
 
   const handleStep2Complete = useCallback(async () => {
     setAttempted(true)

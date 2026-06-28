@@ -7,6 +7,17 @@ import { SectionLabel } from '../../components/ui'
 import { toDateStr } from '../../utils/programme'
 import { AlertCircle, Loader2, Pencil } from 'lucide-react'
 
+function calcAge(dob: string | null): number {
+  if (!dob) return 25
+  const birth = new Date(dob)
+  if (isNaN(birth.getTime())) return 25
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const m = today.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+  return age
+}
+
 // ── Display label maps ──
 const GOAL_LABELS: Record<string, string> = {
   fat_loss: 'Fat Loss',
@@ -31,7 +42,7 @@ const STATUS_MESSAGES = [
 
 interface UserProfile {
   full_name: string | null
-  age: number | null
+  date_of_birth: string | null
   gender: string | null
   height_cm: number | null
   current_weight_kg: number | null
@@ -80,7 +91,9 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
       const [profileRes, healthRes] = await Promise.all([
         supabase
           .from('user_profiles')
-          .select('full_name, age, gender, height_cm, current_weight_kg, target_weight_kg')
+          .select(
+            'full_name, date_of_birth, gender, height_cm, current_weight_kg, target_weight_kg'
+          )
           .eq('user_id', user.id)
           .maybeSingle(),
         supabase
@@ -133,7 +146,7 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
     const payload = {
       athlete: {
         name: profile.full_name ?? 'Athlete',
-        age: profile.age ?? 25,
+        age: calcAge(profile.date_of_birth),
         sex: profile.gender === 'female' ? 'female' : 'male',
         current_weight_kg: profile.current_weight_kg ?? 70,
         target_weight_kg:
@@ -227,7 +240,7 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
             className="text-[13px] font-['DM_Sans'] leading-relaxed"
             style={{ color: colors.textSecondary }}
           >
-            {profile.full_name ?? 'Athlete'} · {profile.age}y ·{' '}
+            {profile.full_name ?? 'Athlete'} · {calcAge(profile.date_of_birth)}y ·{' '}
             {profile.gender === 'female' ? 'Female' : 'Male'} ·{' '}
             {GOAL_LABELS[health.goal ?? ''] ?? health.goal} · {health.available_days_per_week}{' '}
             days/wk · {EQUIPMENT_LABELS[health.equipment ?? ''] ?? health.equipment}

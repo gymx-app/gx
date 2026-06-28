@@ -25,7 +25,7 @@ export function useProfileCompletion(): ProfileCompletionResult {
       const [profileRes, healthRes] = await Promise.all([
         supabase
           .from('user_profiles')
-          .select('full_name, age, gender, height_cm, current_weight_kg')
+          .select('full_name, date_of_birth, gender, height_cm, current_weight_kg')
           .eq('user_id', user.id)
           .maybeSingle(),
         supabase
@@ -52,7 +52,7 @@ export function useProfileCompletion(): ProfileCompletionResult {
       const pComplete = !!(
         p &&
         p.full_name &&
-        p.age != null &&
+        p.date_of_birth != null &&
         p.gender &&
         p.height_cm != null &&
         p.current_weight_kg != null
