@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 const ODIN_URL = 'https://agent-odin.vercel.app/api/v1/odin/generate-programme'
-const TIMEOUT_MS = 90000
+const TIMEOUT_MS = 180000
 
 interface UseOdinGenerateReturn {
   generate: (athletePayload: unknown) => Promise<void>
@@ -69,9 +69,10 @@ export function useOdinGenerate(): UseOdinGenerateReturn {
       setResult(data)
     } catch (err) {
       if ((err as Error).name === 'AbortError') {
-        setError('Connection timed out. Please try again.')
+        setError('Request timed out — Odin may be under heavy load. Please try again.')
       } else {
-        setError('Connection timed out. Please try again.')
+        const msg = err instanceof Error ? err.message : 'Unknown error'
+        setError(`Connection failed: ${msg}. Please try again.`)
       }
     } finally {
       setLoading(false)

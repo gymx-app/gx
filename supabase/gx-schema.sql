@@ -507,7 +507,7 @@ begin
   end if;
   return v_id;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 -- ============================================================
 -- TRIGGER: auto-create programme_config for new users
@@ -519,7 +519,7 @@ begin
   values (new.id, current_date);
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 create trigger on_auth_user_created
   after insert on auth.users

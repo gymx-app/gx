@@ -50,4 +50,4 @@ begin
   end if;
   return v_id;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
