@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../auth/AuthContext'
 import { useOdinGenerate } from '../../hooks/useOdinGenerate'
@@ -298,6 +299,7 @@ interface GenerateProgrammeViewProps {
 
 export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeViewProps) {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const {
     generate,
     loading: generating,
@@ -447,14 +449,20 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
             {GOAL_LABELS[health.goal ?? ''] ?? health.goal} · {health.available_days_per_week}{' '}
             days/wk · {EQUIPMENT_LABELS[health.equipment ?? ''] ?? health.equipment}
           </p>
-          <a
-            href="/gx/onboarding?step=1"
+          <button
+            onClick={() => void navigate('/onboarding?step=1')}
             className="inline-flex items-center gap-1 mt-2 active:opacity-60"
-            style={{ color: colors.accent, textDecoration: 'none' }}
+            style={{
+              color: colors.accent,
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+            }}
           >
             <Pencil size={12} />
             <span className="text-[12px] font-['DM_Sans'] font-semibold">Edit Profile</span>
-          </a>
+          </button>
         </div>
       )}
 
