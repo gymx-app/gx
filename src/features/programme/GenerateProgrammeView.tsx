@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../auth/AuthContext'
 import { useOdinGenerate } from '../../hooks/useOdinGenerate'
@@ -64,6 +64,225 @@ interface UserHealth {
   session_duration_min: number | null
   equipment: string | null
   injuries: string[] | null
+}
+
+const STRATEGY_LINES = [
+  'Reading biomechanical profile…',
+  'Evaluating training history…',
+  'Mapping periodisation model…',
+  'Calibrating volume tolerance…',
+  'Selecting progression strategy…',
+  'Scoring movement patterns…',
+]
+
+const BUILD_LINES = [
+  'Assigning exercise library…',
+  'Calculating set & rep schemes…',
+  'Sequencing phase skeletons…',
+  'Optimising recovery windows…',
+  'Tuning RPE targets per week…',
+  'Finalising programme structure…',
+]
+
+function AiGeneratingScreen({ genStatus }: { genStatus: string }) {
+  const isBuilding = genStatus.toLowerCase().includes('building')
+  const lines = isBuilding ? BUILD_LINES : STRATEGY_LINES
+  const [lineIdx, setLineIdx] = useState(0)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      setLineIdx((i) => (i + 1) % lines.length)
+    }, 1800)
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+      setLineIdx(0)
+    }
+  }, [isBuilding, lines.length])
+
+  const step1Active = !isBuilding
+  const step2Active = isBuilding
+
+  return (
+    <div
+      className="flex-1 flex flex-col items-center justify-between px-6"
+      style={{ background: colors.bg, paddingTop: 64, paddingBottom: 56 }}
+    >
+      {/* Top label */}
+      <div className="flex items-center gap-2">
+        <div
+          className="w-1.5 h-1.5 rounded-full animate-pulse"
+          style={{ background: colors.accent }}
+        />
+        <span
+          className="text-[11px] font-['DM_Sans'] font-bold tracking-[3px] uppercase"
+          style={{ color: colors.accent }}
+        >
+          Odin AI · Processing
+        </span>
+        <div
+          className="w-1.5 h-1.5 rounded-full animate-pulse"
+          style={{ background: colors.accent, animationDelay: '0.5s' }}
+        />
+      </div>
+
+      {/* Animated visual */}
+      <div className="flex flex-col items-center">
+        <div className="relative w-[160px] h-[160px] mb-10">
+          {/* Outer slow ring */}
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{
+              border: `1px solid ${colors.accent}33`,
+              animation: 'spin 8s linear infinite',
+            }}
+          />
+          {/* Dashed mid ring */}
+          <div
+            className="absolute inset-[16px] rounded-full"
+            style={{
+              border: `1px dashed ${colors.accent}55`,
+              animation: 'spin 5s linear infinite reverse',
+            }}
+          />
+          {/* Inner ring */}
+          <div
+            className="absolute inset-[32px] rounded-full"
+            style={{
+              border: `1.5px solid ${colors.accent}99`,
+              animation: 'spin 3s linear infinite',
+            }}
+          />
+          {/* Ping halo */}
+          <div
+            className="absolute inset-[44px] rounded-full animate-ping"
+            style={{ background: colors.accentMuted, animationDuration: '2.4s' }}
+          />
+          {/* Core */}
+          <div
+            className="absolute inset-[44px] rounded-full flex items-center justify-center"
+            style={{
+              background: colors.surface,
+              border: `2px solid ${colors.accent}`,
+            }}
+          >
+            <span
+              className="font-['Bebas_Neue'] text-[22px] tracking-[3px]"
+              style={{ color: colors.accent }}
+            >
+              AI
+            </span>
+          </div>
+          {/* Orbit dot */}
+          <div
+            className="absolute w-2 h-2 rounded-full"
+            style={{
+              background: colors.accent,
+              top: '50%',
+              left: '50%',
+              marginTop: -4,
+              marginLeft: -4,
+              transformOrigin: '-60px center',
+              animation: 'spin 3s linear infinite',
+            }}
+          />
+        </div>
+
+        {/* Title */}
+        <h2
+          className="font-['Bebas_Neue'] text-[30px] tracking-[3px] text-center leading-none mb-2"
+          style={{ color: colors.text }}
+        >
+          Building Your
+          <br />
+          <span style={{ color: colors.accent }}>AI Programme</span>
+        </h2>
+        <p
+          className="text-[13px] font-['DM_Sans'] text-center mb-8"
+          style={{ color: colors.muted }}
+        >
+          Odin is generating a personalised training plan
+          <br />
+          tailored to your exact profile.
+        </p>
+
+        {/* Step pills */}
+        <div className="flex items-center gap-2 mb-8">
+          <div
+            className="flex items-center gap-1.5 px-3 py-1.5"
+            style={{
+              background: step1Active ? colors.accentMuted : colors.surface2,
+              border: `1px solid ${step1Active ? colors.accent : colors.border}`,
+              borderRadius: 99,
+            }}
+          >
+            <div
+              className="w-1.5 h-1.5 rounded-full"
+              style={{
+                background: step1Active ? colors.accent : colors.muted,
+                ...(step1Active ? { animation: 'pulse 1s ease-in-out infinite' } : {}),
+              }}
+            />
+            <span
+              className="text-[11px] font-['DM_Sans'] font-semibold tracking-[0.5px]"
+              style={{ color: step1Active ? colors.accent : colors.muted }}
+            >
+              STRATEGY
+            </span>
+          </div>
+
+          <div className="w-4 h-px" style={{ background: colors.border }} />
+
+          <div
+            className="flex items-center gap-1.5 px-3 py-1.5"
+            style={{
+              background: step2Active ? colors.accentMuted : colors.surface2,
+              border: `1px solid ${step2Active ? colors.accent : colors.border}`,
+              borderRadius: 99,
+            }}
+          >
+            <div
+              className="w-1.5 h-1.5 rounded-full"
+              style={{
+                background: step2Active ? colors.accent : colors.muted,
+                ...(step2Active ? { animation: 'pulse 1s ease-in-out infinite' } : {}),
+              }}
+            />
+            <span
+              className="text-[11px] font-['DM_Sans'] font-semibold tracking-[0.5px]"
+              style={{ color: step2Active ? colors.accent : colors.muted }}
+            >
+              BUILD
+            </span>
+          </div>
+        </div>
+
+        {/* Rotating analysis line */}
+        <div
+          className="px-4 py-2.5 text-center"
+          style={{
+            background: colors.surface,
+            border: `1px solid ${colors.border}`,
+            borderRadius: radius.button,
+            minWidth: 220,
+          }}
+        >
+          <p
+            className="text-[13px] font-['DM_Sans']"
+            style={{ color: colors.textSecondary }}
+            key={lineIdx}
+          >
+            {lines[lineIdx]}
+          </p>
+        </div>
+      </div>
+
+      {/* Bottom note */}
+      <p className="text-[11px] font-['DM_Sans'] text-center" style={{ color: colors.muted }}>
+        This may take 30–60 seconds
+      </p>
+    </div>
+  )
 }
 
 export interface GenerateResult {
@@ -187,40 +406,7 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
   // B — Generating state
   // ════════════════════════════════════════
   if (generating) {
-    return (
-      <div
-        className="flex-1 flex flex-col items-center justify-center px-8"
-        style={{ background: colors.bg }}
-      >
-        <div className="relative w-16 h-16 mb-8">
-          <div
-            className="absolute inset-0 rounded-full animate-ping"
-            style={{ background: colors.accentMuted, animationDuration: '2s' }}
-          />
-          <div
-            className="absolute inset-0 rounded-full flex items-center justify-center"
-            style={{ background: colors.surface, border: `2px solid ${colors.accent}` }}
-          >
-            <span
-              className="font-['Bebas_Neue'] text-[18px] tracking-[2px]"
-              style={{ color: colors.accent }}
-            >
-              Gx
-            </span>
-          </div>
-        </div>
-        <h2 className="font-['Bebas_Neue'] text-[22px] tracking-[2px] text-[#f0ede8] mb-3 text-center">
-          GENERATING YOUR PROGRAMME
-        </h2>
-        <p
-          className="text-[14px] font-['DM_Sans'] text-center transition-opacity duration-500"
-          style={{ color: colors.muted }}
-          key={genStatus}
-        >
-          {genStatus}
-        </p>
-      </div>
-    )
+    return <AiGeneratingScreen genStatus={genStatus} />
   }
 
   // ════════════════════════════════════════
