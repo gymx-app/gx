@@ -4,6 +4,20 @@ import { supabase } from '../lib/supabase'
 const ODIN_URL = 'https://agent-odin.vercel.app/api/v1/odin/generate-programme'
 const TIMEOUT_MS = 180000
 
+function stripNulls(obj: unknown): unknown {
+  if (obj === null) return undefined
+  if (Array.isArray(obj)) return obj.map(stripNulls)
+  if (typeof obj === 'object') {
+    const result: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      const stripped = stripNulls(v)
+      if (stripped !== undefined) result[k] = stripped
+    }
+    return result
+  }
+  return obj
+}
+
 interface UseOdinGenerateReturn {
   generate: (athlete: unknown) => Promise<void>
   loading: boolean
@@ -76,11 +90,11 @@ export function useOdinGenerate(): UseOdinGenerateReturn {
         controller.signal
       )) as { strategy: unknown }
 
-      // Step 2: build
+      // Step 2: build — strip nulls from strategy so Zod validation passes on the server
       setStatus('Building your programme…')
       const buildResult = await odinPost(
         ODIN_URL,
-        { step: 'build', athlete, strategy: strategyResult.strategy },
+        { step: 'build', athlete, strategy: stripNulls(strategyResult.strategy) },
         token,
         controller.signal
       )
