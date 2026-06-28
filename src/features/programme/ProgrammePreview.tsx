@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
 import { useSaveProgramme } from '../../hooks/useSaveProgramme'
@@ -20,31 +20,31 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
   const { save, saving, error: saveError } = useSaveProgramme()
 
   const odinResult = result.odinResult as AnyData
-  const data = odinResult?.data
-  const programme = data?.programme
+  // V2 response: odinResult.programme.phases
+  const programme: AnyData = odinResult?.programme ?? {}
   const phases: AnyData[] = programme?.phases ?? []
+  const programmeName: string = programme?.programme?.name ?? programme?.name ?? 'Your Programme'
+  const summary: string =
+    odinResult?.rationale?.combined?.[0] ?? programme?.programme?.goal_description ?? ''
+  const subtitle = summary.length > 120 ? summary.slice(0, 120) + '…' : summary
 
-  const rationale: string = data?.generation?.rationale ?? programme?.summary ?? ''
-  const subtitle = rationale.length > 120 ? rationale.slice(0, 120) + '…' : rationale
-
-  // Accordion state — only one open at each level
   const [openPhase, setOpenPhase] = useState<number | null>(null)
   const [openWeek, setOpenWeek] = useState<number | null>(null)
-  const [openSession, setOpenSession] = useState<number | null>(null)
+  const [openDay, setOpenDay] = useState<number | null>(null)
 
   const togglePhase = useCallback((i: number) => {
     setOpenPhase((prev) => (prev === i ? null : i))
     setOpenWeek(null)
-    setOpenSession(null)
+    setOpenDay(null)
   }, [])
 
   const toggleWeek = useCallback((i: number) => {
     setOpenWeek((prev) => (prev === i ? null : i))
-    setOpenSession(null)
+    setOpenDay(null)
   }, [])
 
-  const toggleSession = useCallback((i: number) => {
-    setOpenSession((prev) => (prev === i ? null : i))
+  const toggleDay = useCallback((i: number) => {
+    setOpenDay((prev) => (prev === i ? null : i))
   }, [])
 
   const handleActivate = useCallback(async () => {
@@ -70,7 +70,7 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
       >
         <div className="pt-3">
           <h1 className="font-['Bebas_Neue'] text-[24px] tracking-[2px] text-white uppercase">
-            YOUR PROGRAMME
+            {programmeName}
           </h1>
           {subtitle && (
             <p className="text-[12px] font-['DM_Sans'] text-[#999] mt-1 line-clamp-2">{subtitle}</p>
@@ -80,12 +80,6 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
 
       {/* ── Scrollable body ── */}
       <div className="flex-1 overflow-y-auto pb-[120px]">
-        {programme?.name && (
-          <p className="px-4 pt-4 pb-2 text-[14px] font-['DM_Sans'] text-[#ccc]">
-            {programme.name}
-          </p>
-        )}
-
         {phases.length === 0 && (
           <p className="px-4 pt-8 text-[12px] font-['DM_Sans'] text-[#666]">No data</p>
         )}
@@ -107,9 +101,9 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
                 <span className="font-['Bebas_Neue'] text-[18px] text-white">
                   {phase.name ?? `Phase ${pi + 1}`}
                 </span>
-                {phase.duration_weeks != null && (
+                {phase.weeks_count != null && (
                   <span className="text-[13px] font-['DM_Sans'] text-[#888]">
-                    ({phase.duration_weeks} weeks)
+                    ({phase.weeks_count} weeks)
                   </span>
                 )}
               </div>
@@ -120,7 +114,6 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
               )}
             </button>
 
-            {/* Weeks inside open phase */}
             {openPhase === pi && (
               <div>
                 {(!phase.weeks || phase.weeks.length === 0) && (
@@ -150,19 +143,18 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
                       )}
                     </button>
 
-                    {/* Sessions inside open week */}
                     {openWeek === wi && (
                       <div>
-                        {(!week.sessions || week.sessions.length === 0) && (
+                        {(!week.days || week.days.length === 0) && (
                           <p className="pl-12 py-2 text-[12px] font-['DM_Sans'] text-[#666]">
                             No data
                           </p>
                         )}
-                        {(week.sessions ?? []).map((session: AnyData, si: number) => (
-                          <div key={si}>
-                            {/* Session row */}
+                        {(week.days ?? []).map((day: AnyData, di: number) => (
+                          <div key={di}>
+                            {/* Day row */}
                             <button
-                              onClick={() => toggleSession(si)}
+                              onClick={() => toggleDay(di)}
                               className="w-full flex items-center justify-between py-2.5 pl-12 pr-4 active:opacity-70"
                               style={{
                                 background: 'none',
@@ -172,32 +164,34 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
                               }}
                             >
                               <span className="text-[14px] font-['DM_Sans'] text-[#ccc] text-left">
-                                {session.day_label ?? `Day ${si + 1}`}
-                                {session.session_type ? ` — ${session.session_type}` : ''}
+                                {day.title ?? day.day_type ?? `Day ${di + 1}`}
+                                {day.day_of_week ? ` — ${day.day_of_week}` : ''}
                               </span>
-                              {openSession === si ? (
+                              {openDay === di ? (
                                 <ChevronDown size={16} color="#888" />
                               ) : (
                                 <ChevronRight size={16} color="#888" />
                               )}
                             </button>
 
-                            {/* Exercises inside open session */}
-                            {openSession === si && (
+                            {openDay === di && (
                               <div>
-                                {(!session.exercises || session.exercises.length === 0) && (
+                                {(!day.exercises || day.exercises.length === 0) && (
                                   <p className="pl-16 py-2 text-[12px] font-['DM_Sans'] text-[#666]">
-                                    No data
+                                    Rest day
                                   </p>
                                 )}
-                                {(session.exercises ?? []).map((ex: AnyData, ei: number) => {
+                                {(day.exercises ?? []).map((ex: AnyData, ei: number) => {
+                                  const firstSet = ex.sets?.[0]
                                   const details: string[] = []
-                                  if (ex.sets != null && ex.reps != null)
-                                    details.push(`${ex.sets}×${ex.reps}`)
-                                  else if (ex.sets != null) details.push(`${ex.sets} sets`)
-                                  if (ex.rpe != null) details.push(`RPE ${ex.rpe}`)
-                                  if (ex.rest_seconds != null)
-                                    details.push(`${ex.rest_seconds}s rest`)
+                                  if (ex.sets?.length)
+                                    details.push(
+                                      `${ex.sets.length}×${firstSet?.target_reps ?? '?'}`
+                                    )
+                                  if (firstSet?.target_rpe != null)
+                                    details.push(`RPE ${firstSet.target_rpe}`)
+                                  if (firstSet?.rest_seconds != null)
+                                    details.push(`${firstSet.rest_seconds}s rest`)
 
                                   return (
                                     <div
@@ -206,16 +200,16 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
                                       style={{ borderBottom: `1px solid #111` }}
                                     >
                                       <p className="text-[14px] font-['DM_Sans'] font-medium text-white">
-                                        {ex.name}
+                                        {ex.exercise_name}
                                       </p>
                                       {details.length > 0 && (
                                         <p className="text-[12px] font-['DM_Sans'] text-[#888] mt-0.5">
                                           {details.join(' · ')}
                                         </p>
                                       )}
-                                      {ex.notes && (
+                                      {ex.coaching_cues?.[0] && (
                                         <p className="text-[12px] font-['DM_Sans'] text-[#666] italic mt-0.5">
-                                          {ex.notes}
+                                          {ex.coaching_cues[0]}
                                         </p>
                                       )}
                                     </div>
@@ -278,7 +272,6 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
         </button>
       </div>
 
-      {/* Save error */}
       {saveError && (
         <div
           className="absolute left-4 right-4 p-3 text-[13px] font-['DM_Sans']"

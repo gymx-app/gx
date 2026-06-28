@@ -38,9 +38,10 @@ export function useSaveProgramme(): UseSaveProgrammeReturn {
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data = (odinResult as any).data
-      const programme = data?.programme
-      const phases = programme?.phases ?? []
+      const data = odinResult as any
+      // V2: data.programme.phases — programme metadata lives in data.programme.programme
+      const programmeMeta = data?.programme?.programme ?? data?.programme ?? {}
+      const phases = data?.programme?.phases ?? []
 
       const goalType = VALID_GOALS.includes(goal) ? goal : 'general_fitness'
       const equipType = VALID_EQUIP.includes(equipment) ? equipment : 'full_gym'
@@ -54,7 +55,7 @@ export function useSaveProgramme(): UseSaveProgrammeReturn {
 
       // 2. Insert new programme row
       const totalWeeks = phases.reduce(
-        (sum: number, p: { duration_weeks?: number }) => sum + (p.duration_weeks ?? 0),
+        (sum: number, p: { weeks_count?: number }) => sum + (p.weeks_count ?? 0),
         0
       )
 
@@ -62,7 +63,7 @@ export function useSaveProgramme(): UseSaveProgrammeReturn {
         .from('programmes')
         .insert({
           user_id: userId,
-          name: programme?.name ?? 'My Programme',
+          name: programmeMeta?.name ?? 'My Programme',
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           goal_type: goalType as any,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -72,7 +73,7 @@ export function useSaveProgramme(): UseSaveProgrammeReturn {
           ai_prompt: JSON.stringify(odinResult),
           programme_data: data,
           is_active: true,
-          available_days: data?.athlete?.available_days_per_week ?? null,
+          available_days: null,
           target_weeks: totalWeeks ?? null,
           started_at: startDate,
         })
@@ -86,6 +87,7 @@ export function useSaveProgramme(): UseSaveProgrammeReturn {
       }
 
       // 3. Hydrate child tables (phases → days → exercises)
+      // Pass the full odinResult so hydrator can navigate odinResult.programme.phases
       const hydrateResult = await hydrateProgramme(inserted.id, data, userId)
       if (!hydrateResult.success) {
         setError(hydrateResult.error ?? 'Failed to populate programme structure')
@@ -94,7 +96,7 @@ export function useSaveProgramme(): UseSaveProgrammeReturn {
       }
 
       // 4. Update programme_config with new phase_weeks and start_date
-      const phaseWeeks = phases.map((p: { duration_weeks?: number }) => p.duration_weeks ?? 4)
+      const phaseWeeks = phases.map((p: { weeks_count?: number }) => p.weeks_count ?? 4)
       if (phaseWeeks.length === 0) phaseWeeks.push(4)
 
       await supabase

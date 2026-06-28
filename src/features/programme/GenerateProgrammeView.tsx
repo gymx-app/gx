@@ -22,23 +22,31 @@ function calcAge(dob: string | null): number {
 const GOAL_LABELS: Record<string, string> = {
   fat_loss: 'Fat Loss',
   muscle_gain: 'Muscle Gain',
+  recomposition: 'Body Recomposition',
   strength: 'Strength',
+  endurance: 'Endurance',
   general_fitness: 'General Fitness',
+  body_recomposition: 'Body Recomposition',
 }
 
 const EQUIPMENT_LABELS: Record<string, string> = {
   full_gym: 'Full Gym',
   dumbbells_only: 'Dumbbells Only',
+  bodyweight: 'Bodyweight Only',
   bodyweight_only: 'Bodyweight Only',
   home_gym: 'Home Gym',
 }
 
-const STATUS_MESSAGES = [
-  'Analysing your profile…',
-  'Building your training strategy…',
-  'Sequencing phases and sessions…',
-  'Validating your programme…',
-]
+// Map onboarding values → Odin enum values
+const GOAL_MAP: Record<string, string> = {
+  body_recomposition: 'recomposition',
+  general_fitness: 'fat_loss',
+  maintenance: 'fat_loss',
+}
+
+const EQUIPMENT_MAP: Record<string, string> = {
+  bodyweight_only: 'bodyweight',
+}
 
 interface UserProfile {
   full_name: string | null
@@ -71,7 +79,14 @@ interface GenerateProgrammeViewProps {
 
 export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeViewProps) {
   const { user } = useAuth()
-  const { generate, loading: generating, result, error, reset } = useOdinGenerate()
+  const {
+    generate,
+    loading: generating,
+    status: genStatus,
+    result,
+    error,
+    reset,
+  } = useOdinGenerate()
 
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [health, setHealth] = useState<UserHealth | null>(null)
@@ -79,8 +94,6 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
 
   const [startDate, setStartDate] = useState(() => toDateStr(new Date()))
   const [targetWeightKg, setTargetWeightKg] = useState('')
-
-  const [statusIndex, setStatusIndex] = useState(0)
 
   // ── Load profile + health on mount ──
   useEffect(() => {
@@ -118,15 +131,6 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
     }
   }, [user])
 
-  // ── Rotate status messages while generating ──
-  useEffect(() => {
-    if (!generating) return
-    const interval = setInterval(() => {
-      setStatusIndex((prev) => Math.min(prev + 1, STATUS_MESSAGES.length - 1))
-    }, 10000)
-    return () => clearInterval(interval)
-  }, [generating])
-
   // ── Forward result to parent on success ──
   useEffect(() => {
     if (result && health) {
@@ -141,31 +145,43 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
 
   const handleGenerate = useCallback(async () => {
     if (!profile || !health) return
-    setStatusIndex(0)
 
-    const payload = {
-      athlete: {
-        name: profile.full_name ?? 'Athlete',
-        age: calcAge(profile.date_of_birth),
-        sex: profile.gender === 'female' ? 'female' : 'male',
-        current_weight_kg: profile.current_weight_kg ?? 70,
-        target_weight_kg:
-          profile.target_weight_kg ?? (targetWeightKg ? parseFloat(targetWeightKg) : null),
-        height_cm: profile.height_cm ?? 170,
-        goal: health.goal ?? 'general_fitness',
-        available_days_per_week: health.available_days_per_week ?? 4,
-        session_duration_min: health.session_duration_min ?? 60,
-        equipment: health.equipment ?? 'full_gym',
-        fitness_level: health.fitness_level ?? 'beginner',
-        injuries: health.injuries ?? [],
-        inbody: null,
-      },
-      planner_version: 'ai_agent_v1',
-      start_date: startDate,
+    const rawGoal = health.goal ?? 'fat_loss'
+    const odinGoal = GOAL_MAP[rawGoal] ?? rawGoal
+
+    const rawEquip = health.equipment ?? 'full_gym'
+    const odinEquip = EQUIPMENT_MAP[rawEquip] ?? rawEquip
+
+    const currentWeight = profile.current_weight_kg ?? 70
+    const targetWeight =
+      profile.target_weight_kg ??
+      (targetWeightKg ? parseFloat(targetWeightKg) : null) ??
+      currentWeight
+
+    const injuries = (health.injuries ?? []).map((area) => ({
+      area,
+      severity: 'modify' as const,
+      notes: '',
+    }))
+
+    const athlete = {
+      name: profile.full_name ?? 'Athlete',
+      age: calcAge(profile.date_of_birth),
+      sex: profile.gender === 'female' ? ('female' as const) : ('male' as const),
+      current_weight_kg: currentWeight,
+      target_weight_kg: targetWeight,
+      height_cm: profile.height_cm ?? 170,
+      goal: odinGoal,
+      available_days_per_week: health.available_days_per_week ?? 4,
+      session_duration_min: health.session_duration_min ?? 60,
+      equipment: odinEquip,
+      fitness_level: health.fitness_level ?? 'beginner',
+      injuries,
+      inbody: null,
     }
 
-    await generate(payload)
-  }, [profile, health, targetWeightKg, startDate, generate])
+    await generate(athlete)
+  }, [profile, health, targetWeightKg, generate])
 
   // ════════════════════════════════════════
   // B — Generating state
@@ -199,9 +215,9 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
         <p
           className="text-[14px] font-['DM_Sans'] text-center transition-opacity duration-500"
           style={{ color: colors.muted }}
-          key={statusIndex}
+          key={genStatus}
         >
-          {STATUS_MESSAGES[statusIndex]}
+          {genStatus}
         </p>
       </div>
     )

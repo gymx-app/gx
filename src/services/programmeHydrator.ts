@@ -5,7 +5,6 @@ import {
   mapSessionType,
   buildTitle,
   buildSubtitle,
-  formatSetsReps,
   formatRest,
 } from '../utils/odinMappers'
 
@@ -17,26 +16,37 @@ interface HydrateResult {
   error?: string
 }
 
+function formatSetsRepsV2(sets: OdinData[]): string {
+  if (!sets || sets.length === 0) return '3×12'
+  const first = sets[0]
+  return `${sets.length}×${first?.target_reps ?? 12}`
+}
+
+function getRestV2(sets: OdinData[]): string {
+  if (!sets || sets.length === 0) return '60s'
+  return formatRest(sets[0]?.rest_seconds ?? null)
+}
+
 export async function hydrateProgramme(
   programmeId: string,
   odinData: OdinData,
   userId: string
 ): Promise<HydrateResult> {
   try {
-    const programme = odinData?.programme
-    const phases: OdinData[] = programme?.phases ?? []
+    // V2 shape: odinData.programme.phases[].weeks[].days[].exercises[]
+    const phases: OdinData[] = odinData?.programme?.phases ?? []
 
     if (phases.length === 0) {
       return { success: true }
     }
 
-    // 1. Collect all exercise names across all phases/weeks/sessions
+    // 1. Collect all exercise names across all phases/weeks/days
     const allNames: string[] = []
     for (const phase of phases) {
       for (const week of phase.weeks ?? []) {
-        for (const session of week.sessions ?? []) {
-          for (const ex of session.exercises ?? []) {
-            if (ex.name) allNames.push(ex.name)
+        for (const day of week.days ?? []) {
+          for (const ex of day.exercises ?? []) {
+            if (ex.exercise_name) allNames.push(ex.exercise_name)
           }
         }
       }
@@ -50,8 +60,8 @@ export async function hydrateProgramme(
       programme_id: programmeId,
       phase_number: idx + 1,
       name: phase.name ?? `Phase ${idx + 1}`,
-      goal: phase.rationale ?? phase.name ?? `Phase ${idx + 1}`,
-      weeks_count: phase.duration_weeks ?? 4,
+      goal: phase.objective ?? phase.name ?? `Phase ${idx + 1}`,
+      weeks_count: phase.weeks_count ?? phase.weeks?.length ?? 4,
     }))
 
     const { data: insertedPhases, error: phaseErr } = await supabase
@@ -73,38 +83,39 @@ export async function hydrateProgramme(
       if (!phaseId) continue
 
       const templateWeek = phase.weeks?.[0]
-      if (!templateWeek?.sessions) continue
+      if (!templateWeek?.days) continue
 
       const usedDays = new Set<string>()
       const dayRows: OdinData[] = []
 
-      for (let si = 0; si < templateWeek.sessions.length; si++) {
-        const session = templateWeek.sessions[si]
-        let dow = mapDayLabel(session.day_label, si)
+      for (let di = 0; di < templateWeek.days.length; di++) {
+        const day = templateWeek.days[di]
+        let dow = mapDayLabel(day.day_of_week ?? '', di)
 
-        // Avoid duplicate day_of_week within a phase
         while (usedDays.has(dow)) {
           const idx = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].indexOf(dow)
           dow = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'][(idx + 1) % 7] ?? 'MON'
         }
         usedDays.add(dow)
 
-        const workoutType = mapSessionType(session.session_type)
+        const workoutType = mapSessionType(day.day_type ?? '')
 
         dayRows.push({
           phase_id: phaseId,
           day_of_week: dow,
           workout_type: workoutType,
-          title: buildTitle(session.session_type),
-          subtitle: buildSubtitle(session.exercises ?? []),
-          duration_min: null,
-          has_warmup: workoutType === 'workout',
-          _exercises: session.exercises ?? [],
+          title: day.title ?? buildTitle(day.day_type ?? ''),
+          subtitle: buildSubtitle(
+            (day.exercises ?? []).map((e: OdinData) => ({ name: e.exercise_name }))
+          ),
+          duration_min: day.estimated_duration_min ?? null,
+          has_warmup: (day.warmup?.length ?? 0) > 0,
+          _exercises: day.exercises ?? [],
         })
       }
 
       // Insert programme_days (without _exercises)
-      const dbDayRows = dayRows.map(({ _exercises, ...rest }) => rest)
+      const dbDayRows = dayRows.map(({ _exercises: _ex, ...rest }) => rest)
       const { data: insertedDays, error: dayErr } = await supabase
         .from('programme_days')
         .insert(dbDayRows)
@@ -112,13 +123,12 @@ export async function hydrateProgramme(
 
       if (dayErr) return { success: false, error: `Days: ${dayErr.message}` }
 
-      // Build day_of_week → day_id map
       const dayIdMap = new Map<string, string>()
       for (const d of insertedDays ?? []) {
         dayIdMap.set(d.day_of_week, d.id)
       }
 
-      // 5. Insert programme_exercises for each day
+      // 5. Insert programme_exercises
       for (const dayRow of dayRows) {
         const dayId = dayIdMap.get(dayRow.day_of_week)
         if (!dayId) continue
@@ -128,22 +138,21 @@ export async function hydrateProgramme(
 
         const exRows = exercises
           .map((ex: OdinData, idx: number) => {
-            const exerciseId = exerciseMap.get(ex.name)
+            const exerciseId = exerciseMap.get(ex.exercise_name)
             if (!exerciseId) return null
             return {
               day_id: dayId,
               exercise_id: exerciseId,
               display_order: idx + 1,
-              sets_reps: formatSetsReps(ex.sets, ex.reps),
-              rest: formatRest(ex.rest_seconds),
-              notes: ex.notes ?? null,
+              sets_reps: formatSetsRepsV2(ex.sets),
+              rest: getRestV2(ex.sets),
+              notes: ex.coaching_cues?.[0] ?? null,
             }
           })
           .filter((r): r is NonNullable<typeof r> => r !== null)
 
         if (exRows.length > 0) {
           const { error: exErr } = await supabase.from('programme_exercises').insert(exRows)
-
           if (exErr) return { success: false, error: `Exercises: ${exErr.message}` }
         }
       }
