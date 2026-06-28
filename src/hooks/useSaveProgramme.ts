@@ -95,18 +95,31 @@ export function useSaveProgramme(): UseSaveProgrammeReturn {
         return { success: false }
       }
 
-      // 4. Update programme_config with new phase_weeks and start_date
+      // 4. Upsert programme_config with correct start_date + phase_weeks
       const phaseWeeks = phases.map((p: { weeks_count?: number }) => p.weeks_count ?? 4)
       if (phaseWeeks.length === 0) phaseWeeks.push(4)
 
-      await supabase
+      const { error: configErr } = await supabase
         .from('programme_config')
-        .update({
-          programme_id: inserted.id,
-          start_date: startDate,
-          phase_weeks: phaseWeeks,
-        })
-        .eq('user_id', userId)
+        .upsert(
+          { user_id: userId, start_date: startDate, phase_weeks: phaseWeeks },
+          { onConflict: 'user_id' }
+        )
+
+      if (configErr) {
+        setError(`Config update failed: ${configErr.message}`)
+        setSaving(false)
+        return { success: false }
+      }
+
+      // 5. Bust IDB caches so Today loads fresh data on next visit
+      try {
+        const idbCache = await import('../services/idbCache')
+        void idbCache.invalidate('programme-context', userId)
+        void idbCache.invalidate('programme-config', userId)
+      } catch {
+        // non-fatal — stale cache will expire naturally
+      }
 
       setSaving(false)
       return { success: true }

@@ -48,6 +48,7 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
     odinResult?.rationale?.combined?.[0] ?? programme?.programme?.goal_description ?? ''
   const subtitle = summary.length > 140 ? summary.slice(0, 140) + '…' : summary
 
+  const [saved, setSaved] = useState(false)
   const [openPhase, setOpenPhase] = useState<number | null>(null)
   const [openWeek, setOpenWeek] = useState<number | null>(null)
   const [openDay, setOpenDay] = useState<number | null>(null)
@@ -77,9 +78,50 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
       startDate: result.startDate,
     })
     if (success) {
-      void navigate('/', { replace: true })
+      setSaved(true)
     }
-  }, [user, result, save, navigate])
+  }, [user, result, save])
+
+  if (saved) {
+    return (
+      <div
+        className="flex-1 flex flex-col items-center justify-center px-8 text-center"
+        style={{ background: colors.bg }}
+      >
+        <div
+          className="w-20 h-20 rounded-full flex items-center justify-center mb-6"
+          style={{ background: colors.accentMuted, border: `2px solid ${colors.accent}` }}
+        >
+          <span className="text-[36px]">✓</span>
+        </div>
+        <h2
+          className="font-['Bebas_Neue'] text-[30px] tracking-[3px] mb-3"
+          style={{ color: colors.text }}
+        >
+          Programme Activated
+        </h2>
+        <p
+          className="text-[14px] font-['DM_Sans'] leading-relaxed mb-10"
+          style={{ color: colors.muted }}
+        >
+          {programmeName} is now live.{'\n'}Your first session is ready on the Today tab.
+        </p>
+        <button
+          onClick={() => void navigate('/', { replace: true })}
+          className="w-full py-4 font-['Bebas_Neue'] text-[18px] tracking-[2px]"
+          style={{
+            borderRadius: radius.button,
+            background: colors.accent,
+            border: 'none',
+            color: '#fff',
+            cursor: 'pointer',
+          }}
+        >
+          GO TO TODAY
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="flex-1 flex flex-col" style={{ background: colors.bg }}>
