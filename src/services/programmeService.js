@@ -199,6 +199,29 @@ export async function getCooldownItems(dayId) {
  * @param {string} userId
  * @returns {Promise<{ data: { programme: object, phases: Array }|null, error: string|null }>}
  */
+/**
+ * Get all days for a phase, ordered MON→SUN.
+ * @param {string} phaseId
+ * @returns {Promise<{ data: Array|null, error: string|null }>}
+ */
+export async function getProgrammeDays(phaseId) {
+  const DAY_ORDER = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+  try {
+    const { data, error } = await supabase
+      .from('programme_days')
+      .select('id, day_of_week, workout_type, title, duration_min')
+      .eq('phase_id', phaseId)
+    if (error) throw error
+    const sorted = (data ?? []).sort(
+      (a, b) => DAY_ORDER.indexOf(a.day_of_week) - DAY_ORDER.indexOf(b.day_of_week)
+    )
+    return { data: sorted, error: null }
+  } catch (err) {
+    logger.error('getProgrammeDays:', err)
+    return { data: null, error: 'Failed to load days' }
+  }
+}
+
 export async function getFullProgrammeContext(userId) {
   try {
     // Check IDB cache first

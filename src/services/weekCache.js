@@ -37,6 +37,12 @@ export function setInCache(uid, weekStartStr, data) {
   MEM_STORE.set(weekMemKey(uid, weekStartStr), { data, timestamp: Date.now() })
 }
 
+export function clearUserWeekCache(uid) {
+  for (const key of [...MEM_STORE.keys()]) {
+    if (key.startsWith(`week:${uid}:`)) MEM_STORE.delete(key)
+  }
+}
+
 export function invalidateWeekCache(weekStartStr, uid) {
   if (uid) {
     MEM_STORE.delete(weekMemKey(uid, weekStartStr))
