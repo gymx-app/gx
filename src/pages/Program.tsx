@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import TopBar from '../components/layout/TopBar'
 import { colors, radius } from '../styles/tokens'
 import { useAuth } from '../auth/AuthContext'
@@ -53,6 +53,7 @@ const DAY_TYPE_COLOR: Record<string, string> = {
 export default function Program() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [tabState, setTabState] = useState<TabState>('loading')
   const [activeProgramme, setActiveProgramme] = useState<AnyData>(null)
@@ -65,12 +66,28 @@ export default function Program() {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [checkKey, setCheckKey] = useState(0)
+
+  // When the user navigates back to /program with a stale previewResult
+  // (tab stays mounted via display:none), bump checkKey to re-run the check.
+  useEffect(() => {
+    if (location.pathname === '/program' && previewResult !== null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCheckKey((k) => k + 1)
+    }
+    // previewResult intentionally omitted — we only want this on pathname change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname])
 
   useEffect(() => {
     if (!user) return
     let cancelled = false
 
     const check = async () => {
+      // Clear any stale preview state before checking (handles navigation-back case)
+      setPreviewResult(null)
+      setTabState('loading')
+
       const { data } = await getActiveProgramme(user.id)
       if (cancelled) return
 
@@ -132,7 +149,7 @@ export default function Program() {
     return () => {
       cancelled = true
     }
-  }, [user])
+  }, [user, checkKey])
 
   const togglePhase = useCallback(
     async (idx: number, phase: AnyData) => {
