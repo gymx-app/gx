@@ -16,6 +16,19 @@ interface HydrateResult {
   error?: string
 }
 
+function formatItemDetail(
+  purpose: string | undefined,
+  durationSeconds: number | undefined,
+  repetitions: number | undefined
+): string {
+  const timing = durationSeconds
+    ? `${durationSeconds}s`
+    : repetitions
+      ? `${repetitions} reps`
+      : null
+  return [purpose, timing].filter(Boolean).join(' · ')
+}
+
 function formatSetsRepsV2(sets: OdinData[]): string {
   if (!sets || sets.length === 0) return '3×12'
   const first = sets[0]
@@ -111,11 +124,12 @@ export async function hydrateProgramme(
           duration_min: day.estimated_duration_min ?? null,
           has_warmup: (day.warmup?.length ?? 0) > 0,
           _exercises: day.exercises ?? [],
+          _cooldown: day.cooldown ?? [],
         })
       }
 
-      // Insert programme_days (without _exercises)
-      const dbDayRows = dayRows.map(({ _exercises: _ex, ...rest }) => rest)
+      // Insert programme_days (without internal fields)
+      const dbDayRows = dayRows.map(({ _exercises: _ex, _cooldown: _cd, ...rest }) => rest)
       const { data: insertedDays, error: dayErr } = await supabase
         .from('programme_days')
         .insert(dbDayRows)
@@ -128,32 +142,63 @@ export async function hydrateProgramme(
         dayIdMap.set(d.day_of_week, d.id)
       }
 
-      // 5. Insert programme_exercises
+      // 5. Insert programme_exercises + cooldown_items per day
       for (const dayRow of dayRows) {
         const dayId = dayIdMap.get(dayRow.day_of_week)
         if (!dayId) continue
 
         const exercises: OdinData[] = dayRow._exercises
-        if (exercises.length === 0) continue
+        if (exercises.length > 0) {
+          const exRows = exercises
+            .map((ex: OdinData, idx: number) => {
+              const exerciseId = exerciseMap.get(ex.exercise_name)
+              if (!exerciseId) return null
+              return {
+                day_id: dayId,
+                exercise_id: exerciseId,
+                display_order: idx + 1,
+                sets_reps: formatSetsRepsV2(ex.sets),
+                rest: getRestV2(ex.sets),
+                notes: ex.coaching_cues?.[0] ?? null,
+              }
+            })
+            .filter((r): r is NonNullable<typeof r> => r !== null)
 
-        const exRows = exercises
-          .map((ex: OdinData, idx: number) => {
-            const exerciseId = exerciseMap.get(ex.exercise_name)
-            if (!exerciseId) return null
-            return {
-              day_id: dayId,
-              exercise_id: exerciseId,
-              display_order: idx + 1,
-              sets_reps: formatSetsRepsV2(ex.sets),
-              rest: getRestV2(ex.sets),
-              notes: ex.coaching_cues?.[0] ?? null,
-            }
-          })
-          .filter((r): r is NonNullable<typeof r> => r !== null)
+          if (exRows.length > 0) {
+            const { error: exErr } = await supabase.from('programme_exercises').insert(exRows)
+            if (exErr) return { success: false, error: `Exercises: ${exErr.message}` }
+          }
+        }
 
-        if (exRows.length > 0) {
-          const { error: exErr } = await supabase.from('programme_exercises').insert(exRows)
-          if (exErr) return { success: false, error: `Exercises: ${exErr.message}` }
+        // Insert cooldown_items for this day
+        const cooldowns: OdinData[] = dayRow._cooldown ?? []
+        if (cooldowns.length > 0) {
+          const cdRows = cooldowns.map((cd: OdinData, idx: number) => ({
+            day_id: dayId,
+            item_key: cd.cooldown_id ?? `cd-${idx}`,
+            label: cd.activity_name ?? 'Cooldown',
+            detail: formatItemDetail(cd.purpose, cd.duration_seconds, cd.repetitions),
+            display_order: cd.display_order ?? idx + 1,
+          }))
+          const { error: cdErr } = await supabase.from('cooldown_items').insert(cdRows)
+          if (cdErr) return { success: false, error: `Cooldown: ${cdErr.message}` }
+        }
+      }
+
+      // 6. Insert warmup_items once per programme (use phase 1's first workout day template)
+      if (phaseIdx === 0) {
+        const firstWorkoutDay = templateWeek.days.find((d: OdinData) => (d.warmup?.length ?? 0) > 0)
+        const warmups: OdinData[] = firstWorkoutDay?.warmup ?? []
+        if (warmups.length > 0) {
+          const warmupRows = warmups.map((w: OdinData, idx: number) => ({
+            programme_id: programmeId,
+            item_key: w.warmup_id ?? `wu-${idx}`,
+            label: w.activity_name ?? 'Warmup',
+            detail: formatItemDetail(w.purpose, w.duration_seconds, w.repetitions),
+            display_order: w.display_order ?? idx + 1,
+          }))
+          const { error: wuErr } = await supabase.from('warmup_items').insert(warmupRows)
+          if (wuErr) return { success: false, error: `Warmup: ${wuErr.message}` }
         }
       }
     }
