@@ -68,3 +68,39 @@ export async function rehydrateProgramme(
 
   return { success: true }
 }
+
+/**
+ * Full reset: wipe all user logs, all programmes + structure, and programme_config.
+ * Called before entering the generate-new flow.
+ */
+export async function deleteAllUserData(
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Collect all programme IDs for this user
+    const { data: progs } = await supabase.from('programmes').select('id').eq('user_id', userId)
+
+    const progIds = (progs ?? []).map((p: AnyData) => p.id as string)
+
+    for (const progId of progIds) {
+      await clearProgrammeStructure(progId)
+    }
+
+    if (progIds.length > 0) {
+      await supabase.from('programmes').delete().in('id', progIds)
+    }
+
+    // Delete all log tables
+    await Promise.all([
+      supabase.from('exercise_logs').delete().eq('user_id', userId),
+      supabase.from('workout_sessions').delete().eq('user_id', userId),
+      supabase.from('warmup_logs').delete().eq('user_id', userId),
+      supabase.from('checklist_logs').delete().eq('user_id', userId),
+      supabase.from('programme_config').delete().eq('user_id', userId),
+    ])
+
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Reset failed' }
+  }
+}
