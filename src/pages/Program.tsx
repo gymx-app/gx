@@ -18,10 +18,11 @@ import GenerateProgrammeView, {
 import ProgrammePreview from '../features/programme/ProgrammePreview'
 import { ProfileCard } from '../components/programme/ProfileCard'
 import type { UserProfile, UserHealth } from '../components/programme/ProfileCard'
+import BottomSheet from '../components/ui/BottomSheet'
 import { Loader2, ChevronDown, RefreshCw, AlertTriangle } from 'lucide-react'
 
 type TabState = 'loading' | 'no_programme' | 'has_programme'
-type ConfirmAction = 'regen' | null
+type ConfirmAction = 'refresh' | 'regen' | null
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyData = any
@@ -183,6 +184,12 @@ export default function Program() {
     setActionLoading(false)
   }, [user, activeProgramme, bustCaches])
 
+  const closeSheet = useCallback(() => {
+    if (actionLoading) return
+    setConfirmAction(null)
+    setActionError(null)
+  }, [actionLoading])
+
   const handleRegen = useCallback(async () => {
     if (!user) return
     setActionLoading(true)
@@ -286,32 +293,18 @@ export default function Program() {
               {activeProgramme?.name ?? 'My Programme'}
             </h1>
             <button
-              onClick={() => void handleRefresh()}
+              onClick={() => {
+                setConfirmAction('refresh')
+                setActionError(null)
+              }}
               disabled={actionLoading}
               className="p-2 -mr-1 active:opacity-50"
               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
               title="Refresh programme"
             >
-              <RefreshCw
-                size={17}
-                color={actionLoading && confirmAction === null ? colors.accent : colors.muted}
-                className={actionLoading && confirmAction === null ? 'animate-spin' : ''}
-              />
+              <RefreshCw size={17} color={colors.muted} />
             </button>
           </div>
-          {actionError && confirmAction === null && (
-            <p
-              className="text-[11px] font-['DM_Sans'] mt-1.5 px-2 py-1"
-              style={{
-                background: `${colors.error}18`,
-                border: `1px solid ${colors.error}44`,
-                borderRadius: 6,
-                color: colors.error,
-              }}
-            >
-              {actionError}
-            </p>
-          )}
         </div>
 
         {/* Phase accordion */}
@@ -439,58 +432,60 @@ export default function Program() {
         </div>
 
         {/* Generate New Programme button */}
-        {confirmAction === null && (
-          <button
-            onClick={() => {
-              setConfirmAction('regen')
-              setActionError(null)
-            }}
-            disabled={actionLoading}
-            className="w-full py-3.5 text-[13px] font-['DM_Sans'] font-medium active:opacity-60"
-            style={{
-              background: 'none',
-              border: `1px solid ${colors.border}`,
-              borderRadius: radius.button,
-              color: colors.textSecondary,
-              cursor: actionLoading ? 'default' : 'pointer',
-            }}
-          >
-            Generate New Programme
-          </button>
-        )}
+        <button
+          onClick={() => {
+            setConfirmAction('regen')
+            setActionError(null)
+          }}
+          disabled={actionLoading}
+          className="w-full py-3.5 text-[13px] font-['DM_Sans'] font-medium active:opacity-60"
+          style={{
+            background: 'none',
+            border: `1px solid ${colors.border}`,
+            borderRadius: radius.button,
+            color: colors.textSecondary,
+            cursor: actionLoading ? 'default' : 'pointer',
+          }}
+        >
+          Generate New Programme
+        </button>
+      </div>
 
-        {/* Confirmation panel for regen */}
-        {confirmAction === 'regen' && (
-          <div
-            className="p-4"
-            style={{
-              background: `${colors.error}0a`,
-              border: `1px solid ${colors.error}44`,
-              borderRadius: radius.card,
-            }}
-          >
-            <div className="flex items-start gap-2 mb-3">
-              <AlertTriangle size={14} color={colors.warning} className="flex-shrink-0 mt-0.5" />
+      {/* ── Confirm bottom sheet ── */}
+      <BottomSheet isOpen={confirmAction !== null} onClose={closeSheet}>
+        {confirmAction === 'refresh' && (
+          <div className="px-5 pb-8 pt-2">
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className="w-10 h-10 flex items-center justify-center flex-shrink-0"
+                style={{ background: `${colors.blue}18`, borderRadius: 12 }}
+              >
+                <RefreshCw size={18} color={colors.blue} />
+              </div>
               <div>
                 <p
-                  className="text-[13px] font-['DM_Sans'] font-semibold mb-1"
+                  className="font-['Bebas_Neue'] text-[20px] tracking-[1px] leading-none"
                   style={{ color: colors.text }}
                 >
-                  This cannot be undone
+                  Refresh Programme
                 </p>
-                <p
-                  className="text-[12px] font-['DM_Sans'] leading-relaxed"
-                  style={{ color: colors.muted }}
-                >
-                  This will permanently delete your programme, all workout sessions, and exercise
-                  history.
+                <p className="text-[12px] font-['DM_Sans'] mt-0.5" style={{ color: colors.muted }}>
+                  Re-seeds structure from stored AI plan
                 </p>
               </div>
             </div>
 
+            <p
+              className="text-[13px] font-['DM_Sans'] leading-relaxed mb-5"
+              style={{ color: colors.textSecondary }}
+            >
+              This will re-build your workout days from the original AI plan and reset your start
+              date to today. Your exercise history is kept.
+            </p>
+
             {actionError && (
               <p
-                className="text-[12px] font-['DM_Sans'] mb-3 px-3 py-2"
+                className="text-[12px] font-['DM_Sans'] mb-4 px-3 py-2"
                 style={{
                   background: `${colors.error}18`,
                   border: `1px solid ${colors.error}44`,
@@ -502,14 +497,96 @@ export default function Program() {
               </p>
             )}
 
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <button
-                onClick={() => {
-                  setConfirmAction(null)
-                  setActionError(null)
-                }}
+                onClick={closeSheet}
                 disabled={actionLoading}
-                className="flex-1 py-2.5 text-[13px] font-['DM_Sans'] font-medium active:opacity-60"
+                className="flex-1 py-3.5 text-[14px] font-['DM_Sans'] font-medium active:opacity-60"
+                style={{
+                  background: 'none',
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: radius.button,
+                  color: colors.textSecondary,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void handleRefresh()}
+                disabled={actionLoading}
+                className="flex-1 py-3.5 text-[14px] font-['Bebas_Neue'] tracking-[1px] active:scale-[0.98] transition-transform"
+                style={{
+                  background: colors.blue,
+                  border: 'none',
+                  borderRadius: radius.button,
+                  color: '#fff',
+                  cursor: actionLoading ? 'default' : 'pointer',
+                  opacity: actionLoading ? 0.6 : 1,
+                }}
+              >
+                {actionLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 size={14} className="animate-spin" />
+                    Refreshing…
+                  </span>
+                ) : (
+                  'Refresh'
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {confirmAction === 'regen' && (
+          <div className="px-5 pb-8 pt-2">
+            <div className="flex items-start gap-3 mb-4">
+              <div
+                className="w-10 h-10 flex items-center justify-center flex-shrink-0 mt-0.5"
+                style={{ background: `${colors.error}18`, borderRadius: 12 }}
+              >
+                <AlertTriangle size={18} color={colors.error} />
+              </div>
+              <div>
+                <p
+                  className="font-['Bebas_Neue'] text-[20px] tracking-[1px] leading-none"
+                  style={{ color: colors.text }}
+                >
+                  Generate New Programme
+                </p>
+                <p className="text-[12px] font-['DM_Sans'] mt-0.5" style={{ color: colors.error }}>
+                  This cannot be undone
+                </p>
+              </div>
+            </div>
+
+            <p
+              className="text-[13px] font-['DM_Sans'] leading-relaxed mb-5"
+              style={{ color: colors.textSecondary }}
+            >
+              This will permanently delete your current programme, all workout sessions, and your
+              full exercise history.
+            </p>
+
+            {actionError && (
+              <p
+                className="text-[12px] font-['DM_Sans'] mb-4 px-3 py-2"
+                style={{
+                  background: `${colors.error}18`,
+                  border: `1px solid ${colors.error}44`,
+                  borderRadius: 8,
+                  color: colors.error,
+                }}
+              >
+                {actionError}
+              </p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={closeSheet}
+                disabled={actionLoading}
+                className="flex-1 py-3.5 text-[14px] font-['DM_Sans'] font-medium active:opacity-60"
                 style={{
                   background: 'none',
                   border: `1px solid ${colors.border}`,
@@ -523,7 +600,7 @@ export default function Program() {
               <button
                 onClick={() => void handleRegen()}
                 disabled={actionLoading}
-                className="flex-1 py-2.5 text-[13px] font-['DM_Sans'] font-bold active:scale-[0.98] transition-transform"
+                className="flex-1 py-3.5 text-[14px] font-['Bebas_Neue'] tracking-[1px] active:scale-[0.98] transition-transform"
                 style={{
                   background: colors.error,
                   border: 'none',
@@ -535,7 +612,7 @@ export default function Program() {
               >
                 {actionLoading ? (
                   <span className="flex items-center justify-center gap-2">
-                    <Loader2 size={13} className="animate-spin" />
+                    <Loader2 size={14} className="animate-spin" />
                     Deleting…
                   </span>
                 ) : (
@@ -545,7 +622,7 @@ export default function Program() {
             </div>
           </div>
         )}
-      </div>
+      </BottomSheet>
     </>
   )
 }
