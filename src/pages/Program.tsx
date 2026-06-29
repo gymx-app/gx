@@ -11,15 +11,17 @@ import {
   getProgrammeConfig,
   upsertProgrammeConfig,
 } from '../services/programmeService'
+import { rehydrateProgramme } from '../services/programmeManager'
 import GenerateProgrammeView, {
   type GenerateResult,
 } from '../features/programme/GenerateProgrammeView'
 import ProgrammePreview from '../features/programme/ProgrammePreview'
 import { ProfileCard } from '../components/programme/ProfileCard'
 import type { UserProfile, UserHealth } from '../components/programme/ProfileCard'
-import { Loader2, ChevronDown } from 'lucide-react'
+import { Loader2, ChevronDown, RefreshCw, Sparkles, AlertTriangle } from 'lucide-react'
 
 type TabState = 'loading' | 'no_programme' | 'has_programme'
+type ConfirmAction = 'refresh' | 'regen' | null
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyData = any
@@ -59,6 +61,9 @@ export default function Program() {
   const [previewResult, setPreviewResult] = useState<GenerateResult | null>(null)
   const [openPhaseIdx, setOpenPhaseIdx] = useState<number | null>(null)
   const [phaseDays, setPhaseDays] = useState<Record<string, AnyData[]>>({})
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -107,7 +112,6 @@ export default function Program() {
             start_date: startDate,
             phase_weeks: phaseWeeks.length ? phaseWeeks : [4],
           })
-          // Bust caches so Today picks up the fix immediately
           const [idbCache, weekCache] = await Promise.all([
             import('../services/idbCache'),
             import('../services/weekCache'),
@@ -144,6 +148,63 @@ export default function Program() {
     [openPhaseIdx, phaseDays]
   )
 
+  const bustCaches = useCallback(async () => {
+    if (!user) return
+    const [idbCache, weekCache] = await Promise.all([
+      import('../services/idbCache'),
+      import('../services/weekCache'),
+    ])
+    void idbCache.invalidate('programme-config', user.id)
+    void idbCache.invalidate('programme-context', user.id)
+    weekCache.clearUserWeekCache(user.id)
+  }, [user])
+
+  const handleRefresh = useCallback(async () => {
+    if (!user || !activeProgramme) return
+    setActionLoading(true)
+    setActionError(null)
+
+    const result = await rehydrateProgramme(activeProgramme.id, user.id)
+
+    if (!result.success) {
+      setActionError(result.error ?? 'Refresh failed')
+      setActionLoading(false)
+      return
+    }
+
+    await bustCaches()
+
+    // Reload phases + reset accordion
+    const { data: freshPhases } = await getProgrammePhases(activeProgramme.id)
+    setPhases(freshPhases ?? [])
+    setPhaseDays({})
+    setOpenPhaseIdx(null)
+    setConfirmAction(null)
+    setActionLoading(false)
+  }, [user, activeProgramme, bustCaches])
+
+  const handleRegen = useCallback(async () => {
+    if (!user) return
+    setActionLoading(true)
+    setActionError(null)
+
+    await supabase
+      .from('programmes')
+      .update({ is_active: false })
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+
+    await bustCaches()
+
+    setActiveProgramme(null)
+    setPhases([])
+    setPhaseDays({})
+    setOpenPhaseIdx(null)
+    setConfirmAction(null)
+    setActionLoading(false)
+    setTabState('no_programme')
+  }, [user, bustCaches])
+
   // ── Loading ──
   if (tabState === 'loading') {
     return (
@@ -176,6 +237,21 @@ export default function Program() {
 
   // ── Has programme ──
   const totalWeeks = phases.reduce((s: number, p: AnyData) => s + (p.weeks_count ?? 0), 0)
+
+  const CONFIRM_COPY = {
+    refresh: {
+      title: 'Refresh Programme?',
+      body: 'Re-seeds your workout structure from the stored AI plan and resets your start date to today. Your exercise history is kept.',
+      cta: 'Refresh',
+      color: colors.blue,
+    },
+    regen: {
+      title: 'Generate New Programme?',
+      body: "Your current programme will be deactivated and you'll go through the full AI generation flow again. Exercise history is kept.",
+      cta: 'Generate New',
+      color: colors.accent,
+    },
+  }
 
   return (
     <>
@@ -242,7 +318,6 @@ export default function Program() {
                   transition: 'border-color 0.2s',
                 }}
               >
-                {/* Phase header */}
                 <button
                   onClick={() => void togglePhase(pi, phase)}
                   className="w-full flex items-center gap-3 p-4 active:opacity-70"
@@ -296,7 +371,6 @@ export default function Program() {
                   </div>
                 </button>
 
-                {/* Days list */}
                 {isOpen && (
                   <div style={{ borderTop: `1px solid ${colors.border}` }}>
                     {days.length === 0 ? (
@@ -319,7 +393,6 @@ export default function Program() {
                                 di < days.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
                             }}
                           >
-                            {/* Day-of-week tag */}
                             <span
                               className="flex-shrink-0 text-[10px] font-['DM_Sans'] font-bold tracking-[1px] w-8 text-center py-0.5"
                               style={{
@@ -330,14 +403,12 @@ export default function Program() {
                             >
                               {day.day_of_week?.slice(0, 3) ?? `D${di + 1}`}
                             </span>
-                            {/* Title */}
                             <p
                               className="flex-1 text-[13px] font-['DM_Sans']"
                               style={{ color: isRest ? colors.muted : colors.text }}
                             >
                               {day.title ?? (isRest ? 'Rest' : `Day ${di + 1}`)}
                             </p>
-                            {/* Type dot */}
                             <div
                               className="flex-shrink-0 w-2 h-2 rounded-full"
                               style={{ background: dotColor }}
@@ -351,6 +422,177 @@ export default function Program() {
               </div>
             )
           })}
+        </div>
+
+        {/* ── Manage section ── */}
+        <div
+          style={{
+            background: colors.surface,
+            border: `1px solid ${colors.border}`,
+            borderRadius: radius.card,
+            overflow: 'hidden',
+          }}
+        >
+          <p
+            className="px-4 pt-3 pb-2 text-[10px] font-['DM_Sans'] font-bold tracking-[2px] uppercase"
+            style={{ color: colors.muted }}
+          >
+            Manage Programme
+          </p>
+
+          {/* Refresh row */}
+          <button
+            onClick={() => {
+              setConfirmAction((prev) => (prev === 'refresh' ? null : 'refresh'))
+              setActionError(null)
+            }}
+            disabled={actionLoading}
+            className="w-full flex items-center gap-3 px-4 py-3 active:opacity-70"
+            style={{
+              background: 'none',
+              border: 'none',
+              borderTop: `1px solid ${colors.border}`,
+              cursor: 'pointer',
+              opacity: actionLoading ? 0.4 : 1,
+            }}
+          >
+            <div
+              className="flex-shrink-0 w-8 h-8 flex items-center justify-center"
+              style={{ background: `${colors.blue}18`, borderRadius: 8 }}
+            >
+              <RefreshCw size={15} color={colors.blue} />
+            </div>
+            <div className="flex-1 text-left">
+              <p
+                className="text-[14px] font-['DM_Sans'] font-medium"
+                style={{ color: colors.text }}
+              >
+                Refresh Programme
+              </p>
+              <p className="text-[11px] font-['DM_Sans'] mt-0.5" style={{ color: colors.muted }}>
+                Re-seed structure · reset start date to today
+              </p>
+            </div>
+          </button>
+
+          {/* Regen row */}
+          <button
+            onClick={() => {
+              setConfirmAction((prev) => (prev === 'regen' ? null : 'regen'))
+              setActionError(null)
+            }}
+            disabled={actionLoading}
+            className="w-full flex items-center gap-3 px-4 py-3 active:opacity-70"
+            style={{
+              background: 'none',
+              border: 'none',
+              borderTop: `1px solid ${colors.border}`,
+              cursor: 'pointer',
+              opacity: actionLoading ? 0.4 : 1,
+            }}
+          >
+            <div
+              className="flex-shrink-0 w-8 h-8 flex items-center justify-center"
+              style={{ background: `${colors.accent}18`, borderRadius: 8 }}
+            >
+              <Sparkles size={15} color={colors.accent} />
+            </div>
+            <div className="flex-1 text-left">
+              <p
+                className="text-[14px] font-['DM_Sans'] font-medium"
+                style={{ color: colors.text }}
+              >
+                Generate New Programme
+              </p>
+              <p className="text-[11px] font-['DM_Sans'] mt-0.5" style={{ color: colors.muted }}>
+                Start over with a new AI plan
+              </p>
+            </div>
+          </button>
+
+          {/* Confirmation panel */}
+          {confirmAction && (
+            <div
+              className="px-4 py-4"
+              style={{ borderTop: `1px solid ${colors.border}`, background: colors.bgSubtle }}
+            >
+              <div className="flex items-start gap-2 mb-3">
+                <AlertTriangle size={14} color={colors.warning} className="flex-shrink-0 mt-0.5" />
+                <div>
+                  <p
+                    className="text-[13px] font-['DM_Sans'] font-semibold mb-1"
+                    style={{ color: colors.text }}
+                  >
+                    {CONFIRM_COPY[confirmAction].title}
+                  </p>
+                  <p
+                    className="text-[12px] font-['DM_Sans'] leading-relaxed"
+                    style={{ color: colors.muted }}
+                  >
+                    {CONFIRM_COPY[confirmAction].body}
+                  </p>
+                </div>
+              </div>
+
+              {actionError && (
+                <p
+                  className="text-[12px] font-['DM_Sans'] mb-3 px-3 py-2"
+                  style={{
+                    background: `${colors.error}18`,
+                    border: `1px solid ${colors.error}44`,
+                    borderRadius: 8,
+                    color: colors.error,
+                  }}
+                >
+                  {actionError}
+                </p>
+              )}
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setConfirmAction(null)
+                    setActionError(null)
+                  }}
+                  disabled={actionLoading}
+                  className="flex-1 py-2.5 text-[13px] font-['DM_Sans'] font-medium active:opacity-60"
+                  style={{
+                    background: 'none',
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: radius.button,
+                    color: colors.textSecondary,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() =>
+                    void (confirmAction === 'refresh' ? handleRefresh() : handleRegen())
+                  }
+                  disabled={actionLoading}
+                  className="flex-1 py-2.5 text-[13px] font-['DM_Sans'] font-bold active:scale-[0.98] transition-transform"
+                  style={{
+                    background: CONFIRM_COPY[confirmAction].color,
+                    border: 'none',
+                    borderRadius: radius.button,
+                    color: '#fff',
+                    cursor: actionLoading ? 'default' : 'pointer',
+                    opacity: actionLoading ? 0.6 : 1,
+                  }}
+                >
+                  {actionLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 size={13} className="animate-spin" />
+                      Working…
+                    </span>
+                  ) : (
+                    CONFIRM_COPY[confirmAction].cta
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
