@@ -41,9 +41,9 @@ const Account = lazyWithRetry(() => import('./pages/Account'))
 const OnboardingWizard = lazyWithRetry(() => import('./features/onboarding/OnboardingWizard'))
 
 function OnboardingGate({ children }: { children: ReactNode }) {
-  const { profileComplete, healthComplete, loading } = useProfileCompletion()
+  const { status } = useProfileCompletion()
 
-  if (loading) {
+  if (status === 'loading') {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
@@ -54,12 +54,12 @@ function OnboardingGate({ children }: { children: ReactNode }) {
     )
   }
 
-  if (!profileComplete) {
+  if (status === 'onboarding') {
     return <Navigate to="/onboarding" replace />
   }
 
-  if (!healthComplete) {
-    return <Navigate to="/onboarding?step=2" replace />
+  if (status === 'goal-only') {
+    return <Navigate to="/onboarding?mode=complete" replace />
   }
 
   return children

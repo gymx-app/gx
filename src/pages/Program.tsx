@@ -106,7 +106,7 @@ export default function Program() {
           supabase
             .from('user_health')
             .select(
-              'fitness_level, goal, available_days_per_week, session_duration_min, equipment, injuries'
+              'fitness_level, goal, available_days_per_week, session_duration_min, equipment, injuries, preferred_workout_time'
             )
             .eq('user_id', user.id)
             .maybeSingle(),

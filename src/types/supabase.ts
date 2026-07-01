@@ -438,6 +438,7 @@ export type Database = {
           skeletal_muscle_mass: number | null
           total_body_water: number | null
           user_id: string
+          visceral_fat_area: number | null
           visceral_fat_level: number | null
           weight_kg: number | null
         }
@@ -462,6 +463,7 @@ export type Database = {
           skeletal_muscle_mass?: number | null
           total_body_water?: number | null
           user_id: string
+          visceral_fat_area?: number | null
           visceral_fat_level?: number | null
           weight_kg?: number | null
         }
@@ -486,6 +488,7 @@ export type Database = {
           skeletal_muscle_mass?: number | null
           total_body_water?: number | null
           user_id?: string
+          visceral_fat_area?: number | null
           visceral_fat_level?: number | null
           weight_kg?: number | null
         }
@@ -807,6 +810,13 @@ export type Database = {
           session_duration_min: number | null
           equipment: string | null
           injuries: string[] | null
+          preferred_workout_time: string | null
+          height_cm: number | null
+          current_weight_kg: number | null
+          lifestyle: string[] | null
+          occupation: string | null
+          medical_conditions: string[] | null
+          injuries_v2: Json | null
           created_at: string | null
           updated_at: string | null
         }
@@ -819,6 +829,13 @@ export type Database = {
           session_duration_min?: number | null
           equipment?: string | null
           injuries?: string[] | null
+          preferred_workout_time?: string | null
+          height_cm?: number | null
+          current_weight_kg?: number | null
+          lifestyle?: string[] | null
+          occupation?: string | null
+          medical_conditions?: string[] | null
+          injuries_v2?: Json | null
           created_at?: string | null
           updated_at?: string | null
         }
@@ -831,6 +848,13 @@ export type Database = {
           session_duration_min?: number | null
           equipment?: string | null
           injuries?: string[] | null
+          preferred_workout_time?: string | null
+          height_cm?: number | null
+          current_weight_kg?: number | null
+          lifestyle?: string[] | null
+          occupation?: string | null
+          medical_conditions?: string[] | null
+          injuries_v2?: Json | null
           created_at?: string | null
           updated_at?: string | null
         }
@@ -883,6 +907,7 @@ export type Database = {
           id: string
           last_name: string | null
           medical_conditions: string | null
+          nationality: string | null
           occupation_type: string | null
           onboarding_completed: boolean | null
           onboarding_step: number | null
@@ -910,6 +935,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           medical_conditions?: string | null
+          nationality?: string | null
           occupation_type?: string | null
           onboarding_completed?: boolean | null
           onboarding_step?: number | null
@@ -937,6 +963,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           medical_conditions?: string | null
+          nationality?: string | null
           occupation_type?: string | null
           onboarding_completed?: boolean | null
           onboarding_step?: number | null

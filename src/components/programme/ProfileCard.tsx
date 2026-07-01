@@ -1,4 +1,6 @@
 import { colors } from '../../styles/tokens'
+import { calculateAge } from '../../utils/dateUtils'
+import { GOAL_LABELS } from './goalLabels'
 import { Pencil } from 'lucide-react'
 
 export interface UserProfile {
@@ -17,16 +19,8 @@ export interface UserHealth {
   session_duration_min: number | null
   equipment: string | null
   injuries: string[] | null
-}
-
-const GOAL_LABELS: Record<string, string> = {
-  fat_loss: 'Fat Loss',
-  muscle_gain: 'Muscle Gain',
-  recomposition: 'Body Recomposition',
-  strength: 'Strength',
-  endurance: 'Endurance',
-  general_fitness: 'General Fitness',
-  body_recomposition: 'Body Recomposition',
+  preferred_workout_time: string | null
+  injuries_v2?: { area: string; modification: 'modify' | 'avoid' | null; notes: string }[] | null
 }
 
 const EQUIPMENT_LABELS: Record<string, string> = {
@@ -50,23 +44,11 @@ const GOAL_COLORS: Record<string, string> = {
 
 const FITNESS_LEVELS = ['beginner', 'intermediate', 'advanced']
 
-function calcAge(dob: string | null): number {
-  if (!dob) return 25
-  const birth = new Date(dob)
-  if (isNaN(birth.getTime())) return 25
-  const today = new Date()
-  let age = today.getFullYear() - birth.getFullYear()
-  const m = today.getMonth() - birth.getMonth()
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
-  return age
-}
-
-function initials(name: string | null): string {
-  if (!name) return 'A'
-  const parts = name.trim().split(' ')
-  const first = parts[0]?.[0] ?? 'A'
-  const last = parts[parts.length - 1]?.[0] ?? ''
-  return parts.length >= 2 ? `${first}${last}`.toUpperCase() : first.toUpperCase()
+function ageGenderChip(dob: string | null, gender: string | null): string {
+  const age = calculateAge(dob)
+  if (age === null) return '—'
+  const initial = gender === 'female' ? 'F' : gender === 'other' ? 'O' : 'M'
+  return `${age}${initial}`
 }
 
 interface ProfileCardProps {
@@ -76,9 +58,9 @@ interface ProfileCardProps {
 }
 
 export function ProfileCard({ profile, health, onEdit }: ProfileCardProps) {
-  const name = profile.full_name ?? 'Athlete'
-  const age = calcAge(profile.date_of_birth)
-  const gender = profile.gender === 'female' ? 'Female' : 'Male'
+  const chip = ageGenderChip(profile.date_of_birth, profile.gender)
+  const heightCm = profile.height_cm != null ? `${Math.round(profile.height_cm)}cm` : '—'
+  const weightKg = profile.current_weight_kg != null ? `${profile.current_weight_kg}kg` : '—'
   const goalKey = health.goal ?? 'general_fitness'
   const goalLabel = GOAL_LABELS[goalKey] ?? goalKey
   const goalColor = GOAL_COLORS[goalKey] ?? colors.accent
@@ -97,32 +79,29 @@ export function ProfileCard({ profile, health, onEdit }: ProfileCardProps) {
         overflow: 'hidden',
       }}
     >
-      {/* Header: avatar + name + goal badge */}
+      {/* Header: age/gender chip + height/weight + goal badge */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3">
         <div
-          className="flex-shrink-0 w-11 h-11 flex items-center justify-center"
+          className="flex-shrink-0 px-3 py-2 flex items-center justify-center"
           style={{
             background: `${goalColor}22`,
             border: `1.5px solid ${goalColor}55`,
-            borderRadius: '50%',
+            borderRadius: 10,
           }}
         >
           <span
-            className="font-['Bebas_Neue'] text-[15px] tracking-[1px]"
+            className="font-['Bebas_Neue'] text-[16px] tracking-[1px]"
             style={{ color: goalColor }}
           >
-            {initials(name)}
+            {chip}
           </span>
         </div>
         <div className="flex-1 min-w-0">
           <p
-            className="font-['DM_Sans'] font-semibold text-[15px] leading-tight truncate"
+            className="font-['DM_Sans'] font-semibold text-[13px] leading-tight truncate"
             style={{ color: colors.text }}
           >
-            {name}
-          </p>
-          <p className="text-[12px] font-['DM_Sans'] mt-0.5" style={{ color: colors.muted }}>
-            {age}y · {gender}
+            {heightCm} · {weightKg}
           </p>
         </div>
         <div

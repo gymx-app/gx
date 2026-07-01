@@ -299,6 +299,7 @@ create table if not exists inbody_logs (
   ecw_ratio numeric(5,3),
   bmr int,
   visceral_fat_level int,
+  visceral_fat_area numeric(6,2),
   inbody_score int,
   lean_right_arm numeric(4,2),
   lean_left_arm numeric(4,2),

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
-const ODIN_URL = 'https://agent-odin.vercel.app/api/v1/odin/generate-programme'
+const ODIN_URL = 'https://agent-odin.vercel.app/api/v2/odin/generate-programme'
 const TIMEOUT_MS = 180000
 
 function stripNulls(obj: unknown): unknown {

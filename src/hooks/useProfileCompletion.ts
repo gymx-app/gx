@@ -2,18 +2,19 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthContext'
 
+export type OnboardingGateStatus = 'loading' | 'onboarding' | 'goal-only' | 'ready'
+
 interface ProfileCompletionResult {
-  profileComplete: boolean
-  healthComplete: boolean
-  loading: boolean
+  status: OnboardingGateStatus
   error: string | null
 }
 
+// Mirrors the onboarding trigger logic: missing/incomplete profile sends the
+// user through the full 3-step wizard; a completed profile with no goal yet
+// (e.g. an existing user re-entering the funnel) only needs step 3.
 export function useProfileCompletion(): ProfileCompletionResult {
   const { user } = useAuth()
-  const [profileComplete, setProfileComplete] = useState(false)
-  const [healthComplete, setHealthComplete] = useState(false)
-  const [checked, setChecked] = useState(false)
+  const [status, setStatus] = useState<OnboardingGateStatus>('loading')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -25,52 +26,37 @@ export function useProfileCompletion(): ProfileCompletionResult {
       const [profileRes, healthRes] = await Promise.all([
         supabase
           .from('user_profiles')
-          .select('full_name, date_of_birth, gender, height_cm, current_weight_kg')
+          .select('onboarding_completed')
           .eq('user_id', user.id)
           .maybeSingle(),
-        supabase
-          .from('user_health')
-          .select('fitness_level, goal, available_days_per_week, session_duration_min, equipment')
-          .eq('user_id', user.id)
-          .maybeSingle(),
+        supabase.from('user_health').select('goal').eq('user_id', user.id).maybeSingle(),
       ])
 
       if (cancelled) return
 
       if (profileRes.error && profileRes.error.code !== 'PGRST116') {
         setError('Failed to check profile')
-        setChecked(true)
+        setStatus('ready')
         return
       }
       if (healthRes.error && healthRes.error.code !== 'PGRST116') {
         setError('Failed to check health data')
-        setChecked(true)
+        setStatus('ready')
         return
       }
 
-      const p = profileRes.data
-      const pComplete = !!(
-        p &&
-        p.full_name &&
-        p.date_of_birth != null &&
-        p.gender &&
-        p.height_cm != null &&
-        p.current_weight_kg != null
-      )
+      const profile = profileRes.data
+      if (!profile || !profile.onboarding_completed) {
+        setStatus('onboarding')
+        return
+      }
 
-      const h = healthRes.data
-      const hComplete = !!(
-        h &&
-        h.fitness_level &&
-        h.goal &&
-        h.available_days_per_week != null &&
-        h.session_duration_min != null &&
-        h.equipment
-      )
+      if (!healthRes.data?.goal) {
+        setStatus('goal-only')
+        return
+      }
 
-      setProfileComplete(pComplete)
-      setHealthComplete(hComplete)
-      setChecked(true)
+      setStatus('ready')
     }
 
     void check()
@@ -79,7 +65,5 @@ export function useProfileCompletion(): ProfileCompletionResult {
     }
   }, [user])
 
-  const loading = !checked && !!user
-
-  return { profileComplete, healthComplete, loading, error }
+  return { status, error }
 }
