@@ -75,13 +75,20 @@ export default function Program() {
   const [checkKey, setCheckKey] = useState(0)
   const skipInitialCheckRef = useRef(previewFromOnboarding !== null)
 
-  // Clear the router state once so a refresh or re-navigation doesn't replay it.
+  // Reactively pick up a freshly-generated preview handed off via router state.
+  // AppLayout keeps every tab mounted (display:none), so a later navigate() to
+  // /program with new state (e.g. re-onboarding while this tab is still
+  // mounted) must be picked up here too, not just captured once at first mount.
   useEffect(() => {
-    if (previewFromOnboarding) {
+    const incoming =
+      (location.state as { previewResult?: GenerateResult } | null)?.previewResult ?? null
+    if (incoming) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPreviewResult(incoming)
       void navigate(location.pathname, { replace: true, state: null })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [location.state])
 
   // When the user navigates back to /program with a stale previewResult
   // (tab stays mounted via display:none), bump checkKey to re-run the check.
