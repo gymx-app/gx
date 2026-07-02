@@ -2089,8 +2089,8 @@ export default function OnboardingWizard() {
   if (!user || loadingInitial) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: colors.bg }}
+        className="flex items-center justify-center"
+        style={{ background: colors.bg, height: '100dvh' }}
       >
         <Loader2 size={28} color={colors.accent} className="animate-spin" />
       </div>
@@ -2100,7 +2100,7 @@ export default function OnboardingWizard() {
   const progressWidth = step === 1 ? '33%' : step === 2 ? '66%' : '100%'
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: colors.bg }}>
+    <div className="flex flex-col" style={{ background: colors.bg, height: '100dvh' }}>
       {/* Top bar */}
       <div className="px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)] pb-3">
         <div className="flex items-center justify-between mb-3">
