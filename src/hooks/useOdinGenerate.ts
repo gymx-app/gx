@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase'
 const ODIN_URL = 'https://agent-odin.vercel.app/api/v2/odin/generate-programme'
 const TIMEOUT_MS = 180000
 
+export type OdinErrorType = 'API_ERROR' | 'VALIDATION_ERROR' | null
+
 function stripNulls(obj: unknown): unknown {
   if (obj === null) return undefined
   if (Array.isArray(obj)) return obj.map(stripNulls)
@@ -18,13 +20,31 @@ function stripNulls(obj: unknown): unknown {
   return obj
 }
 
+export interface OdinGenerateOutcome {
+  success: boolean
+  result: unknown
+  error: string | null
+  errorType: OdinErrorType
+}
+
 interface UseOdinGenerateReturn {
-  generate: (athlete: unknown) => Promise<void>
+  generate: (athlete: unknown, timeoutMs?: number) => Promise<OdinGenerateOutcome>
   loading: boolean
   status: string
   result: unknown
   error: string | null
+  errorType: OdinErrorType
   reset: () => void
+}
+
+class OdinResponseError extends Error {
+  // A well-formed { success: false, error } response is Odin rejecting the
+  // input (validation) — distinct from a network failure/timeout/5xx.
+  isValidationError: boolean
+  constructor(message: string, isValidationError: boolean) {
+    super(message)
+    this.isValidationError = isValidationError
+  }
 }
 
 async function odinPost(
@@ -43,10 +63,19 @@ async function odinPost(
     signal,
   })
 
-  const data = await res.json()
+  let data: { success?: boolean; error?: { message?: string }; message?: string; data?: unknown }
+  try {
+    data = await res.json()
+  } catch {
+    throw new OdinResponseError(`HTTP ${res.status}`, false)
+  }
 
   if (!res.ok || data.success === false) {
-    throw new Error(data?.error?.message ?? data?.message ?? `HTTP ${res.status}`)
+    const message = data?.error?.message ?? data?.message ?? `HTTP ${res.status}`
+    // A 4xx with a structured error body is Odin telling us the input was bad;
+    // anything else (5xx, malformed body) is an infrastructure failure.
+    const isValidationError = res.status >= 400 && res.status < 500 && !!data?.error?.message
+    throw new OdinResponseError(message, isValidationError)
   }
 
   return data.data
@@ -57,62 +86,80 @@ export function useOdinGenerate(): UseOdinGenerateReturn {
   const [status, setStatus] = useState('')
   const [result, setResult] = useState<unknown>(null)
   const [error, setError] = useState<string | null>(null)
+  const [errorType, setErrorType] = useState<OdinErrorType>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  const generate = useCallback(async (athlete: unknown) => {
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
+  const generate = useCallback(
+    async (athlete: unknown, timeoutMs: number = TIMEOUT_MS): Promise<OdinGenerateOutcome> => {
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
 
-    setLoading(true)
-    setError(null)
-    setResult(null)
+      setLoading(true)
+      setError(null)
+      setErrorType(null)
+      setResult(null)
 
-    const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS)
+      const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      if (!session) {
-        setError('Not authenticated. Please sign in again.')
-        return
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        if (!session) {
+          const msg = 'Not authenticated. Please sign in again.'
+          setError(msg)
+          setErrorType('API_ERROR')
+          return { success: false, result: null, error: msg, errorType: 'API_ERROR' }
+        }
+
+        const token = session.access_token
+
+        // Step 1: strategy
+        setStatus('Analysing your profile…')
+        const strategyResult = (await odinPost(
+          ODIN_URL,
+          { step: 'strategy', athlete },
+          token,
+          controller.signal
+        )) as { strategy: unknown }
+
+        // Step 2: build — strip nulls from strategy so Zod validation passes on the server
+        setStatus('Building your programme…')
+        const buildResult = await odinPost(
+          ODIN_URL,
+          { step: 'build', athlete, strategy: stripNulls(strategyResult.strategy) },
+          token,
+          controller.signal
+        )
+
+        setResult(buildResult)
+        return { success: true, result: buildResult, error: null, errorType: null }
+      } catch (err) {
+        let msg: string
+        let type: OdinErrorType
+        if ((err as Error).name === 'AbortError') {
+          msg = 'Connection timed out. Please try again.'
+          type = 'API_ERROR'
+        } else if (err instanceof OdinResponseError) {
+          msg = err.message
+          type = err.isValidationError ? 'VALIDATION_ERROR' : 'API_ERROR'
+        } else {
+          const inner = err instanceof Error ? err.message : 'Unknown error'
+          msg = `Generation failed: ${inner}. Please try again.`
+          type = 'API_ERROR'
+        }
+        setError(msg)
+        setErrorType(type)
+        return { success: false, result: null, error: msg, errorType: type }
+      } finally {
+        setLoading(false)
+        setStatus('')
+        clearTimeout(timeout)
       }
-
-      const token = session.access_token
-
-      // Step 1: strategy
-      setStatus('Analysing your profile…')
-      const strategyResult = (await odinPost(
-        ODIN_URL,
-        { step: 'strategy', athlete },
-        token,
-        controller.signal
-      )) as { strategy: unknown }
-
-      // Step 2: build — strip nulls from strategy so Zod validation passes on the server
-      setStatus('Building your programme…')
-      const buildResult = await odinPost(
-        ODIN_URL,
-        { step: 'build', athlete, strategy: stripNulls(strategyResult.strategy) },
-        token,
-        controller.signal
-      )
-
-      setResult(buildResult)
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') {
-        setError('Request timed out — Odin may be under heavy load. Please try again.')
-      } else {
-        const msg = err instanceof Error ? err.message : 'Unknown error'
-        setError(`Generation failed: ${msg}. Please try again.`)
-      }
-    } finally {
-      setLoading(false)
-      setStatus('')
-      clearTimeout(timeout)
-    }
-  }, [])
+    },
+    []
+  )
 
   const reset = useCallback(() => {
     abortRef.current?.abort()
@@ -120,7 +167,8 @@ export function useOdinGenerate(): UseOdinGenerateReturn {
     setStatus('')
     setResult(null)
     setError(null)
+    setErrorType(null)
   }, [])
 
-  return { generate, loading, status, result, error, reset }
+  return { generate, loading, status, result, error, errorType, reset }
 }

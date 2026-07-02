@@ -10,8 +10,9 @@ interface ProfileCompletionResult {
 }
 
 // Mirrors the onboarding trigger logic: missing/incomplete profile sends the
-// user through the full 3-step wizard; a completed profile with no goal yet
-// (e.g. an existing user re-entering the funnel) only needs step 3.
+// user through the full 10-screen wizard; a completed profile with no goal
+// yet (legacy accounts from before goal was a required onboarding field)
+// only needs the goal-onward screens, via OnboardingWizard's ?mode=complete.
 export function useProfileCompletion(): ProfileCompletionResult {
   const { user } = useAuth()
   const [status, setStatus] = useState<OnboardingGateStatus>('loading')

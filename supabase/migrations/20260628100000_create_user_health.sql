@@ -12,18 +12,21 @@ CREATE TABLE IF NOT EXISTS user_health (
   updated_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX idx_user_health_user_id ON user_health(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_health_user_id ON user_health(user_id);
 
 ALTER TABLE user_health ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own health data" ON user_health;
 CREATE POLICY "Users can view own health data"
   ON user_health FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own health data" ON user_health;
 CREATE POLICY "Users can insert own health data"
   ON user_health FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own health data" ON user_health;
 CREATE POLICY "Users can update own health data"
   ON user_health FOR UPDATE
   USING (auth.uid() = user_id)

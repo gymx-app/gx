@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import TopBar from '../components/layout/TopBar'
 import { colors, radius } from '../styles/tokens'
@@ -55,22 +55,38 @@ export default function Program() {
   const navigate = useNavigate()
   const location = useLocation()
 
+  // OnboardingWizard navigates here with a freshly-generated result in router
+  // state (Screen 10's "user must confirm first" requirement) so it can reuse
+  // this tab's existing ProgrammePreview/save flow instead of duplicating it.
+  const previewFromOnboarding =
+    (location.state as { previewResult?: GenerateResult } | null)?.previewResult ?? null
+
   const [tabState, setTabState] = useState<TabState>('loading')
   const [activeProgramme, setActiveProgramme] = useState<AnyData>(null)
   const [phases, setPhases] = useState<AnyData[]>([])
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [health, setHealth] = useState<UserHealth | null>(null)
-  const [previewResult, setPreviewResult] = useState<GenerateResult | null>(null)
+  const [previewResult, setPreviewResult] = useState<GenerateResult | null>(previewFromOnboarding)
   const [openPhaseIdx, setOpenPhaseIdx] = useState<number | null>(null)
   const [phaseDays, setPhaseDays] = useState<Record<string, AnyData[]>>({})
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [checkKey, setCheckKey] = useState(0)
+  const skipInitialCheckRef = useRef(previewFromOnboarding !== null)
+
+  // Clear the router state once so a refresh or re-navigation doesn't replay it.
+  useEffect(() => {
+    if (previewFromOnboarding) {
+      void navigate(location.pathname, { replace: true, state: null })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // When the user navigates back to /program with a stale previewResult
   // (tab stays mounted via display:none), bump checkKey to re-run the check.
   useEffect(() => {
+    if (skipInitialCheckRef.current) return
     if (location.pathname === '/program' && previewResult !== null) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCheckKey((k) => k + 1)
@@ -84,6 +100,11 @@ export default function Program() {
     let cancelled = false
 
     const check = async () => {
+      if (skipInitialCheckRef.current) {
+        skipInitialCheckRef.current = false
+        setTabState('no_programme')
+        return
+      }
       // Clear any stale preview state before checking (handles navigation-back case)
       setPreviewResult(null)
       setTabState('loading')
