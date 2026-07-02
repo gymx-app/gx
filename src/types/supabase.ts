@@ -755,6 +755,7 @@ export type Database = {
           ai_prompt: string | null
           assessment_id: string | null
           available_days: number | null
+          baseline_session: Json | null
           completed_at: string | null
           created_at: string | null
           created_by_ai: boolean | null
@@ -777,6 +778,7 @@ export type Database = {
           ai_prompt?: string | null
           assessment_id?: string | null
           available_days?: number | null
+          baseline_session?: Json | null
           completed_at?: string | null
           created_at?: string | null
           created_by_ai?: boolean | null
@@ -799,6 +801,7 @@ export type Database = {
           ai_prompt?: string | null
           assessment_id?: string | null
           available_days?: number | null
+          baseline_session?: Json | null
           completed_at?: string | null
           created_at?: string | null
           created_by_ai?: boolean | null
@@ -822,6 +825,59 @@ export type Database = {
             columns: ['assessment_id']
             isOneToOne: false
             referencedRelation: 'fitness_assessments'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      strength_baselines: {
+        Row: {
+          created_at: string | null
+          estimated_1rm_kg: number
+          exercise_id: string
+          exercise_name: string
+          goal_type: string
+          id: string
+          programme_id: string | null
+          set3_reps: number
+          set3_weight_kg: number
+          tested_at: string | null
+          user_id: string | null
+          working_weight_kg: number
+        }
+        Insert: {
+          created_at?: string | null
+          estimated_1rm_kg: number
+          exercise_id: string
+          exercise_name: string
+          goal_type: string
+          id?: string
+          programme_id?: string | null
+          set3_reps: number
+          set3_weight_kg: number
+          tested_at?: string | null
+          user_id?: string | null
+          working_weight_kg: number
+        }
+        Update: {
+          created_at?: string | null
+          estimated_1rm_kg?: number
+          exercise_id?: string
+          exercise_name?: string
+          goal_type?: string
+          id?: string
+          programme_id?: string | null
+          set3_reps?: number
+          set3_weight_kg?: number
+          tested_at?: string | null
+          user_id?: string | null
+          working_weight_kg?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'strength_baselines_programme_id_fkey'
+            columns: ['programme_id']
+            isOneToOne: false
+            referencedRelation: 'programmes'
             referencedColumns: ['id']
           },
         ]
@@ -1134,6 +1190,7 @@ export type Database = {
           id: string
           is_travel: boolean | null
           phase: number
+          session_type: string | null
           user_id: string
           workout_title: string | null
         }
@@ -1145,6 +1202,7 @@ export type Database = {
           id?: string
           is_travel?: boolean | null
           phase: number
+          session_type?: string | null
           user_id: string
           workout_title?: string | null
         }
@@ -1156,6 +1214,7 @@ export type Database = {
           id?: string
           is_travel?: boolean | null
           phase?: number
+          session_type?: string | null
           user_id?: string
           workout_title?: string | null
         }

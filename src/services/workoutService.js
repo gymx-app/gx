@@ -83,6 +83,30 @@ export async function upsertWorkoutSession(userId, sessionData) {
 }
 
 /**
+ * Get the most recently tested baseline working weight for an exercise.
+ * @param {string} userId
+ * @param {string} exerciseId
+ * @returns {Promise<number|null>}
+ */
+export async function getBaselineWeight(userId, exerciseId) {
+  try {
+    const { data, error } = await supabase
+      .from('strength_baselines')
+      .select('working_weight_kg')
+      .eq('user_id', userId)
+      .eq('exercise_id', exerciseId)
+      .order('tested_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (error) throw error
+    return data?.working_weight_kg ?? null
+  } catch (err) {
+    logger.error('getBaselineWeight:', err)
+    return null
+  }
+}
+
+/**
  * Get previous bests for all exercises within a date range.
  * @param {string} userId
  * @param {string} fromDate - YYYY-MM-DD

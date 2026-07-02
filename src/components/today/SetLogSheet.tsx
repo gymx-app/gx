@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef, memo } from 'react'
 import { useAuth } from '../../auth/AuthContext'
-import { upsertExerciseLog, upsertWorkoutSession } from '../../services/workoutService'
+import {
+  upsertExerciseLog,
+  upsertWorkoutSession,
+  getBaselineWeight,
+} from '../../services/workoutService'
 import { logger } from '../../lib/logger'
 import { Button, SectionLabel } from '../ui'
 import { colors, radius } from '../../styles/tokens'
@@ -71,9 +75,27 @@ const SetLogSheet = memo(function SetLogSheet({
   const [reps, setReps] = useState(existingLog?.reps?.toString() ?? '')
   const [rpe, setRpe] = useState<number | null>(existingLog?.rpe ?? null)
   const [isMM, setIsMM] = useState(false)
+  const [usedBaselineWeight, setUsedBaselineWeight] = useState(false)
 
   useEffect(() => {
     setTimeout(() => weightRef.current?.focus(), 100)
+  }, [])
+
+  useEffect(() => {
+    if (existingLog || previousBest) return
+    const exerciseId = exerciseMap[exercise.n]
+    if (!exerciseId || !user?.id) return
+
+    let cancelled = false
+    void getBaselineWeight(user.id, exerciseId).then((baselineWeight) => {
+      if (cancelled || baselineWeight == null) return
+      setWeight(baselineWeight.toString())
+      setUsedBaselineWeight(true)
+    })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per sheet open for this exercise
   }, [])
 
   function handleLog() {
@@ -183,7 +205,10 @@ const SetLogSheet = memo(function SetLogSheet({
               inputMode="decimal"
               step="0.5"
               value={weight}
-              onChange={(e) => setWeight(e.target.value)}
+              onChange={(e) => {
+                setWeight(e.target.value)
+                setUsedBaselineWeight(false)
+              }}
               className="w-full px-[14px] py-3 text-[18px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] text-center transition-all duration-150"
               style={{
                 background: colors.surface2,
@@ -193,6 +218,11 @@ const SetLogSheet = memo(function SetLogSheet({
               placeholder="0"
               aria-label="Weight in kilograms"
             />
+            {usedBaselineWeight && (
+              <p className="text-xs text-zinc-500 mt-1">
+                Prescribed starting weight from your baseline
+              </p>
+            )}
           </div>
           <div>
             <SectionLabel label="Reps" className="mb-[6px]" />

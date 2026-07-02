@@ -18,7 +18,9 @@ import CooldownSection from '../components/today/CooldownSection'
 import FinisherBlock from '../components/today/FinisherBlock'
 import TodaySkeleton, { DayContentSkeleton } from '../components/today/TodaySkeleton'
 import PullToRefreshIndicator from '../components/today/PullToRefreshIndicator'
+import BaselineSessionCard from '../components/today/BaselineSessionCard'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
+import useBaselineStatus from '../hooks/useBaselineStatus'
 import { Moon } from 'lucide-react'
 
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
@@ -181,6 +183,20 @@ export default function Today() {
 
   const phase = phaseInfo.phase
   const totalWeek = phaseInfo.totalWeek
+
+  // ── Day 0 baseline strength test (Odin v2 day_one_test path) ──
+  const {
+    baselinePending,
+    baselineSession,
+    programmeId: baselineProgrammeId,
+    loading: baselineLoading,
+    refetch: refetchBaselineStatus,
+  } = useBaselineStatus()
+
+  const handleBaselineComplete = useCallback(() => {
+    void refetchBaselineStatus()
+    void syncRefetch()
+  }, [refetchBaselineStatus, syncRefetch])
 
   // ── Workout for selected day (DB only) ──
   const workout = useMemo(() => {
@@ -544,7 +560,7 @@ export default function Today() {
   }
 
   // ── Loading — show skeleton only when no cached data ──
-  if (loading && !hasCachedData) {
+  if ((loading || baselineLoading) && !hasCachedData) {
     return <TodaySkeleton />
   }
 
@@ -625,6 +641,15 @@ export default function Today() {
 
             {dayLoading ? (
               <DayContentSkeleton />
+            ) : baselinePending ? (
+              <div className="pt-2.5">
+                <BaselineSessionCard
+                  baselineSession={baselineSession}
+                  mode="logging"
+                  programmeId={baselineProgrammeId}
+                  onComplete={handleBaselineComplete}
+                />
+              </div>
             ) : (
               <>
                 {/* Rest day */}
