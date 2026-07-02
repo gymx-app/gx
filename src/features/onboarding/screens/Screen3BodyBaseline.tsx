@@ -27,6 +27,7 @@ interface ParsedFields {
   bmr: number | null
   visceral_fat_area: number | null
   total_body_water_l: number | null
+  weight_kg: number | null
 }
 
 const FIELD_LABELS: { key: keyof InBodyData; label: string; unit: string }[] = [
@@ -34,7 +35,7 @@ const FIELD_LABELS: { key: keyof InBodyData; label: string; unit: string }[] = [
   { key: 'skeletal_muscle_mass', label: 'Skeletal Muscle Mass', unit: 'kg' },
   { key: 'body_fat_mass', label: 'Body Fat Mass', unit: 'kg' },
   { key: 'bmr', label: 'BMR', unit: 'kcal' },
-  { key: 'visceral_fat_level', label: 'Visceral Fat Level', unit: '' },
+  { key: 'visceral_fat_area', label: 'Visceral Fat Area', unit: 'cm²' },
   { key: 'weight_kg', label: 'Weight', unit: 'kg' },
 ]
 
@@ -117,9 +118,9 @@ export function Screen3BodyBaseline({
           skeletal_muscle_mass: parsed.smm_kg,
           body_fat_mass: parsed.body_fat_mass_kg,
           bmr: parsed.bmr,
-          visceral_fat_level: null,
+          visceral_fat_area: parsed.visceral_fat_area,
           total_body_water: parsed.total_body_water_l,
-          weight_kg: null,
+          weight_kg: parsed.weight_kg,
         })
         setUploadState('success')
       } catch {
@@ -178,7 +179,7 @@ export function Screen3BodyBaseline({
         skeletal_muscle_mass: wizardState.inbody_data.skeletal_muscle_mass,
         body_fat_mass: wizardState.inbody_data.body_fat_mass,
         bmr: wizardState.inbody_data.bmr,
-        visceral_fat_level: wizardState.inbody_data.visceral_fat_level,
+        visceral_fat_area: wizardState.inbody_data.visceral_fat_area,
         total_body_water: wizardState.inbody_data.total_body_water,
         weight_kg: wizardState.inbody_data.weight_kg ?? wizardState.current_weight_kg,
         date: getISTTodayStr(),

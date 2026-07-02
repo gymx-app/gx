@@ -198,7 +198,7 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
         supabase
           .from('inbody_logs')
           .select(
-            'body_fat_pct, skeletal_muscle_mass, body_fat_mass, bmr, visceral_fat_level, total_body_water'
+            'body_fat_pct, skeletal_muscle_mass, body_fat_mass, bmr, visceral_fat_area, total_body_water'
           )
           .eq('user_id', user.id)
           .order('date', { ascending: false })

@@ -138,13 +138,15 @@ export interface InBodySourceData {
   skeletal_muscle_mass: number | null
   body_fat_mass: number | null
   bmr: number | null
-  visceral_fat_level: number | null
+  visceral_fat_area: number | null
   total_body_water: number | null
 }
 
 // Odin's InBody schema requires body_fat_pct, skeletal_muscle_mass_kg, bmr, and
-// visceral_fat_level together — a partial object fails the server's strict
-// validation, so we only forward it once all four are present.
+// visceral_fat_area together — a partial object fails the server's strict
+// validation, so we only forward it once all four are present. Optional
+// fields (body_fat_mass_kg, total_body_water_kg) are included whenever known,
+// independently of whether the required set is complete.
 export function buildInbodyPayload(
   inbodyData: InBodySourceData | null | undefined
 ): Record<string, number> | null {
@@ -154,8 +156,7 @@ export function buildInbodyPayload(
   if (inbodyData.skeletal_muscle_mass != null)
     payload.skeletal_muscle_mass_kg = inbodyData.skeletal_muscle_mass
   if (inbodyData.body_fat_mass != null) payload.body_fat_mass_kg = inbodyData.body_fat_mass
-  if (inbodyData.visceral_fat_level != null)
-    payload.visceral_fat_level = inbodyData.visceral_fat_level
+  if (inbodyData.visceral_fat_area != null) payload.visceral_fat_area = inbodyData.visceral_fat_area
   if (inbodyData.total_body_water != null) payload.total_body_water_kg = inbodyData.total_body_water
   if (inbodyData.bmr != null) payload.bmr = inbodyData.bmr
 
@@ -163,6 +164,6 @@ export function buildInbodyPayload(
     payload.body_fat_pct != null &&
     payload.skeletal_muscle_mass_kg != null &&
     payload.bmr != null &&
-    payload.visceral_fat_level != null
+    payload.visceral_fat_area != null
   return hasRequired ? payload : null
 }

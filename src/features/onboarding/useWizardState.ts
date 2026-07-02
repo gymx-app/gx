@@ -16,7 +16,7 @@ export interface InBodyData {
   skeletal_muscle_mass: number | null
   body_fat_mass: number | null
   bmr: number | null
-  visceral_fat_level: number | null
+  visceral_fat_area: number | null
   total_body_water: number | null
   weight_kg: number | null
 }
@@ -220,7 +220,7 @@ export function useWizardState(): UseWizardStateReturn {
         supabase
           .from('inbody_logs')
           .select(
-            'body_fat_pct, skeletal_muscle_mass, body_fat_mass, bmr, visceral_fat_level, total_body_water, weight_kg'
+            'body_fat_pct, skeletal_muscle_mass, body_fat_mass, bmr, visceral_fat_area, total_body_water, weight_kg'
           )
           .eq('user_id', user.id)
           .order('date', { ascending: false })
@@ -279,7 +279,7 @@ export function useWizardState(): UseWizardStateReturn {
             skeletal_muscle_mass: inbody.skeletal_muscle_mass,
             body_fat_mass: inbody.body_fat_mass,
             bmr: inbody.bmr,
-            visceral_fat_level: inbody.visceral_fat_level,
+            visceral_fat_area: inbody.visceral_fat_area,
             total_body_water: inbody.total_body_water,
             weight_kg: inbody.weight_kg,
           }
