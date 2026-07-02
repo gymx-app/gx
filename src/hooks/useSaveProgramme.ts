@@ -45,6 +45,7 @@ export function useSaveProgramme(): UseSaveProgrammeReturn {
 
       const goalType = VALID_GOALS.includes(goal) ? goal : 'general_fitness'
       const equipType = VALID_EQUIP.includes(equipment) ? equipment : 'full_gym'
+      const baselineSession = data?.baseline_session ?? null
 
       // 1. Deactivate existing active programmes
       await supabase
@@ -59,26 +60,42 @@ export function useSaveProgramme(): UseSaveProgrammeReturn {
         0
       )
 
-      const { data: inserted, error: insertError } = await supabase
+      const baseInsert = {
+        user_id: userId,
+        name: programmeMeta?.name ?? 'My Programme',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        goal_type: goalType as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        equipment: equipType as any,
+        created_by_ai: true,
+        ai_model: data?.planner_version ?? 'ai_agent_v1',
+        ai_prompt: JSON.stringify(odinResult),
+        programme_data: data,
+        is_active: true,
+        available_days: null,
+        target_weeks: totalWeeks ?? null,
+        started_at: startDate,
+      }
+
+      let { data: inserted, error: insertError } = await supabase
         .from('programmes')
-        .insert({
-          user_id: userId,
-          name: programmeMeta?.name ?? 'My Programme',
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          goal_type: goalType as any,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          equipment: equipType as any,
-          created_by_ai: true,
-          ai_model: data?.planner_version ?? 'ai_agent_v1',
-          ai_prompt: JSON.stringify(odinResult),
-          programme_data: data,
-          is_active: true,
-          available_days: null,
-          target_weeks: totalWeeks ?? null,
-          started_at: startDate,
-        })
+        .insert({ ...baseInsert, baseline_session: baselineSession })
         .select('id')
         .single()
+
+      // `baseline_session` column may not exist yet if the migration adding it
+      // hasn't been applied to this Supabase project — fall back to saving
+      // without it rather than failing the whole programme save.
+      if (insertError?.code === '42703') {
+        console.warn(
+          '[GX] programmes.baseline_session column missing — saving programme without it. Apply supabase/migrations/20260702200000_add_baseline_session_to_programmes.sql'
+        )
+        ;({ data: inserted, error: insertError } = await supabase
+          .from('programmes')
+          .insert(baseInsert)
+          .select('id')
+          .single())
+      }
 
       if (insertError || !inserted) {
         setError(insertError?.message ?? 'Failed to create programme')

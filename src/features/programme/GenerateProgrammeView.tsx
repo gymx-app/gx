@@ -14,6 +14,7 @@ import {
   type ReturningUserHealth,
   type ReturningUserProfile,
 } from './buildReturningUserOdinPayload'
+import type { InBodySourceData } from '../../utils/odinMappers'
 
 const STRATEGY_LINES = [
   'Reading biomechanical profile…',
@@ -172,31 +173,43 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
   const [loadingData, setLoadingData] = useState(true)
   const [startDate, setStartDate] = useState(getISTTodayStr())
 
+  const [inbody, setInbody] = useState<InBodySourceData | null>(null)
+
   useEffect(() => {
     if (!user) return
     let cancelled = false
 
     const load = async () => {
-      const [profileRes, healthRes] = await Promise.all([
+      const [profileRes, healthRes, inbodyRes] = await Promise.all([
         supabase
           .from('user_profiles')
           .select(
-            'full_name, date_of_birth, gender, height_cm, current_weight_kg, target_weight_kg'
+            'full_name, date_of_birth, gender, height_cm, current_weight_kg, target_weight_kg, nationality'
           )
           .eq('user_id', user.id)
           .maybeSingle(),
         supabase
           .from('user_health')
           .select(
-            'fitness_level, goal, available_days_per_week, session_duration_min, equipment, injuries, injuries_v2, preferred_workout_time, lifestyle, occupation, medical_conditions, goal_sub_fields, baseline_path, known_lifts, target_body_fat_pct, target_timeframe_weeks'
+            'fitness_level, goal, available_days_per_week, session_duration_min, equipment, injuries, injuries_v2, preferred_workout_time, lifestyle, occupation, medical_conditions, goal_sub_fields, baseline_path, known_lifts, target_body_fat_pct, target_timeframe_weeks, body_fat_pct'
           )
           .eq('user_id', user.id)
+          .maybeSingle(),
+        supabase
+          .from('inbody_logs')
+          .select(
+            'body_fat_pct, skeletal_muscle_mass, body_fat_mass, bmr, visceral_fat_level, total_body_water'
+          )
+          .eq('user_id', user.id)
+          .order('date', { ascending: false })
+          .limit(1)
           .maybeSingle(),
       ])
 
       if (cancelled) return
       setProfile(profileRes.data ?? null)
       setHealth((healthRes.data as unknown as (UserHealth & ReturningUserHealth) | null) ?? null)
+      setInbody(inbodyRes.data ?? null)
       setLoadingData(false)
     }
 
@@ -209,7 +222,7 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
   const handleGenerate = async () => {
     if (!profile || !health) return
     setError(null)
-    const payload = buildReturningUserOdinPayload(profile, health, profile.target_weight_kg)
+    const payload = buildReturningUserOdinPayload(profile, health, profile.target_weight_kg, inbody)
     const outcome = await generate(payload)
     if (outcome.success) {
       onSuccess({

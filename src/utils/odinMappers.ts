@@ -75,3 +75,94 @@ export function formatRest(restSeconds: number | null): string {
   if (!restSeconds) return '60s'
   return `${restSeconds}s`
 }
+
+// The onboarding wizard stores free-text display labels in user_health
+// (lifestyle, occupation, medical_conditions) rather than Odin's enum values —
+// these maps translate label -> enum so the athlete payload validates against
+// Odin's strict Zod schemas (LifestyleTagSchema / OccupationSchema /
+// MedicalConditionSchema).
+export const LIFESTYLE_TAG_MAP: Record<string, string> = {
+  'Sedentary (desk job, minimal movement)': 'sedentary',
+  'Lightly Active (walk occasionally)': 'lightly_active',
+  'Moderately Active (on feet most of day)': 'moderately_active',
+  'Very Active (physical work or sport regularly)': 'very_active',
+  'Shift Worker (irregular hours)': 'shift_worker',
+  'Frequently Travelling': 'frequently_travelling',
+  'High Stress / Low Sleep': 'high_stress_low_sleep',
+}
+
+export const OCCUPATION_MAP: Record<string, string> = {
+  Student: 'student',
+  'Desk Job / Office Worker': 'desk_job',
+  'Field / On-site Worker': 'field_worker',
+  'Healthcare Professional': 'healthcare',
+  'Athlete / Coach': 'athlete_coach',
+  Homemaker: 'homemaker',
+  'Business Owner / Entrepreneur': 'business_owner',
+  'Creative / Freelancer': 'creative_freelancer',
+  Retired: 'retired',
+  Other: 'other',
+}
+
+export const MEDICAL_CONDITION_MAP: Record<string, string> = {
+  Hypertension: 'hypertension',
+  'Type 2 Diabetes': 'type2_diabetes',
+  'Thyroid Disorder': 'thyroid_disorder',
+  Asthma: 'asthma',
+  'Chronic Lower Back Pain': 'chronic_lower_back_pain',
+  'Chronic Knee Pain': 'chronic_knee_pain',
+  'Heart Condition (doctor cleared)': 'heart_condition',
+  Arthritis: 'arthritis',
+  'PCOD / PCOS': 'pcod_pcos',
+  Endometriosis: 'endometriosis',
+  Osteoporosis: 'osteoporosis',
+  'Pregnancy / Postpartum': 'pregnancy_postpartum',
+  'Low Testosterone (diagnosed)': 'low_testosterone',
+  Hernia: 'hernia',
+}
+
+export function mapEnumLabels(labels: string[], map: Record<string, string>): string[] {
+  return labels.map((l) => map[l]).filter((v): v is string => v != null)
+}
+
+export function mapEnumLabel(
+  label: string | null | undefined,
+  map: Record<string, string>
+): string | undefined {
+  if (!label) return undefined
+  return map[label]
+}
+
+export interface InBodySourceData {
+  body_fat_pct: number | null
+  skeletal_muscle_mass: number | null
+  body_fat_mass: number | null
+  bmr: number | null
+  visceral_fat_level: number | null
+  total_body_water: number | null
+}
+
+// Odin's InBody schema requires body_fat_pct, skeletal_muscle_mass_kg, bmr, and
+// visceral_fat_level together — a partial object fails the server's strict
+// validation, so we only forward it once all four are present.
+export function buildInbodyPayload(
+  inbodyData: InBodySourceData | null | undefined
+): Record<string, number> | null {
+  if (!inbodyData) return null
+  const payload: Record<string, number> = {}
+  if (inbodyData.body_fat_pct != null) payload.body_fat_pct = inbodyData.body_fat_pct
+  if (inbodyData.skeletal_muscle_mass != null)
+    payload.skeletal_muscle_mass_kg = inbodyData.skeletal_muscle_mass
+  if (inbodyData.body_fat_mass != null) payload.body_fat_mass_kg = inbodyData.body_fat_mass
+  if (inbodyData.visceral_fat_level != null)
+    payload.visceral_fat_level = inbodyData.visceral_fat_level
+  if (inbodyData.total_body_water != null) payload.total_body_water_kg = inbodyData.total_body_water
+  if (inbodyData.bmr != null) payload.bmr = inbodyData.bmr
+
+  const hasRequired =
+    payload.body_fat_pct != null &&
+    payload.skeletal_muscle_mass_kg != null &&
+    payload.bmr != null &&
+    payload.visceral_fat_level != null
+  return hasRequired ? payload : null
+}

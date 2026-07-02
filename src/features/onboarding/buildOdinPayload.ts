@@ -1,4 +1,12 @@
 import { calculateAge } from '../../utils/dateUtils'
+import {
+  LIFESTYLE_TAG_MAP,
+  MEDICAL_CONDITION_MAP,
+  OCCUPATION_MAP,
+  buildInbodyPayload,
+  mapEnumLabel,
+  mapEnumLabels,
+} from '../../utils/odinMappers'
 import type { WizardState } from './useWizardState'
 
 // Mirrors buildAthletePayload in GenerateProgrammeView.tsx (see agent-odin
@@ -27,9 +35,10 @@ export function buildOdinPayloadFromWizardState(wizardState: WizardState) {
       ? currentWeight + wizardState.goal_sub_fields.target_muscle_gain_kg
       : currentWeight
 
+  // Odin's InjuryV2Schema is .strict() and requires `modification`, not `severity`.
   const injuries = wizardState.injuries
     .filter((i) => i.modification !== null)
-    .map((i) => ({ area: i.area, severity: i.modification as 'modify' | 'avoid', notes: '' }))
+    .map((i) => ({ area: i.area, modification: i.modification as 'modify' | 'avoid', notes: '' }))
 
   const sub = wizardState.goal_sub_fields
   const goalParameters: Record<string, number | string> = {}
@@ -62,23 +71,27 @@ export function buildOdinPayloadFromWizardState(wizardState: WizardState) {
   return {
     name: wizardState.full_name || 'Athlete',
     age: calculateAge(wizardState.date_of_birth) ?? 25,
-    sex: wizardState.gender === 'female' ? ('female' as const) : ('male' as const),
+    sex:
+      wizardState.gender === 'female'
+        ? ('female' as const)
+        : wizardState.gender === 'other'
+          ? ('other' as const)
+          : ('male' as const),
     current_weight_kg: currentWeight,
     target_weight_kg: targetWeight,
     height_cm: wizardState.height_cm ?? 170,
+    body_fat_pct: wizardState.body_fat_pct ?? undefined,
     goal: odinGoal,
     available_days_per_week: wizardState.available_days_per_week,
     session_duration_min: wizardState.session_duration_min,
     equipment: odinEquip,
     fitness_level: wizardState.fitness_level ?? 'beginner',
-    lifestyle: wizardState.lifestyle,
-    occupation: wizardState.occupation ?? undefined,
+    lifestyle_tags: mapEnumLabels(wizardState.lifestyle, LIFESTYLE_TAG_MAP),
+    occupation: mapEnumLabel(wizardState.occupation, OCCUPATION_MAP),
+    nationality: wizardState.nationality || undefined,
     injuries,
-    medical_conditions: wizardState.medical_conditions,
-    // Segmental balance (lean_* limbs) is never available at onboarding time —
-    // it only ever comes from a prior stored inbody_logs row — so the full
-    // strict inbody object can't be populated from a first-time upload.
-    inbody: null,
+    medical_conditions: mapEnumLabels(wizardState.medical_conditions, MEDICAL_CONDITION_MAP),
+    inbody: buildInbodyPayload(wizardState.inbody_data),
     ...(wizardState.preferred_workout_time
       ? { schedule: { preferred_workout_time: wizardState.preferred_workout_time } }
       : {}),

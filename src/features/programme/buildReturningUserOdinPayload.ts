@@ -1,4 +1,13 @@
 import { calculateAge } from '../../utils/dateUtils'
+import {
+  LIFESTYLE_TAG_MAP,
+  MEDICAL_CONDITION_MAP,
+  OCCUPATION_MAP,
+  buildInbodyPayload,
+  mapEnumLabel,
+  mapEnumLabels,
+  type InBodySourceData,
+} from '../../utils/odinMappers'
 
 // Mirrors buildOdinPayloadFromWizardState (src/features/onboarding/buildOdinPayload.ts)
 // but sources every field from the already-persisted user_profiles/user_health
@@ -21,6 +30,7 @@ export interface ReturningUserProfile {
   height_cm: number | null
   current_weight_kg: number | null
   target_weight_kg: number | null
+  nationality: string | null
 }
 
 export interface ReturningUserHealth {
@@ -39,12 +49,14 @@ export interface ReturningUserHealth {
   known_lifts: { exercise_id: string; weight_kg: number; reps: number }[] | null
   target_body_fat_pct: number | null
   target_timeframe_weeks: number | null
+  body_fat_pct: number | null
 }
 
 export function buildReturningUserOdinPayload(
   profile: ReturningUserProfile,
   health: ReturningUserHealth,
-  targetWeightOverrideKg: number | null
+  targetWeightOverrideKg: number | null,
+  inbody: InBodySourceData | null = null
 ) {
   const rawGoal = health.goal ?? 'fat_loss'
   const odinGoal = GOAL_MAP[rawGoal] ?? rawGoal
@@ -59,7 +71,7 @@ export function buildReturningUserOdinPayload(
     .filter((i) => i.modification !== null)
     .map((i) => ({
       area: i.area,
-      severity: i.modification as 'modify' | 'avoid',
+      modification: i.modification as 'modify' | 'avoid',
       notes: i.notes ?? '',
     }))
 
@@ -85,22 +97,28 @@ export function buildReturningUserOdinPayload(
   return {
     name: profile.full_name ?? 'Athlete',
     age: calculateAge(profile.date_of_birth) ?? 25,
-    sex: profile.gender === 'female' ? ('female' as const) : ('male' as const),
+    sex:
+      profile.gender === 'female'
+        ? ('female' as const)
+        : profile.gender === 'other' || profile.gender === 'prefer_not_to_say'
+          ? ('other' as const)
+          : ('male' as const),
     current_weight_kg: currentWeight,
     target_weight_kg: targetWeight,
     height_cm: profile.height_cm ?? 170,
+    body_fat_pct: health.body_fat_pct ?? undefined,
     goal: odinGoal,
     available_days_per_week: health.available_days_per_week ?? 4,
     session_duration_min: health.session_duration_min ?? 60,
     equipment: odinEquip,
     fitness_level: health.fitness_level ?? 'beginner',
-    lifestyle: health.lifestyle ?? [],
-    occupation: health.occupation ?? undefined,
+    lifestyle_tags: mapEnumLabels(health.lifestyle ?? [], LIFESTYLE_TAG_MAP),
+    occupation: mapEnumLabel(health.occupation, OCCUPATION_MAP),
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- treat '' same as missing
+    nationality: profile.nationality || undefined,
     injuries,
-    medical_conditions: health.medical_conditions ?? [],
-    // Segmental balance (lean_* limbs) only ever comes from a prior InBody
-    // upload's stored inbody_logs row — returning users don't re-upload here.
-    inbody: null,
+    medical_conditions: mapEnumLabels(health.medical_conditions ?? [], MEDICAL_CONDITION_MAP),
+    inbody: buildInbodyPayload(inbody),
     ...(health.preferred_workout_time
       ? { schedule: { preferred_workout_time: health.preferred_workout_time } }
       : {}),

@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/AuthContext'
 import { useSaveProgramme } from '../../hooks/useSaveProgramme'
 import { colors, radius } from '../../styles/tokens'
 import { ChevronDown } from 'lucide-react'
+import BaselineSessionCard from '../../components/today/BaselineSessionCard'
 import type { GenerateResult } from './GenerateProgrammeView'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,6 +39,7 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
 
   const odinResult = result.odinResult as AnyData
   const programme: AnyData = odinResult?.programme ?? {}
+  const baselineSession: AnyData = odinResult?.baseline_session ?? null
   const phases: AnyData[] = programme?.phases ?? []
   const programmeName: string = programme?.programme?.name ?? programme?.name ?? 'Your Programme'
   const totalWeeks: number = phases.reduce(
@@ -171,6 +173,8 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
 
       {/* ── Scrollable body ── */}
       <div className="flex-1 overflow-y-auto pb-4 px-4 pt-3 space-y-3">
+        {baselineSession && <BaselineSessionCard baselineSession={baselineSession} />}
+
         {phases.length === 0 && (
           <p
             className="pt-8 text-[13px] font-['DM_Sans'] text-center"

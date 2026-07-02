@@ -41,9 +41,13 @@ class OdinResponseError extends Error {
   // A well-formed { success: false, error } response is Odin rejecting the
   // input (validation) — distinct from a network failure/timeout/5xx.
   isValidationError: boolean
-  constructor(message: string, isValidationError: boolean) {
+  // 410 means this client is calling a deprecated/retired endpoint version —
+  // distinct from validation and generic infra failures.
+  isGone: boolean
+  constructor(message: string, isValidationError: boolean, isGone = false) {
     super(message)
     this.isValidationError = isValidationError
+    this.isGone = isGone
   }
 }
 
@@ -62,6 +66,11 @@ async function odinPost(
     body: JSON.stringify(body),
     signal,
   })
+
+  if (res.status === 410) {
+    console.error('V1 endpoint called — check useOdinGenerate endpoint URL')
+    throw new OdinResponseError('App needs to be updated. Please refresh the page.', false, true)
+  }
 
   let data: { success?: boolean; error?: { message?: string }; message?: string; data?: unknown }
   try {
