@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, Loader2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthContext'
+import { supabase } from '../../lib/supabase'
 import { colors } from '../../styles/tokens'
 import { useWizardState } from './useWizardState'
 import { buildOdinPayloadFromWizardState } from './buildOdinPayload'
@@ -78,6 +79,18 @@ export default function OnboardingWizard() {
     const payload = buildOdinPayloadFromWizardState(wizardState)
     const outcome = await generate(payload, GENERATE_TIMEOUT_MS)
     if (outcome.success) {
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({ onboarding_completed: true })
+        .eq('user_id', user.id)
+      if (profileError) {
+        setGenerationError(
+          'Your programme was generated but we could not save your progress. Please try again.',
+          'API_ERROR'
+        )
+        setGenerating(false)
+        return
+      }
       const previewResult: GenerateResult = {
         odinResult: outcome.result,
         goal: wizardState.goal ?? 'general_fitness',

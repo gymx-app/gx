@@ -168,7 +168,7 @@ export function Screen9Constraints({
     setSaving(true)
     setError(null)
 
-    const result = await saveHealthAndProfile({ onboarding_completed: isPregnant })
+    const result = await saveHealthAndProfile({ onboarding_completed: true })
     setSaving(false)
     if (result.error) {
       setError('Failed to save your details. Please try again.')
