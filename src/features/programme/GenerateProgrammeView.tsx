@@ -123,7 +123,8 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
         <ProfileCard
           profile={profile}
           health={health}
-          onEdit={() => void navigate('/onboarding?step=1')}
+          totalWeeks={0}
+          injuries={health.injuries ?? []}
         />
       )}
 

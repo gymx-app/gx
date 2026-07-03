@@ -1,4 +1,6 @@
-import { colors } from '../../styles/tokens'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { colors, radius, shadows } from '../../styles/tokens'
 import { calculateAge } from '../../utils/dateUtils'
 import { GOAL_LABELS } from './goalLabels'
 import { Pencil } from 'lucide-react'
@@ -44,6 +46,23 @@ const GOAL_COLORS: Record<string, string> = {
 
 const FITNESS_LEVELS = ['beginner', 'intermediate', 'advanced']
 
+interface EditMenuItem {
+  label: string
+  step: number
+  accent?: boolean
+}
+
+const EDIT_MENU_ITEMS: EditMenuItem[] = [
+  { label: 'Goal', step: 5 },
+  { label: 'Days & Duration', step: 7 },
+  { label: 'Equipment', step: 7 },
+  { label: 'Fitness level', step: 4 },
+  { label: 'Injuries & Limitations', step: 9 },
+  { label: 'Personal stats', step: 3 },
+]
+
+const REGENERATE_ITEM: EditMenuItem = { label: 'Regenerate programme', step: 10, accent: true }
+
 function ageGenderChip(dob: string | null, gender: string | null): string {
   const age = calculateAge(dob)
   if (age === null) return '—'
@@ -51,13 +70,114 @@ function ageGenderChip(dob: string | null, gender: string | null): string {
   return `${age}${initial}`
 }
 
+function EditMenu() {
+  const navigate = useNavigate()
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [open])
+
+  const handleItemTap = (step: number) => {
+    setOpen(false)
+    void navigate(`/onboarding?step=${step}`)
+  }
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex items-center gap-1.5 active:opacity-60"
+        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+      >
+        <Pencil size={11} color={colors.accent} />
+        <span
+          className="text-[12px] font-['DM_Sans'] font-semibold"
+          style={{ color: colors.accent }}
+        >
+          Edit
+        </span>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '100%',
+            right: 0,
+            marginTop: 8,
+            zIndex: 50,
+            minWidth: 200,
+            background: colors.surface,
+            border: `1px solid ${colors.border}`,
+            borderRadius: radius.card,
+            boxShadow: shadows.cardElevated,
+            overflow: 'hidden',
+          }}
+        >
+          {EDIT_MENU_ITEMS.map((item) => (
+            <button
+              key={item.label}
+              onClick={() => handleItemTap(item.step)}
+              className="w-full text-left px-4 flex items-center active:opacity-70"
+              style={{
+                minHeight: 44,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: colors.muted,
+              }}
+            >
+              <span className="text-[13px] font-['DM_Sans']">{item.label}</span>
+            </button>
+          ))}
+
+          <div style={{ height: 1, background: colors.border }} />
+
+          <button
+            onClick={() => handleItemTap(REGENERATE_ITEM.step)}
+            className="w-full text-left px-4 flex items-center active:opacity-70"
+            style={{
+              minHeight: 44,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: colors.accent,
+            }}
+          >
+            <span className="text-[13px] font-['DM_Sans']">{REGENERATE_ITEM.label}</span>
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface ProfileCardProps {
   profile: UserProfile
   health: UserHealth
-  onEdit?: () => void
+  totalWeeks: number
+  injuries: string[]
 }
 
-export function ProfileCard({ profile, health, onEdit }: ProfileCardProps) {
+export function ProfileCard({ profile, health, totalWeeks, injuries }: ProfileCardProps) {
   const chip = ageGenderChip(profile.date_of_birth, profile.gender)
   const heightCm = profile.height_cm != null ? `${Math.round(profile.height_cm)}cm` : '—'
   const weightKg = profile.current_weight_kg != null ? `${profile.current_weight_kg}kg` : '—'
@@ -69,6 +189,7 @@ export function ProfileCard({ profile, health, onEdit }: ProfileCardProps) {
   const duration = health.session_duration_min ? `${health.session_duration_min} min` : '—'
   const fitnessLevel = health.fitness_level ?? 'beginner'
   const fitnessIdx = FITNESS_LEVELS.indexOf(fitnessLevel.toLowerCase())
+  const limitationsText = injuries.length > 0 ? injuries.join(', ') : null
 
   return (
     <div
@@ -79,7 +200,7 @@ export function ProfileCard({ profile, health, onEdit }: ProfileCardProps) {
         overflow: 'hidden',
       }}
     >
-      {/* Header: age/gender chip + height/weight + goal badge */}
+      {/* Row 1 — Identity bar: age/gender chip + height/weight + goal badge */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3">
         <div
           className="flex-shrink-0 px-3 py-2 flex items-center justify-center"
@@ -121,7 +242,7 @@ export function ProfileCard({ profile, health, onEdit }: ProfileCardProps) {
         </div>
       </div>
 
-      {/* Stat row */}
+      {/* Row 2 — Stats grid */}
       <div className="grid grid-cols-3" style={{ borderTop: `1px solid ${colors.border}` }}>
         {[
           { label: 'DAYS / WK', value: String(days) },
@@ -151,9 +272,9 @@ export function ProfileCard({ profile, health, onEdit }: ProfileCardProps) {
         ))}
       </div>
 
-      {/* Fitness level + edit */}
+      {/* Row 3 — Level bar */}
       <div
-        className="flex items-center justify-between px-4 py-3"
+        className="flex items-center px-4 py-3"
         style={{ borderTop: `1px solid ${colors.border}` }}
       >
         <div className="flex items-center gap-2">
@@ -182,21 +303,63 @@ export function ProfileCard({ profile, health, onEdit }: ProfileCardProps) {
             {fitnessLevel}
           </span>
         </div>
-        {onEdit && (
-          <button
-            onClick={onEdit}
-            className="flex items-center gap-1.5 active:opacity-60"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+      </div>
+
+      {/* Row 4 — Limitations row */}
+      <div
+        className="flex items-center justify-between px-4 py-3"
+        style={{ borderTop: `1px solid ${colors.border}` }}
+      >
+        <span
+          className="text-[10px] font-['DM_Sans'] font-bold tracking-[1.5px] uppercase"
+          style={{ color: colors.muted }}
+        >
+          Limitations
+        </span>
+        {limitationsText ? (
+          <span
+            className="text-[12px] font-['DM_Sans'] font-medium text-right"
+            style={{ color: colors.textSecondary }}
           >
-            <Pencil size={11} color={colors.accent} />
-            <span
-              className="text-[12px] font-['DM_Sans'] font-semibold"
-              style={{ color: colors.accent }}
-            >
-              Edit
-            </span>
-          </button>
+            {limitationsText}
+          </span>
+        ) : (
+          <span className="text-[12px] font-['DM_Sans']" style={{ color: colors.muted }}>
+            None reported
+          </span>
         )}
+      </div>
+
+      {/* Row 5 — Bottom bar: Active + weeks badges, Edit dropdown */}
+      <div
+        className="flex items-center justify-between px-4 py-3"
+        style={{ borderTop: `1px solid ${colors.border}` }}
+      >
+        <div className="flex items-center gap-2">
+          <span
+            className="text-[10px] font-['DM_Sans'] font-bold tracking-[2px] uppercase px-2 py-1"
+            style={{
+              background: colors.accentMuted,
+              color: colors.accent,
+              borderRadius: radius.pill,
+            }}
+          >
+            Active
+          </span>
+          {totalWeeks > 0 && (
+            <span
+              className="text-[10px] font-['DM_Sans'] font-bold tracking-[2px] uppercase px-2 py-1"
+              style={{
+                background: colors.surface2,
+                color: colors.textSecondary,
+                borderRadius: radius.pill,
+              }}
+            >
+              {totalWeeks} weeks
+            </span>
+          )}
+        </div>
+        <EditMenu />
       </div>
     </div>
   )

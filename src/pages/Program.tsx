@@ -300,36 +300,13 @@ export default function Program() {
           <ProfileCard
             profile={profile}
             health={health}
-            onEdit={() => void navigate('/onboarding?step=1')}
+            totalWeeks={totalWeeks}
+            injuries={health.injuries ?? []}
           />
         )}
 
         {/* Programme header: name left, refresh icon right */}
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span
-              className="text-[10px] font-['DM_Sans'] font-bold tracking-[2px] uppercase px-2 py-1"
-              style={{
-                background: colors.accentMuted,
-                color: colors.accent,
-                borderRadius: radius.pill,
-              }}
-            >
-              Active
-            </span>
-            {totalWeeks > 0 && (
-              <span
-                className="text-[10px] font-['DM_Sans'] font-bold tracking-[2px] uppercase px-2 py-1"
-                style={{
-                  background: colors.surface2,
-                  color: colors.textSecondary,
-                  borderRadius: radius.pill,
-                }}
-              >
-                {totalWeeks} weeks
-              </span>
-            )}
-          </div>
           <div className="flex items-center justify-between">
             <h1
               className="font-['Bebas_Neue'] text-[26px] tracking-[2px] leading-none"
