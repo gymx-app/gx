@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../auth/AuthContext'
 import { useOdinGenerate } from '../../hooks/useOdinGenerate'
+import { OdinLoader } from '../../components/OdinLoader'
 import { colors, radius } from '../../styles/tokens'
 import { SectionLabel } from '../../components/ui'
 import { getISTTodayStr } from '../../utils/dateUtils'
@@ -15,138 +16,6 @@ import {
   type ReturningUserProfile,
 } from './buildReturningUserOdinPayload'
 import type { InBodySourceData } from '../../utils/odinMappers'
-
-const STRATEGY_LINES = [
-  'Reading biomechanical profile…',
-  'Evaluating training history…',
-  'Mapping periodisation model…',
-  'Calibrating volume tolerance…',
-  'Selecting progression strategy…',
-  'Scoring movement patterns…',
-]
-
-const BUILD_LINES = [
-  'Assigning exercise library…',
-  'Calculating set & rep schemes…',
-  'Sequencing phase skeletons…',
-  'Optimising recovery windows…',
-  'Tuning RPE targets per week…',
-  'Finalising programme structure…',
-]
-
-function AiGeneratingScreen({ genStatus }: { genStatus: string }) {
-  const isBuilding = genStatus.toLowerCase().includes('building')
-  const lines = isBuilding ? BUILD_LINES : STRATEGY_LINES
-  const [lineIdx, setLineIdx] = useState(0)
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLineIdx((i) => (i + 1) % lines.length)
-    }, 1800)
-    return () => clearInterval(interval)
-  }, [isBuilding, lines.length])
-
-  return (
-    <div
-      className="flex-1 flex flex-col items-center justify-between px-6"
-      style={{ background: colors.bg, paddingTop: 64, paddingBottom: 56 }}
-    >
-      <div className="flex items-center gap-2">
-        <div
-          className="w-1.5 h-1.5 rounded-full animate-pulse"
-          style={{ background: colors.accent }}
-        />
-        <span
-          className="text-[11px] font-['DM_Sans'] font-bold tracking-[3px] uppercase"
-          style={{ color: colors.accent }}
-        >
-          Odin AI · Processing
-        </span>
-        <div
-          className="w-1.5 h-1.5 rounded-full animate-pulse"
-          style={{ background: colors.accent, animationDelay: '0.5s' }}
-        />
-      </div>
-
-      <div className="flex flex-col items-center">
-        <div className="relative w-[160px] h-[160px] mb-10">
-          <div
-            className="absolute inset-0 rounded-full"
-            style={{ border: `1px solid ${colors.accent}33`, animation: 'spin 8s linear infinite' }}
-          />
-          <div
-            className="absolute inset-[16px] rounded-full"
-            style={{
-              border: `1px dashed ${colors.accent}55`,
-              animation: 'spin 5s linear infinite reverse',
-            }}
-          />
-          <div
-            className="absolute inset-[32px] rounded-full"
-            style={{
-              border: `1.5px solid ${colors.accent}99`,
-              animation: 'spin 3s linear infinite',
-            }}
-          />
-          <div
-            className="absolute inset-[44px] rounded-full animate-ping"
-            style={{ background: colors.accentMuted, animationDuration: '2.4s' }}
-          />
-          <div
-            className="absolute inset-[44px] rounded-full flex items-center justify-center"
-            style={{ background: colors.surface, border: `2px solid ${colors.accent}` }}
-          >
-            <span
-              className="font-['Bebas_Neue'] text-[22px] tracking-[3px]"
-              style={{ color: colors.accent }}
-            >
-              AI
-            </span>
-          </div>
-        </div>
-
-        <h2
-          className="font-['Bebas_Neue'] text-[30px] tracking-[3px] text-center leading-none mb-2"
-          style={{ color: colors.text }}
-        >
-          Building Your
-          <br />
-          <span style={{ color: colors.accent }}>AI Programme</span>
-        </h2>
-        <p
-          className="text-[13px] font-['DM_Sans'] text-center mb-8"
-          style={{ color: colors.muted }}
-        >
-          Odin is generating a personalised training plan
-          <br />
-          tailored to your exact profile.
-        </p>
-
-        <div
-          className="px-4 py-2.5 text-center"
-          style={{
-            background: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: radius.button,
-            minWidth: 220,
-          }}
-        >
-          <p
-            className="text-[13px] font-['DM_Sans']"
-            style={{ color: colors.textSecondary }}
-            key={lineIdx}
-          >
-            {lines[lineIdx]}
-          </p>
-        </div>
-      </div>
-
-      <p className="text-[11px] font-['DM_Sans'] text-center" style={{ color: colors.muted }}>
-        This may take 30–60 seconds
-      </p>
-    </div>
-  )
-}
 
 export interface GenerateResult {
   odinResult: unknown
@@ -165,7 +34,7 @@ interface GenerateProgrammeViewProps {
 export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeViewProps) {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const { generate, loading: generating, status: genStatus, errorType, reset } = useOdinGenerate()
+  const { generate, loading: generating, errorType, reset } = useOdinGenerate()
   const [error, setError] = useState<string | null>(null)
 
   const [profile, setProfile] = useState<(UserProfile & ReturningUserProfile) | null>(null)
@@ -237,7 +106,7 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
   }
 
   if (generating) {
-    return <AiGeneratingScreen genStatus={genStatus} />
+    return <OdinLoader />
   }
 
   if (loadingData) {

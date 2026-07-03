@@ -18,7 +18,7 @@ import { Screen7Logistics } from './screens/Screen7Logistics'
 import { Screen8BaselineStrength } from './screens/Screen8BaselineStrength'
 import { Screen9Constraints } from './screens/Screen9Constraints'
 import { Screen10ProgrammeProfile } from './screens/Screen10ProgrammeProfile'
-import { GenerationLoadingScreen } from './screens/GenerationLoadingScreen'
+import { OdinLoader } from '../../components/OdinLoader'
 
 const GENERATE_TIMEOUT_MS = 90000
 const TOTAL_STEPS = 10
@@ -165,7 +165,7 @@ export default function OnboardingWizard() {
 
       {generating ? (
         <div className="flex-1">
-          <GenerationLoadingScreen />
+          <OdinLoader />
         </div>
       ) : (
         <div className={`flex-1 overflow-y-auto pb-32 ${step === 1 ? '' : 'px-5 pt-2'}`}>

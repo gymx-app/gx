@@ -1,9 +1,34 @@
 import { AlertCircle, WifiOff } from 'lucide-react'
 import { colors, radius } from '../../../styles/tokens'
 import { calculateAge, getISTTodayStr } from '../../../utils/dateUtils'
+import { useOdinStatus } from '../../../hooks/useOdinStatus'
 import type { GenerationErrorType, WizardState } from '../useWizardState'
 import { INPUT_STYLE } from './sharedUtils'
 import { WizardCta } from './WizardCta'
+
+function OdinStatusPill() {
+  const { infra, model, status } = useOdinStatus()
+
+  if (status === 'failed') return null
+
+  return (
+    <div
+      className={`absolute top-0 right-0 font-['Bebas_Neue'] uppercase ${
+        status === 'loading' ? 'animate-pulse' : ''
+      }`}
+      style={{
+        fontSize: 9,
+        letterSpacing: '0.16em',
+        color: colors.muted,
+        border: `1px solid ${colors.border}`,
+        borderRadius: radius.pill,
+        padding: '4px 8px',
+      }}
+    >
+      {status === 'loading' ? infra : `${infra} · ${model}`}
+    </div>
+  )
+}
 
 const GOAL_LABELS: Record<string, string> = {
   fat_loss: 'Fat Loss',
@@ -57,7 +82,9 @@ export function Screen10ProgrammeProfile({ wizardState, setField, goToStep, onGe
       : 'GENERATE MY PROGRAMME →'
 
   return (
-    <>
+    <div className="relative">
+      <OdinStatusPill />
+
       <h1 className="font-['Bebas_Neue'] text-[26px] tracking-[2px] text-[#f0ede8] leading-none">
         THIS IS WHO ODIN IS BUILDING FOR
       </h1>
@@ -307,6 +334,6 @@ export function Screen10ProgrammeProfile({ wizardState, setField, goToStep, onGe
       )}
 
       <WizardCta label={ctaLabel} onTap={onGenerate} />
-    </>
+    </div>
   )
 }
