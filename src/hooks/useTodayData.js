@@ -46,6 +46,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
   const [dayLoading, setDayLoading] = useState(true)
   const [error, setError] = useState(null)
   const [hasCachedData, setHasCachedData] = useState(false)
+  const [revalidating, setRevalidating] = useState(false)
 
   const revalidatingRef = useRef(false)
   const lastWeekRef = useRef('')
@@ -209,6 +210,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
 
         // Stale — revalidate in background
         revalidatingRef.current = true
+        setRevalidating(true)
       } else if (isNewWeek) {
         setLoading(true)
       }
@@ -244,6 +246,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
         setHasCachedData(true)
         setLoading(false)
         revalidatingRef.current = false
+        setRevalidating(false)
 
         // 3. Prefetch adjacent weeks
         setTimeout(() => {
@@ -255,6 +258,8 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
         if (!cancelled) {
           setError(err.message ?? String(err))
           setLoading(false)
+          revalidatingRef.current = false
+          setRevalidating(false)
         }
       }
     }
@@ -299,6 +304,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
     loading,
     dayLoading,
     hasCachedData,
+    revalidating,
     error,
     refetch,
   }

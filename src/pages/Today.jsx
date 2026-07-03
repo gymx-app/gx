@@ -155,6 +155,7 @@ export default function Today() {
     loading,
     dayLoading,
     hasCachedData,
+    revalidating,
     error,
     refetch,
   } = useTodayData(dateStr, weekDays[0].dateStr, weekDays[6].dateStr, selectedDayLabel)
@@ -561,6 +562,12 @@ export default function Today() {
 
   // ── Loading — show skeleton only when no cached data ──
   if ((loading || baselineLoading) && !hasCachedData) {
+    return <TodaySkeleton />
+  }
+
+  // A stale "no programme" snapshot is being revalidated in the background —
+  // prefer skeleton over confidently showing an empty state that may be wrong.
+  if (revalidating && !programme) {
     return <TodaySkeleton />
   }
 

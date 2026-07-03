@@ -129,11 +129,15 @@ export function useSaveProgramme(): UseSaveProgrammeReturn {
         return { success: false }
       }
 
-      // 5. Bust IDB caches so Today loads fresh data on next visit
+      // 5. Bust IDB + week caches so Today loads fresh data on next visit
       try {
-        const idbCache = await import('../services/idbCache')
+        const [idbCache, weekCache] = await Promise.all([
+          import('../services/idbCache'),
+          import('../services/weekCache'),
+        ])
         void idbCache.invalidate('programme-context', userId)
         void idbCache.invalidate('programme-config', userId)
+        weekCache.clearUserWeekCache(userId)
       } catch {
         // non-fatal — stale cache will expire naturally
       }
