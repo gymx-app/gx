@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
-const ODIN_URL = 'https://agent-odin.vercel.app/api/v2/odin/generate-programme'
+const ODIN_URL = 'https://lzftkohidnykwnmekdyq.supabase.co/functions/v1/generate-programme-v2'
 const TIMEOUT_MS = 180000
 
 export type OdinErrorType = 'API_ERROR' | 'VALIDATION_ERROR' | null
