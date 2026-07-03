@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import TopBar from '../components/layout/TopBar'
 import { colors, radius } from '../styles/tokens'
@@ -73,7 +73,13 @@ export default function Program() {
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [checkKey, setCheckKey] = useState(0)
-  const skipInitialCheckRef = useRef(previewFromOnboarding !== null)
+  // Deliberately state, not a ref: a ref's `.current` mutation would be visible
+  // to both passes of React StrictMode's dev-only double-invoke of this effect
+  // (mount -> cleanup -> mount, same closure, no re-render in between), so the
+  // second pass would see the flag already flipped and take the wrong branch.
+  // State reads the value captured by that render's closure, so both passes
+  // agree, and the flip only takes effect after the real subsequent re-render.
+  const [skipInitialCheck, setSkipInitialCheck] = useState(previewFromOnboarding !== null)
 
   // Reactively pick up a freshly-generated preview handed off via router state.
   // AppLayout keeps every tab mounted (display:none), so a later navigate() to
@@ -93,7 +99,7 @@ export default function Program() {
   // When the user navigates back to /program with a stale previewResult
   // (tab stays mounted via display:none), bump checkKey to re-run the check.
   useEffect(() => {
-    if (skipInitialCheckRef.current) return
+    if (skipInitialCheck) return
     if (location.pathname === '/program' && previewResult !== null) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCheckKey((k) => k + 1)
@@ -107,8 +113,8 @@ export default function Program() {
     let cancelled = false
 
     const check = async () => {
-      if (skipInitialCheckRef.current) {
-        skipInitialCheckRef.current = false
+      if (skipInitialCheck) {
+        setSkipInitialCheck(false)
         setTabState('no_programme')
         return
       }
@@ -177,6 +183,10 @@ export default function Program() {
     return () => {
       cancelled = true
     }
+    // skipInitialCheck intentionally omitted — read once per [user, checkKey]
+    // cycle; reacting to its own change here would immediately re-run this
+    // effect and clear the preview it just decided to skip clearing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, checkKey])
 
   const togglePhase = useCallback(
