@@ -3,10 +3,14 @@ import { resolveExercises } from './exerciseResolver'
 import {
   mapDayLabel,
   mapSessionType,
+  mapWorkoutTypeForDb,
+  mapConditioningTypeLabel,
   buildTitle,
   buildSubtitle,
   formatRest,
 } from '../utils/odinMappers'
+
+const CONDITIONING_ONLY_DAY_TYPES = new Set(['conditioning', 'sport', 'recovery'])
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type OdinData = any
@@ -111,25 +115,41 @@ export async function hydrateProgramme(
         }
         usedDays.add(dow)
 
-        const workoutType = mapSessionType(day.day_type ?? '')
+        const rawDayType = (day.day_type ?? '').toLowerCase()
+        const workoutType = mapWorkoutTypeForDb(mapSessionType(day.day_type ?? ''))
+        const conditioning: OdinData[] = day.conditioning ?? []
+        const primaryConditioning = conditioning[0]
+        const isConditioningOnly =
+          CONDITIONING_ONLY_DAY_TYPES.has(rawDayType) && !!primaryConditioning
 
         dayRows.push({
           phase_id: phaseId,
           day_of_week: dow,
           workout_type: workoutType,
-          title: day.title ?? buildTitle(day.day_type ?? ''),
-          subtitle: buildSubtitle(
-            (day.exercises ?? []).map((e: OdinData) => ({ name: e.exercise_name }))
-          ),
-          duration_min: day.estimated_duration_min ?? null,
-          has_warmup: (day.warmup?.length ?? 0) > 0,
+          title:
+            day.title ??
+            (isConditioningOnly ? primaryConditioning.activity_name : null) ??
+            buildTitle(day.day_type ?? ''),
+          subtitle: isConditioningOnly
+            ? mapConditioningTypeLabel(primaryConditioning.conditioning_type)
+            : buildSubtitle(
+                (day.exercises ?? []).map((e: OdinData) => ({ name: e.exercise_name }))
+              ),
+          duration_min: isConditioningOnly
+            ? (primaryConditioning.duration_min ?? day.estimated_duration_min ?? null)
+            : (day.estimated_duration_min ?? null),
+          has_warmup: isConditioningOnly ? false : (day.warmup?.length ?? 0) > 0,
+          tags: isConditioningOnly ? [primaryConditioning.activity_id] : null,
           _exercises: day.exercises ?? [],
           _cooldown: day.cooldown ?? [],
+          _conditioning: conditioning,
         })
       }
 
       // Insert programme_days (without internal fields)
-      const dbDayRows = dayRows.map(({ _exercises: _ex, _cooldown: _cd, ...rest }) => rest)
+      const dbDayRows = dayRows.map(
+        ({ _exercises: _ex, _cooldown: _cd, _conditioning: _cond, ...rest }) => rest
+      )
       const { data: insertedDays, error: dayErr } = await supabase
         .from('programme_days')
         .insert(dbDayRows)
@@ -182,6 +202,31 @@ export async function hydrateProgramme(
           }))
           const { error: cdErr } = await supabase.from('cooldown_items').insert(cdRows)
           if (cdErr) return { success: false, error: `Cooldown: ${cdErr.message}` }
+        }
+
+        // Insert conditioning_items for this day (conditioning/sport/recovery-only
+        // days, and the conditioning half of combined days)
+        const conditioningItems: OdinData[] = dayRow._conditioning ?? []
+        if (conditioningItems.length > 0) {
+          const condRows = conditioningItems.map((ci: OdinData, idx: number) => ({
+            programme_id: programmeId,
+            day_id: dayId,
+            display_order: idx,
+            conditioning_id: ci.conditioning_id ?? null,
+            activity_id: ci.activity_id,
+            activity_name: ci.activity_name,
+            conditioning_type: ci.conditioning_type,
+            purpose: ci.purpose ?? null,
+            duration_min: ci.duration_min,
+            target_rpe: ci.intensity?.target_rpe ?? null,
+            heart_rate_zone: ci.intensity?.heart_rate_zone ?? null,
+            intensity_description: ci.intensity?.description ?? null,
+            intervals: ci.intervals ?? null,
+            fatigue_cost: ci.fatigue_cost ?? null,
+            rationale: ci.rationale ?? null,
+          }))
+          const { error: condErr } = await supabase.from('conditioning_items').insert(condRows)
+          if (condErr) return { success: false, error: `Conditioning: ${condErr.message}` }
         }
       }
 

@@ -2,7 +2,7 @@ import { logger } from '../lib/logger'
 import { memCache } from './memoryCache'
 
 const DB_NAME = 'gx-cache'
-const DB_VERSION = 3
+const DB_VERSION = 4
 
 const STORES = [
   'workout-data',
@@ -15,6 +15,7 @@ const STORES = [
   'programme-exercises',
   'warmup-items',
   'cooldown-items',
+  'conditioning-items',
 ]
 
 /** TTL in milliseconds per store */
@@ -28,6 +29,7 @@ const TTL = {
   'programme-exercises': 60 * 60 * 1000, // 1 hour
   'warmup-items': 60 * 60 * 1000, // 1 hour
   'cooldown-items': 60 * 60 * 1000, // 1 hour
+  'conditioning-items': 60 * 60 * 1000, // 1 hour
 }
 
 let dbPromise = null

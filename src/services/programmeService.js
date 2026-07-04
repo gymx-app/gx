@@ -194,6 +194,26 @@ export async function getCooldownItems(dayId) {
 }
 
 /**
+ * Get conditioning items for a programme day.
+ * @param {string} dayId
+ * @returns {Promise<{ data: Array|null, error: string|null }>}
+ */
+export async function getConditioningItems(dayId) {
+  try {
+    const { data, error } = await supabase
+      .from('conditioning_items')
+      .select('*')
+      .eq('day_id', dayId)
+      .order('display_order', { ascending: true })
+    if (error) throw error
+    return { data: data || [], error: null }
+  } catch (err) {
+    logger.error('getConditioningItems:', err)
+    return { data: null, error: 'Failed to load conditioning items' }
+  }
+}
+
+/**
  * Get full programme context — programme + phases.
  * Cached in IDB under 'programme-context', TTL 30 minutes.
  * @param {string} userId

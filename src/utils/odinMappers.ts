@@ -39,10 +39,24 @@ export function mapDayLabel(dayLabel: string, sessionIndex: number): string {
   return INDEX_TO_DAY[sessionIndex % 7] ?? 'MON'
 }
 
+// Odin V2 day_type is a strict enum (resistance/conditioning/combined/sport/
+// recovery/rest) — matched exactly before falling back to the fuzzy V1
+// freeform-text matching below.
+const V2_DAY_TYPE_MAP: Record<string, string> = {
+  resistance: 'workout',
+  conditioning: 'conditioning',
+  combined: 'workout',
+  sport: 'conditioning',
+  recovery: 'liss',
+  rest: 'rest',
+}
+
 export function mapSessionType(sessionType: string): string {
   if (!sessionType) return 'workout'
 
   const lower = sessionType.toLowerCase()
+
+  if (V2_DAY_TYPE_MAP[lower]) return V2_DAY_TYPE_MAP[lower]
 
   if (/\brest\b|day\s*off\b|\boff\b/.test(lower)) return 'rest'
   if (/\bliss\b|\bcardio\b|\brecovery\b|\bactive\s*rest/.test(lower)) return 'liss'
@@ -50,6 +64,31 @@ export function mapSessionType(sessionType: string): string {
   if (/\bmobility\b|\bstretch\b|\byoga\b|\bflexibility\b/.test(lower)) return 'mobility'
 
   return 'workout'
+}
+
+// programme_days.workout_type is a Postgres enum that doesn't include
+// 'conditioning' — semantic types that aren't valid DB values fall back to
+// 'liss' for storage; the real V2 day_type is preserved via conditioning_items
+// and programme_days.tags so the UI can still tell days apart.
+const DB_WORKOUT_TYPES = new Set(['workout', 'liss', 'hiit', 'rest', 'mobility'])
+
+export function mapWorkoutTypeForDb(semanticType: string): string {
+  return DB_WORKOUT_TYPES.has(semanticType) ? semanticType : 'liss'
+}
+
+const CONDITIONING_TYPE_LABELS: Record<string, string> = {
+  low_intensity_steady_state: 'Low Intensity Cardio',
+  moderate_continuous: 'Moderate Cardio',
+  threshold: 'Threshold Training',
+  intervals: 'Interval Training',
+  sprint_intervals: 'Sprint Intervals',
+  active_recovery: 'Active Recovery',
+  movement_target: 'Movement Practice',
+}
+
+export function mapConditioningTypeLabel(conditioningType: string | null | undefined): string {
+  if (!conditioningType) return ''
+  return CONDITIONING_TYPE_LABELS[conditioningType] ?? conditioningType
 }
 
 export function buildTitle(sessionType: string): string {

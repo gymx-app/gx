@@ -20,6 +20,7 @@ const cacheKey = {
   programmeExercises: (dayId) => dayId,
   warmupItems: (programmeId) => programmeId,
   cooldownItems: (dayId) => dayId,
+  conditioningItems: (dayId) => dayId,
 }
 
 async function cachedFetch(store, key, queueId, priority, fetchFn) {
@@ -40,6 +41,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
     programmeExercises: null,
     warmupItems: null,
     cooldownItems: null,
+    conditioningItems: null,
   })
 
   const [loading, setLoading] = useState(true)
@@ -91,6 +93,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
             programmeExercises: null,
             warmupItems: null,
             cooldownItems: null,
+            conditioningItems: null,
           })
           setDayLoading(false)
         }
@@ -110,6 +113,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
             programmeExercises: null,
             warmupItems: null,
             cooldownItems: null,
+            conditioningItems: null,
           })
           setDayLoading(false)
         }
@@ -130,10 +134,11 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
       let freshExercises = null
       let freshWarmup = null
       let freshCooldown = null
+      let freshConditioning = null
 
       if (freshDayData) {
         const isWorkout = freshDayData.workout_type === 'workout'
-        const [exResult, wuResult, cdResult] = await Promise.all([
+        const [exResult, wuResult, cdResult, condResult] = await Promise.all([
           isWorkout
             ? cachedFetch(
                 'programme-exercises',
@@ -159,10 +164,20 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
                 () => programmeService.getCooldownItems(freshDayData.id)
               )
             : null,
+          freshDayData.id
+            ? cachedFetch(
+                'conditioning-items',
+                cacheKey.conditioningItems(freshDayData.id),
+                `conditioning_${freshDayData.id}`,
+                PRIORITY.HIGH,
+                () => programmeService.getConditioningItems(freshDayData.id)
+              )
+            : null,
         ])
         freshExercises = exResult
         freshWarmup = wuResult
         freshCooldown = cdResult
+        freshConditioning = condResult
       }
 
       if (!cancelled) {
@@ -171,6 +186,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
           programmeExercises: freshExercises,
           warmupItems: freshWarmup,
           cooldownItems: freshCooldown,
+          conditioningItems: freshConditioning,
         })
         setDayLoading(false)
       }
@@ -301,6 +317,7 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
     programmeExercises: dayMeta.programmeExercises,
     warmupItems: dayMeta.warmupItems,
     cooldownItems: dayMeta.cooldownItems,
+    conditioningItems: dayMeta.conditioningItems,
     loading,
     dayLoading,
     hasCachedData,

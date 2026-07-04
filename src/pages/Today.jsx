@@ -13,6 +13,9 @@ import ExerciseCard from '../components/today/ExerciseCard'
 import SetLogSheet from '../components/today/SetLogSheet'
 import RestTimerHUD from '../components/today/RestTimerHUD'
 import LissDay from '../components/today/LissDay'
+import ConditioningDay from '../components/today/ConditioningDay'
+import RecoveryDay from '../components/today/RecoveryDay'
+import CollapsibleConditioningBlock from '../components/today/CollapsibleConditioningBlock'
 import WorkoutCompleteSheet from '../components/today/WorkoutCompleteSheet'
 import CooldownSection from '../components/today/CooldownSection'
 import FinisherBlock from '../components/today/FinisherBlock'
@@ -107,7 +110,7 @@ const RestDay = memo(function RestDay({ workout }) {
 // TODAY — Main Controller
 // ═══════════════════════════════════════════
 export default function Today() {
-  useAuth()
+  const { user } = useAuth()
   const { startLoading, stopLoading } = useLoading()
 
   // ── Screen state ──
@@ -152,6 +155,7 @@ export default function Today() {
     programmeExercises,
     warmupItems,
     cooldownItems,
+    conditioningItems,
     loading,
     dayLoading,
     hasCachedData,
@@ -261,14 +265,34 @@ export default function Today() {
     return map
   }, [logs])
 
-  // Determine day type
+  // ── Odin V2 conditioning items for the selected day ──
+  const hasConditioningItems = conditioningItems && conditioningItems.length > 0
+  const isRecoveryConditioning = useMemo(() => {
+    if (!hasConditioningItems) return false
+    return conditioningItems.every(
+      (ci) =>
+        ci.conditioning_type === 'active_recovery' || ci.conditioning_type === 'movement_target'
+    )
+  }, [conditioningItems, hasConditioningItems])
+
+  // Determine day type. workout_type === 'workout' covers V2 'resistance' and
+  // 'combined' days (combined also renders a conditioning finisher below).
+  // 'conditioning'/'sport'/'recovery' V2 days store workout_type as the 'liss'
+  // DB fallback (see mapWorkoutTypeForDb) — conditioningItems presence is what
+  // actually distinguishes them from legacy V1 liss days.
   const dayType = workout?.isRest
     ? 'rest'
-    : workout?.isLiss
-      ? 'liss'
-      : dayData?.workout_type === 'workout'
+    : dayData?.workout_type === 'workout'
+      ? displayExercises.length > 0
         ? 'workout'
         : 'none'
+      : hasConditioningItems
+        ? isRecoveryConditioning
+          ? 'recovery'
+          : 'conditioning'
+        : workout?.isLiss
+          ? 'liss'
+          : 'none'
 
   // ── Session for selected date ──
   const sessionForDate = useMemo(
@@ -662,7 +686,7 @@ export default function Today() {
                 {/* Rest day */}
                 {dayType === 'rest' && <RestDay workout={workout} />}
 
-                {/* LISS day */}
+                {/* LISS day (legacy V1) */}
                 {dayType === 'liss' && (
                   <LissDay
                     workout={workout}
@@ -674,6 +698,28 @@ export default function Today() {
                     cooldownItems={cooldownItems}
                     onUpdate={syncRefetch}
                     readOnly={isFutureDate}
+                  />
+                )}
+
+                {/* Conditioning / sport day (V2) */}
+                {dayType === 'conditioning' && (
+                  <ConditioningDay
+                    dayData={dayData}
+                    conditioningItems={conditioningItems}
+                    date={dateStr}
+                    userId={user.id}
+                    isFuture={isFutureDate}
+                  />
+                )}
+
+                {/* Recovery day (V2) */}
+                {dayType === 'recovery' && (
+                  <RecoveryDay
+                    dayData={dayData}
+                    conditioningItems={conditioningItems}
+                    date={dateStr}
+                    userId={user.id}
+                    isFuture={isFutureDate}
                   />
                 )}
 
@@ -772,6 +818,16 @@ export default function Today() {
                           Seed the programme_exercises table to populate.
                         </Text>
                       </div>
+                    )}
+
+                    {/* Combined day — conditioning finisher */}
+                    {hasConditioningItems && (
+                      <CollapsibleConditioningBlock
+                        conditioningItems={conditioningItems}
+                        date={dateStr}
+                        userId={user.id}
+                        isFuture={isFutureDate}
+                      />
                     )}
 
                     {/* Finisher */}

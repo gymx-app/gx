@@ -182,6 +182,81 @@ export type Database = {
         }
         Relationships: []
       }
+      conditioning_items: {
+        Row: {
+          activity_id: string
+          activity_name: string
+          conditioning_id: string | null
+          conditioning_type: string
+          created_at: string | null
+          day_id: string | null
+          display_order: number
+          duration_min: number
+          fatigue_cost: string | null
+          heart_rate_zone: number | null
+          id: string
+          intensity_description: string | null
+          intervals: Json | null
+          programme_id: string | null
+          purpose: string | null
+          rationale: string | null
+          target_rpe: number | null
+        }
+        Insert: {
+          activity_id: string
+          activity_name: string
+          conditioning_id?: string | null
+          conditioning_type: string
+          created_at?: string | null
+          day_id?: string | null
+          display_order?: number
+          duration_min: number
+          fatigue_cost?: string | null
+          heart_rate_zone?: number | null
+          id?: string
+          intensity_description?: string | null
+          intervals?: Json | null
+          programme_id?: string | null
+          purpose?: string | null
+          rationale?: string | null
+          target_rpe?: number | null
+        }
+        Update: {
+          activity_id?: string
+          activity_name?: string
+          conditioning_id?: string | null
+          conditioning_type?: string
+          created_at?: string | null
+          day_id?: string | null
+          display_order?: number
+          duration_min?: number
+          fatigue_cost?: string | null
+          heart_rate_zone?: number | null
+          id?: string
+          intensity_description?: string | null
+          intervals?: Json | null
+          programme_id?: string | null
+          purpose?: string | null
+          rationale?: string | null
+          target_rpe?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'conditioning_items_day_id_fkey'
+            columns: ['day_id']
+            isOneToOne: false
+            referencedRelation: 'programme_days'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'conditioning_items_programme_id_fkey'
+            columns: ['programme_id']
+            isOneToOne: false
+            referencedRelation: 'programmes'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       cooldown_items: {
         Row: {
           day_id: string
