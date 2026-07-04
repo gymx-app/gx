@@ -89,7 +89,7 @@ export default function OnboardingWizard() {
       const equipment = wizardState.equipment ?? 'full_gym'
       const startDate = wizardState.start_date
 
-      const { success: saveSuccess } = await saveProgramme({
+      const { success: saveSuccess, programmeId } = await saveProgramme({
         odinResult: outcome.result as Record<string, unknown>,
         userId: user.id,
         goal,
@@ -122,7 +122,9 @@ export default function OnboardingWizard() {
         goal,
         equipment,
         startDate,
+        programmeId: programmeId ?? null,
       }
+      setGenerating(false)
       void navigate('/program', {
         replace: true,
         state: { previewResult, alreadySaved: true },

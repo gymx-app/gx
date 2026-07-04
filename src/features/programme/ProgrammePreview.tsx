@@ -59,6 +59,9 @@ export default function ProgrammePreview({
   const subtitle = summary.length > 140 ? summary.slice(0, 140) + '…' : summary
 
   const [saved, setSaved] = useState(alreadySaved)
+  const [resolvedProgrammeId, setResolvedProgrammeId] = useState<string | null>(
+    result.programmeId ?? null
+  )
   const [openPhase, setOpenPhase] = useState<number | null>(null)
   const [openWeek, setOpenWeek] = useState<number | null>(null)
   const [openDay, setOpenDay] = useState<number | null>(null)
@@ -80,7 +83,7 @@ export default function ProgrammePreview({
 
   const handleActivate = useCallback(async () => {
     if (!user) return
-    const { success } = await save({
+    const { success, programmeId } = await save({
       odinResult: result.odinResult as Record<string, unknown>,
       userId: user.id,
       goal: result.goal,
@@ -88,11 +91,55 @@ export default function ProgrammePreview({
       startDate: result.startDate,
     })
     if (success) {
+      if (programmeId) setResolvedProgrammeId(programmeId)
       setSaved(true)
     }
   }, [user, result, save])
 
+  // Baseline logging needs a durable programme row to attach sets/results to
+  // (calculateAndStoreBaseline writes against it) — only enable it once the
+  // programme is actually saved, whether that happened before this screen
+  // mounted (onboarding hand-off) or just now via handleActivate.
+  const handleBaselineComplete = useCallback(() => {
+    void navigate('/', { replace: true })
+  }, [navigate])
+
   if (saved) {
+    if (baselineSession) {
+      return (
+        <div
+          className="flex-1 flex flex-col overflow-y-auto px-4 pt-4 pb-4"
+          style={{ background: colors.bg }}
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: colors.accentMuted, border: `2px solid ${colors.accent}` }}
+            >
+              <span className="text-[16px]">✓</span>
+            </div>
+            <div>
+              <p
+                className="font-['Bebas_Neue'] text-[16px] tracking-[1px] leading-none"
+                style={{ color: colors.text }}
+              >
+                {programmeName} is now active
+              </p>
+              <p className="text-[12px] font-['DM_Sans'] mt-1" style={{ color: colors.muted }}>
+                Log your Day 0 baseline below to get started.
+              </p>
+            </div>
+          </div>
+          <BaselineSessionCard
+            baselineSession={baselineSession}
+            mode="logging"
+            programmeId={resolvedProgrammeId}
+            onComplete={handleBaselineComplete}
+          />
+        </div>
+      )
+    }
+
     return (
       <div
         className="flex-1 flex flex-col items-center justify-center px-8 text-center"

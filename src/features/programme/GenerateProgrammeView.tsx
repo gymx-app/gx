@@ -22,6 +22,10 @@ export interface GenerateResult {
   goal: string
   equipment: string
   startDate: string
+  // Set once the programme has been saved to Supabase — lets ProgrammePreview
+  // enable real baseline-set logging (which needs a durable programme row)
+  // instead of the read-only preview.
+  programmeId?: string | null
 }
 
 interface GenerateProgrammeViewProps {
