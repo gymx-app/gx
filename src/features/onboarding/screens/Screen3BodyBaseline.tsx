@@ -9,7 +9,7 @@ import { FieldError, FieldHelper, SectionLabel, UnitToggle } from './shared'
 import { INPUT_STYLE } from './sharedUtils'
 import { WizardCta } from './WizardCta'
 
-const INBODY_PARSE_URL = 'https://agent-odin.vercel.app/api/v1/inbody/parse'
+const INBODY_PARSE_URL = 'https://lzftkohidnykwnmekdyq.supabase.co/functions/v1/inbody-parse'
 const MAX_FILE_BYTES = 10 * 1024 * 1024
 
 type Path = 'inbody' | 'manual'
