@@ -7,6 +7,7 @@ import { colors } from '../../styles/tokens'
 import { useWizardState } from './useWizardState'
 import { buildOdinPayloadFromWizardState } from './buildOdinPayload'
 import { useOdinGenerate } from '../../hooks/useOdinGenerate'
+import { useSaveProgramme } from '../../hooks/useSaveProgramme'
 import type { GenerateResult } from '../programme/GenerateProgrammeView'
 import { Screen1Hook } from './screens/Screen1Hook'
 import { Screen2Identity } from './screens/Screen2Identity'
@@ -42,6 +43,7 @@ export default function OnboardingWizard() {
   } = useWizardState()
 
   const { generate, reset: resetOdin } = useOdinGenerate()
+  const { save: saveProgramme } = useSaveProgramme()
 
   const [generating, setGenerating] = useState(false)
   const appliedStepParamRef = useRef(false)
@@ -68,9 +70,13 @@ export default function OnboardingWizard() {
   )
 
   // ── Generation orchestration ──
-  // Odin success hands off to /program's existing ProgrammePreview (confirm +
-  // save + retry-on-save-failure), rather than auto-saving here — reuses the
-  // already-built "user must confirm first" flow instead of duplicating it.
+  // Odin success is persisted to `programmes`/`programme_config` immediately
+  // (via useSaveProgramme) before we ever navigate, so the generated result
+  // can't be silently lost if router state doesn't survive to /program (e.g.
+  // an auth event or backgrounding in between). /program then reads the
+  // active programme from Supabase; the previewResult handed through router
+  // state is only used as an instant-render fallback while that DB read is
+  // in flight.
   const runGenerate = useCallback(async () => {
     if (!user) return
     resetGeneration()
@@ -79,6 +85,26 @@ export default function OnboardingWizard() {
     const payload = buildOdinPayloadFromWizardState(wizardState)
     const outcome = await generate(payload, GENERATE_TIMEOUT_MS)
     if (outcome.success) {
+      const goal = wizardState.goal ?? 'general_fitness'
+      const equipment = wizardState.equipment ?? 'full_gym'
+      const startDate = wizardState.start_date
+
+      const { success: saveSuccess } = await saveProgramme({
+        odinResult: outcome.result as Record<string, unknown>,
+        userId: user.id,
+        goal,
+        equipment,
+        startDate,
+      })
+      if (!saveSuccess) {
+        setGenerationError(
+          'Your programme was generated but we could not save it. Please try again.',
+          'API_ERROR'
+        )
+        setGenerating(false)
+        return
+      }
+
       const { error: profileError } = await supabase
         .from('user_profiles')
         .update({ onboarding_completed: true })
@@ -93,16 +119,28 @@ export default function OnboardingWizard() {
       }
       const previewResult: GenerateResult = {
         odinResult: outcome.result,
-        goal: wizardState.goal ?? 'general_fitness',
-        equipment: wizardState.equipment ?? 'full_gym',
-        startDate: wizardState.start_date,
+        goal,
+        equipment,
+        startDate,
       }
-      void navigate('/program', { replace: true, state: { previewResult } })
+      void navigate('/program', {
+        replace: true,
+        state: { previewResult, alreadySaved: true },
+      })
     } else {
       setGenerationError(outcome.error ?? 'Generation failed.', outcome.errorType)
       setGenerating(false)
     }
-  }, [user, wizardState, generate, resetGeneration, resetOdin, setGenerationError, navigate])
+  }, [
+    user,
+    wizardState,
+    generate,
+    resetGeneration,
+    resetOdin,
+    setGenerationError,
+    navigate,
+    saveProgramme,
+  ])
 
   const handlePregnancySaved = useCallback(() => {
     void navigate('/', { replace: true })

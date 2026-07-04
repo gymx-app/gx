@@ -13,6 +13,10 @@ type AnyData = any
 interface ProgrammePreviewProps {
   result: GenerateResult
   onRegenerate: () => void
+  // True when the programme has already been saved as the active programme
+  // (e.g. the onboarding wizard saves before navigating here) — skips the
+  // review/activate step and goes straight to the confirmation screen.
+  alreadySaved?: boolean
 }
 
 const PHASE_ACCENT: Record<string, string> = {
@@ -32,7 +36,11 @@ function phaseColor(phase: AnyData): string {
   return colors.accent
 }
 
-export default function ProgrammePreview({ result, onRegenerate }: ProgrammePreviewProps) {
+export default function ProgrammePreview({
+  result,
+  onRegenerate,
+  alreadySaved = false,
+}: ProgrammePreviewProps) {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { save, saving, error: saveError } = useSaveProgramme()
@@ -50,7 +58,7 @@ export default function ProgrammePreview({ result, onRegenerate }: ProgrammePrev
     odinResult?.rationale?.combined?.[0] ?? programme?.programme?.goal_description ?? ''
   const subtitle = summary.length > 140 ? summary.slice(0, 140) + '…' : summary
 
-  const [saved, setSaved] = useState(false)
+  const [saved, setSaved] = useState(alreadySaved)
   const [openPhase, setOpenPhase] = useState<number | null>(null)
   const [openWeek, setOpenWeek] = useState<number | null>(null)
   const [openDay, setOpenDay] = useState<number | null>(null)

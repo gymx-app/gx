@@ -15,6 +15,7 @@ export interface UserProfile {
 }
 
 export interface UserHealth {
+  current_weight_kg: number | null
   fitness_level: string | null
   goal: string | null
   available_days_per_week: number | null
@@ -180,7 +181,7 @@ interface ProfileCardProps {
 export function ProfileCard({ profile, health, totalWeeks, injuries }: ProfileCardProps) {
   const chip = ageGenderChip(profile.date_of_birth, profile.gender)
   const heightCm = profile.height_cm != null ? `${Math.round(profile.height_cm)}cm` : '—'
-  const weightKg = profile.current_weight_kg != null ? `${profile.current_weight_kg}kg` : '—'
+  const weightKg = health.current_weight_kg != null ? `${health.current_weight_kg}kg` : '—'
   const goalKey = health.goal ?? 'general_fitness'
   const goalLabel = GOAL_LABELS[goalKey] ?? goalKey
   const goalColor = GOAL_COLORS[goalKey] ?? colors.accent
@@ -192,174 +193,181 @@ export function ProfileCard({ profile, health, totalWeeks, injuries }: ProfileCa
   const limitationsText = injuries.length > 0 ? injuries.join(', ') : null
 
   return (
-    <div
-      style={{
-        background: colors.surface,
-        border: `1px solid ${colors.border}`,
-        borderRadius: 16,
-        overflow: 'hidden',
-      }}
-    >
-      {/* Row 1 — Identity bar: age/gender chip + height/weight + goal badge */}
-      <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-        <div
-          className="flex-shrink-0 px-3 py-2 flex items-center justify-center"
-          style={{
-            background: `${goalColor}22`,
-            border: `1.5px solid ${goalColor}55`,
-            borderRadius: 10,
-          }}
-        >
-          <span
-            className="font-['Bebas_Neue'] text-[16px] tracking-[1px]"
-            style={{ color: goalColor }}
-          >
-            {chip}
-          </span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <p
-            className="font-['DM_Sans'] font-semibold text-[13px] leading-tight truncate"
-            style={{ color: colors.text }}
-          >
-            {heightCm} · {weightKg}
-          </p>
-        </div>
-        <div
-          className="flex-shrink-0 px-2.5 py-1"
-          style={{
-            background: `${goalColor}18`,
-            border: `1px solid ${goalColor}55`,
-            borderRadius: 8,
-          }}
-        >
-          <span
-            className="text-[11px] font-['DM_Sans'] font-bold tracking-[0.5px]"
-            style={{ color: goalColor }}
-          >
-            {goalLabel}
-          </span>
-        </div>
-      </div>
-
-      {/* Row 2 — Stats grid */}
-      <div className="grid grid-cols-3" style={{ borderTop: `1px solid ${colors.border}` }}>
-        {[
-          { label: 'DAYS / WK', value: String(days) },
-          { label: 'DURATION', value: duration },
-          { label: 'EQUIPMENT', value: equipLabel },
-        ].map((stat, i, arr) => (
+    <div style={{ position: 'relative' }}>
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: colors.surface,
+          border: `1px solid ${colors.border}`,
+          borderRadius: 16,
+          overflow: 'hidden',
+          pointerEvents: 'none',
+        }}
+      />
+      <div style={{ position: 'relative' }}>
+        {/* Row 1 — Identity bar: age/gender chip + height/weight + goal badge */}
+        <div className="flex items-center gap-3 px-4 pt-4 pb-3">
           <div
-            key={stat.label}
-            className="flex flex-col items-center justify-center py-3 px-2"
+            className="flex-shrink-0 px-3 py-2 flex items-center justify-center"
             style={{
-              borderRight: i < arr.length - 1 ? `1px solid ${colors.border}` : 'none',
+              background: `${goalColor}22`,
+              border: `1.5px solid ${goalColor}55`,
+              borderRadius: 10,
             }}
           >
-            <p
-              className="text-[9px] font-['DM_Sans'] font-bold tracking-[1.5px] mb-1"
-              style={{ color: colors.muted }}
+            <span
+              className="font-['Bebas_Neue'] text-[16px] tracking-[1px]"
+              style={{ color: goalColor }}
             >
-              {stat.label}
-            </p>
+              {chip}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
             <p
-              className="font-['Bebas_Neue'] text-[18px] leading-none text-center"
+              className="font-['DM_Sans'] font-semibold text-[13px] leading-tight truncate"
               style={{ color: colors.text }}
             >
-              {stat.value}
+              {heightCm} · {weightKg}
             </p>
           </div>
-        ))}
-      </div>
+          <div
+            className="flex-shrink-0 px-2.5 py-1"
+            style={{
+              background: `${goalColor}18`,
+              border: `1px solid ${goalColor}55`,
+              borderRadius: 8,
+            }}
+          >
+            <span
+              className="text-[11px] font-['DM_Sans'] font-bold tracking-[0.5px]"
+              style={{ color: goalColor }}
+            >
+              {goalLabel}
+            </span>
+          </div>
+        </div>
 
-      {/* Row 3 — Level bar */}
-      <div
-        className="flex items-center px-4 py-3"
-        style={{ borderTop: `1px solid ${colors.border}` }}
-      >
-        <div className="flex items-center gap-2">
+        {/* Row 2 — Stats grid */}
+        <div className="grid grid-cols-3" style={{ borderTop: `1px solid ${colors.border}` }}>
+          {[
+            { label: 'DAYS / WK', value: String(days) },
+            { label: 'DURATION', value: duration },
+            { label: 'EQUIPMENT', value: equipLabel },
+          ].map((stat, i, arr) => (
+            <div
+              key={stat.label}
+              className="flex flex-col items-center justify-center py-3 px-2"
+              style={{
+                borderRight: i < arr.length - 1 ? `1px solid ${colors.border}` : 'none',
+              }}
+            >
+              <p
+                className="text-[9px] font-['DM_Sans'] font-bold tracking-[1.5px] mb-1"
+                style={{ color: colors.muted }}
+              >
+                {stat.label}
+              </p>
+              <p
+                className="font-['Bebas_Neue'] text-[18px] leading-none text-center"
+                style={{ color: colors.text }}
+              >
+                {stat.value}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Row 3 — Level bar */}
+        <div
+          className="flex items-center px-4 py-3"
+          style={{ borderTop: `1px solid ${colors.border}` }}
+        >
+          <div className="flex items-center gap-2">
+            <span
+              className="text-[10px] font-['DM_Sans'] font-bold tracking-[1.5px] uppercase"
+              style={{ color: colors.muted }}
+            >
+              Level
+            </span>
+            <div className="flex gap-1">
+              {FITNESS_LEVELS.map((_, i) => (
+                <div
+                  key={i}
+                  className="w-5 h-1.5"
+                  style={{
+                    background: i <= fitnessIdx ? goalColor : colors.surface3,
+                    borderRadius: 2,
+                  }}
+                />
+              ))}
+            </div>
+            <span
+              className="text-[12px] font-['DM_Sans'] font-medium capitalize"
+              style={{ color: colors.textSecondary }}
+            >
+              {fitnessLevel}
+            </span>
+          </div>
+        </div>
+
+        {/* Row 4 — Limitations row */}
+        <div
+          className="flex items-center justify-between px-4 py-3"
+          style={{ borderTop: `1px solid ${colors.border}` }}
+        >
           <span
             className="text-[10px] font-['DM_Sans'] font-bold tracking-[1.5px] uppercase"
             style={{ color: colors.muted }}
           >
-            Level
+            Limitations
           </span>
-          <div className="flex gap-1">
-            {FITNESS_LEVELS.map((_, i) => (
-              <div
-                key={i}
-                className="w-5 h-1.5"
-                style={{
-                  background: i <= fitnessIdx ? goalColor : colors.surface3,
-                  borderRadius: 2,
-                }}
-              />
-            ))}
-          </div>
-          <span
-            className="text-[12px] font-['DM_Sans'] font-medium capitalize"
-            style={{ color: colors.textSecondary }}
-          >
-            {fitnessLevel}
-          </span>
-        </div>
-      </div>
-
-      {/* Row 4 — Limitations row */}
-      <div
-        className="flex items-center justify-between px-4 py-3"
-        style={{ borderTop: `1px solid ${colors.border}` }}
-      >
-        <span
-          className="text-[10px] font-['DM_Sans'] font-bold tracking-[1.5px] uppercase"
-          style={{ color: colors.muted }}
-        >
-          Limitations
-        </span>
-        {limitationsText ? (
-          <span
-            className="text-[12px] font-['DM_Sans'] font-medium text-right"
-            style={{ color: colors.textSecondary }}
-          >
-            {limitationsText}
-          </span>
-        ) : (
-          <span className="text-[12px] font-['DM_Sans']" style={{ color: colors.muted }}>
-            None reported
-          </span>
-        )}
-      </div>
-
-      {/* Row 5 — Bottom bar: Active + weeks badges, Edit dropdown */}
-      <div
-        className="flex items-center justify-between px-4 py-3"
-        style={{ borderTop: `1px solid ${colors.border}` }}
-      >
-        <div className="flex items-center gap-2">
-          <span
-            className="text-[10px] font-['DM_Sans'] font-bold tracking-[2px] uppercase px-2 py-1"
-            style={{
-              background: colors.accentMuted,
-              color: colors.accent,
-              borderRadius: radius.pill,
-            }}
-          >
-            Active
-          </span>
-          {totalWeeks > 0 && (
+          {limitationsText ? (
             <span
-              className="text-[10px] font-['DM_Sans'] font-bold tracking-[2px] uppercase px-2 py-1"
-              style={{
-                background: colors.surface2,
-                color: colors.textSecondary,
-                borderRadius: radius.pill,
-              }}
+              className="text-[12px] font-['DM_Sans'] font-medium text-right"
+              style={{ color: colors.textSecondary }}
             >
-              {totalWeeks} weeks
+              {limitationsText}
+            </span>
+          ) : (
+            <span className="text-[12px] font-['DM_Sans']" style={{ color: colors.muted }}>
+              None reported
             </span>
           )}
         </div>
-        <EditMenu />
+
+        {/* Row 5 — Bottom bar: Active + weeks badges, Edit dropdown */}
+        <div
+          className="flex items-center justify-between px-4 py-3"
+          style={{ borderTop: `1px solid ${colors.border}` }}
+        >
+          <div className="flex items-center gap-2">
+            <span
+              className="text-[10px] font-['DM_Sans'] font-bold tracking-[2px] uppercase px-2 py-1"
+              style={{
+                background: colors.accentMuted,
+                color: colors.accent,
+                borderRadius: radius.pill,
+              }}
+            >
+              Active
+            </span>
+            {totalWeeks > 0 && (
+              <span
+                className="text-[10px] font-['DM_Sans'] font-bold tracking-[2px] uppercase px-2 py-1"
+                style={{
+                  background: colors.surface2,
+                  color: colors.textSecondary,
+                  borderRadius: radius.pill,
+                }}
+              >
+                {totalWeeks} weeks
+              </span>
+            )}
+          </div>
+          <EditMenu />
+        </div>
       </div>
     </div>
   )

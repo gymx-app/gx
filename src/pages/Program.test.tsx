@@ -22,8 +22,13 @@ vi.mock('../lib/supabase', () => ({
   },
 }))
 
+// OnboardingWizard now saves the generated programme to Supabase before
+// navigating to /program (see useSaveProgramme), so by the time this page
+// mounts, getActiveProgramme should already find it — this mock simulates
+// that success case rather than "no active programme".
 vi.mock('../services/programmeService', () => ({
-  getActiveProgramme: () => Promise.resolve({ data: null, error: null }),
+  getActiveProgramme: () =>
+    Promise.resolve({ data: { id: 'programme-1', name: 'My Programme' }, error: null }),
   getProgrammePhases: () => Promise.resolve({ data: [], error: null }),
   getProgrammeDays: () => Promise.resolve({ data: [], error: null }),
   getProgrammeConfig: () => Promise.resolve({ data: null, error: null }),
@@ -51,17 +56,27 @@ const previewResult: GenerateResult = {
 }
 
 describe('Program - onboarding hand-off preview survives StrictMode double-invoke', () => {
-  it('keeps the freshly-generated previewResult after mount, even under StrictMode', async () => {
+  it('shows the freshly-generated preview instantly, then confirms it against Supabase, without ever falling back to the generate form — even under StrictMode', async () => {
     render(
       <StrictMode>
-        <MemoryRouter initialEntries={[{ pathname: '/program', state: { previewResult } }]}>
+        <MemoryRouter
+          initialEntries={[{ pathname: '/program', state: { previewResult, alreadySaved: true } }]}
+        >
           <Program />
         </MemoryRouter>
       </StrictMode>
     )
 
+    // Instant fallback: previewResult renders immediately while the
+    // getActiveProgramme check (mocked to resolve async) is still in flight.
+    expect(screen.getByText(/PREVIEW_STUB/)).toBeInTheDocument()
+    expect(screen.queryByText('GENERATE_STUB')).not.toBeInTheDocument()
+
+    // Once Supabase confirms the programme OnboardingWizard already saved,
+    // the page hands off from the instant preview to the real programme view
+    // — it never falls through to "no programme, please generate one".
     await waitFor(() => {
-      expect(screen.getByText(/PREVIEW_STUB/)).toBeInTheDocument()
+      expect(screen.getByText('My Programme')).toBeInTheDocument()
     })
     expect(screen.queryByText('GENERATE_STUB')).not.toBeInTheDocument()
   })

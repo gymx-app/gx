@@ -84,6 +84,10 @@ function InBodyBadgeField({
   )
 }
 
+function inRange(value: number | null | undefined, min: number, max: number): boolean {
+  return value == null || (value >= min && value <= max)
+}
+
 export function Screen6GoalPrecision({ wizardState, setField, onContinue }: Props) {
   const [editingCurrentBf, setEditingCurrentBf] = useState(false)
   const goal = wizardState.goal
@@ -92,7 +96,15 @@ export function Screen6GoalPrecision({ wizardState, setField, onContinue }: Prop
 
   const setSub = (key: string, value: unknown) => setField(`goal_sub_fields.${key}`, value)
 
-  const valid = goal !== 'strength' || !!sub.primary_lift
+  const subFieldsValid =
+    inRange(sub.current_body_fat_pct ?? wizardState.body_fat_pct, 3, 60) &&
+    inRange(sub.target_body_fat_pct, 3, 60) &&
+    inRange(sub.target_muscle_gain_kg, 0.5, 20) &&
+    inRange(sub.target_timeframe_weeks, 8, 52) &&
+    inRange(sub.current_1rm_kg, 0, 500) &&
+    inRange(sub.target_1rm_kg, 0, 500)
+
+  const valid = (goal !== 'strength' || !!sub.primary_lift) && subFieldsValid
 
   return (
     <>
@@ -101,9 +113,16 @@ export function Screen6GoalPrecision({ wizardState, setField, onContinue }: Prop
           MAKE IT PRECISE
         </h1>
         <button
-          onClick={onContinue}
+          onClick={() => subFieldsValid && onContinue()}
+          disabled={!subFieldsValid}
           className="text-[13px] font-['DM_Sans'] font-semibold"
-          style={{ color: colors.accent, background: 'none', border: 'none', cursor: 'pointer' }}
+          style={{
+            color: colors.accent,
+            background: 'none',
+            border: 'none',
+            cursor: subFieldsValid ? 'pointer' : 'default',
+            opacity: subFieldsValid ? 1 : 0.4,
+          }}
         >
           Skip →
         </button>

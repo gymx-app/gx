@@ -299,7 +299,11 @@ export function useWizardState(): UseWizardStateReturn {
     return () => {
       cancelled = true
     }
-  }, [user])
+    // Depend on user?.id (not the user object) — onAuthStateChange creates a
+    // new user object on every token refresh, which would otherwise re-run
+    // this hydration and reset in-progress wizard state on every refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
 
   const setField = useCallback((key: string, value: unknown) => {
     setWizardState((prev) => setPath(prev, key, value))

@@ -20,6 +20,13 @@ type WeightUnit = 'kg' | 'lbs'
 const ftInToCm = (ft: number, inches: number) => Math.round((ft * 30.48 + inches * 2.54) * 10) / 10
 const lbsToKg = (lbs: number) => Math.round((lbs / 2.205) * 10) / 10
 
+const HEIGHT_MIN_CM = 50
+const HEIGHT_MAX_CM = 300
+const WEIGHT_MIN_KG = 20
+const WEIGHT_MAX_KG = 500
+const BODY_FAT_MIN_PCT = 3
+const BODY_FAT_MAX_PCT = 60
+
 interface ParsedFields {
   body_fat_pct: number | null
   smm_kg: number | null
@@ -137,8 +144,22 @@ export function Screen3BodyBaseline({
     void handleFileSelect(file)
   }
 
+  const heightValid =
+    wizardState.height_cm != null &&
+    wizardState.height_cm >= HEIGHT_MIN_CM &&
+    wizardState.height_cm <= HEIGHT_MAX_CM
+  const weightValid =
+    wizardState.current_weight_kg != null &&
+    wizardState.current_weight_kg >= WEIGHT_MIN_KG &&
+    wizardState.current_weight_kg <= WEIGHT_MAX_KG
+  const bodyFatValid =
+    wizardState.body_fat_pct == null ||
+    (wizardState.body_fat_pct >= BODY_FAT_MIN_PCT && wizardState.body_fat_pct <= BODY_FAT_MAX_PCT)
+
+  const valid = heightValid && weightValid && bodyFatValid
+
   const handleContinue = async () => {
-    if (!wizardState.height_cm || !wizardState.current_weight_kg) return
+    if (!valid) return
     setSaving(true)
     setError(null)
 
@@ -190,8 +211,6 @@ export function Screen3BodyBaseline({
     setSaving(false)
     onSaved(3)
   }
-
-  const valid = !!wizardState.height_cm && !!wizardState.current_weight_kg
 
   return (
     <>
@@ -489,6 +508,11 @@ export function Screen3BodyBaseline({
                 />
               </div>
             )}
+            {wizardState.height_cm != null && !heightValid && (
+              <FieldError
+                text={`Height must be between ${HEIGHT_MIN_CM} and ${HEIGHT_MAX_CM} cm`}
+              />
+            )}
           </div>
 
           <div className="mb-5">
@@ -518,6 +542,11 @@ export function Screen3BodyBaseline({
               className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
               style={INPUT_STYLE}
             />
+            {wizardState.current_weight_kg != null && !weightValid && (
+              <FieldError
+                text={`Weight must be between ${WEIGHT_MIN_KG} and ${WEIGHT_MAX_KG} kg`}
+              />
+            )}
           </div>
 
           <div className="mb-2">
@@ -525,8 +554,8 @@ export function Screen3BodyBaseline({
             <input
               type="number"
               inputMode="decimal"
-              min={3}
-              max={60}
+              min={BODY_FAT_MIN_PCT}
+              max={BODY_FAT_MAX_PCT}
               value={wizardState.body_fat_pct ?? ''}
               onChange={(e) => {
                 const v = e.target.value === '' ? null : parseFloat(e.target.value)
@@ -537,7 +566,13 @@ export function Screen3BodyBaseline({
               className="w-full h-[48px] px-[14px] text-[15px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
               style={INPUT_STYLE}
             />
-            <FieldHelper text="From a previous InBody or DEXA scan. Leave blank if unknown." />
+            {wizardState.body_fat_pct != null && !bodyFatValid ? (
+              <FieldError
+                text={`Body fat % must be between ${BODY_FAT_MIN_PCT} and ${BODY_FAT_MAX_PCT}`}
+              />
+            ) : (
+              <FieldHelper text="From a previous InBody or DEXA scan. Leave blank if unknown." />
+            )}
           </div>
 
           <button

@@ -85,7 +85,10 @@ export function Screen10ProgrammeProfile({ wizardState, setField, goToStep, onGe
     <div className="relative">
       <OdinStatusPill />
 
-      <h1 className="font-['Bebas_Neue'] text-[26px] tracking-[2px] text-[#f0ede8] leading-none">
+      <h1
+        className="font-['Bebas_Neue'] text-[26px] tracking-[2px] text-[#f0ede8] leading-none"
+        style={{ paddingRight: 100 }}
+      >
         THIS IS WHO ODIN IS BUILDING FOR
       </h1>
       <p

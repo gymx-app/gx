@@ -60,7 +60,7 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
         supabase
           .from('user_health')
           .select(
-            'fitness_level, goal, available_days_per_week, session_duration_min, equipment, injuries, injuries_v2, preferred_workout_time, lifestyle, occupation, medical_conditions, goal_sub_fields, baseline_path, known_lifts, target_body_fat_pct, target_timeframe_weeks, body_fat_pct'
+            'current_weight_kg, fitness_level, goal, available_days_per_week, session_duration_min, equipment, injuries, injuries_v2, preferred_workout_time, lifestyle, occupation, medical_conditions, goal_sub_fields, baseline_path, known_lifts, target_body_fat_pct, target_timeframe_weeks, body_fat_pct'
           )
           .eq('user_id', user.id)
           .maybeSingle(),

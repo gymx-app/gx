@@ -2,9 +2,14 @@ import { useState } from 'react'
 import { X } from 'lucide-react'
 import { colors } from '../../../styles/tokens'
 import type { BaselinePath, WizardState } from '../useWizardState'
-import { SelectableCard } from './shared'
+import { FieldError, SelectableCard } from './shared'
 import { INPUT_STYLE } from './sharedUtils'
 import { WizardCta } from './WizardCta'
+
+const LIFT_WEIGHT_MIN_KG = 1
+const LIFT_WEIGHT_MAX_KG = 500
+const LIFT_REPS_MIN = 1
+const LIFT_REPS_MAX = 12
 
 const BASELINE_OPTIONS: { value: NonNullable<BaselinePath>; label: string; description: string }[] =
   [
@@ -50,11 +55,25 @@ export function Screen8BaselineStrength({ wizardState, setField, onContinue }: P
     const lifts = wizardState.known_lifts.filter((l) => l.exercise_id !== exerciseId)
     const w = parseFloat(weightKg)
     const r = parseInt(repCount, 10)
-    if (weightKg.trim() && repCount.trim() && !isNaN(w) && !isNaN(r)) {
+    const weightValid = !isNaN(w) && w >= LIFT_WEIGHT_MIN_KG && w <= LIFT_WEIGHT_MAX_KG
+    const repsValid = !isNaN(r) && r >= LIFT_REPS_MIN && r <= LIFT_REPS_MAX
+    if (weightKg.trim() && repCount.trim() && weightValid && repsValid) {
       lifts.push({ exercise_id: exerciseId, weight_kg: w, reps: r })
     }
     setField('known_lifts', lifts)
   }
+
+  const liftFieldInvalid = (raw: string | undefined, min: number, max: number) => {
+    if (raw == null || raw.trim() === '') return false
+    const n = parseFloat(raw)
+    return isNaN(n) || n < min || n > max
+  }
+
+  const hasInvalidLiftInput = LIFT_OPTIONS.some(
+    (lift) =>
+      liftFieldInvalid(weights[lift.value], LIFT_WEIGHT_MIN_KG, LIFT_WEIGHT_MAX_KG) ||
+      liftFieldInvalid(reps[lift.value], LIFT_REPS_MIN, LIFT_REPS_MAX)
+  )
 
   return (
     <>
@@ -81,53 +100,76 @@ export function Screen8BaselineStrength({ wizardState, setField, onContinue }: P
             <div className="mb-4 -mt-1 px-1">
               {LIFT_OPTIONS.map((lift) => {
                 const existing = wizardState.known_lifts.find((l) => l.exercise_id === lift.value)
+                const weightRaw = weights[lift.value] ?? String(existing?.weight_kg ?? '')
+                const repsRaw = reps[lift.value] ?? String(existing?.reps ?? '')
+                const weightInvalid = liftFieldInvalid(
+                  weightRaw,
+                  LIFT_WEIGHT_MIN_KG,
+                  LIFT_WEIGHT_MAX_KG
+                )
+                const repsInvalid = liftFieldInvalid(repsRaw, LIFT_REPS_MIN, LIFT_REPS_MAX)
                 return (
-                  <div key={lift.value} className="flex items-center gap-2 mb-2">
-                    <span
-                      className="text-[12px] font-['DM_Sans'] w-24 flex-shrink-0"
-                      style={{ color: colors.textSecondary }}
-                    >
-                      {lift.label}
-                    </span>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min={1}
-                      max={500}
-                      defaultValue={existing?.weight_kg ?? ''}
-                      placeholder="kg"
-                      onChange={(e) => {
-                        setWeights((prev) => ({ ...prev, [lift.value]: e.target.value }))
-                        updateLift(
-                          lift.value,
-                          e.target.value,
-                          reps[lift.value] ?? String(existing?.reps ?? '')
-                        )
-                      }}
-                      className="w-20 h-[40px] px-2 text-[13px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
-                      style={INPUT_STYLE}
-                    />
-                    <span className="text-[11px] font-['DM_Sans']" style={{ color: colors.muted }}>
-                      for
-                    </span>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min={1}
-                      max={12}
-                      defaultValue={existing?.reps ?? ''}
-                      placeholder="reps"
-                      onChange={(e) => {
-                        setReps((prev) => ({ ...prev, [lift.value]: e.target.value }))
-                        updateLift(
-                          lift.value,
-                          weights[lift.value] ?? String(existing?.weight_kg ?? ''),
-                          e.target.value
-                        )
-                      }}
-                      className="w-16 h-[40px] px-2 text-[13px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
-                      style={INPUT_STYLE}
-                    />
+                  <div key={lift.value} className="mb-2">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="text-[12px] font-['DM_Sans'] w-24 flex-shrink-0"
+                        style={{ color: colors.textSecondary }}
+                      >
+                        {lift.label}
+                      </span>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min={LIFT_WEIGHT_MIN_KG}
+                        max={LIFT_WEIGHT_MAX_KG}
+                        defaultValue={existing?.weight_kg ?? ''}
+                        placeholder="kg"
+                        onChange={(e) => {
+                          setWeights((prev) => ({ ...prev, [lift.value]: e.target.value }))
+                          updateLift(
+                            lift.value,
+                            e.target.value,
+                            reps[lift.value] ?? String(existing?.reps ?? '')
+                          )
+                        }}
+                        className="w-20 h-[40px] px-2 text-[13px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
+                        style={INPUT_STYLE}
+                      />
+                      <span
+                        className="text-[11px] font-['DM_Sans']"
+                        style={{ color: colors.muted }}
+                      >
+                        for
+                      </span>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={LIFT_REPS_MIN}
+                        max={LIFT_REPS_MAX}
+                        defaultValue={existing?.reps ?? ''}
+                        placeholder="reps"
+                        onChange={(e) => {
+                          setReps((prev) => ({ ...prev, [lift.value]: e.target.value }))
+                          updateLift(
+                            lift.value,
+                            weights[lift.value] ?? String(existing?.weight_kg ?? ''),
+                            e.target.value
+                          )
+                        }}
+                        className="w-16 h-[40px] px-2 text-[13px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
+                        style={INPUT_STYLE}
+                      />
+                    </div>
+                    {weightInvalid && (
+                      <FieldError
+                        text={`Weight must be between ${LIFT_WEIGHT_MIN_KG} and ${LIFT_WEIGHT_MAX_KG} kg`}
+                      />
+                    )}
+                    {repsInvalid && (
+                      <FieldError
+                        text={`Reps must be between ${LIFT_REPS_MIN} and ${LIFT_REPS_MAX}`}
+                      />
+                    )}
                   </div>
                 )
               })}
@@ -180,7 +222,11 @@ export function Screen8BaselineStrength({ wizardState, setField, onContinue }: P
         </div>
       ))}
 
-      <WizardCta label="CONTINUE →" disabled={!wizardState.baseline_path} onTap={onContinue} />
+      <WizardCta
+        label="CONTINUE →"
+        disabled={!wizardState.baseline_path || hasInvalidLiftInput}
+        onTap={onContinue}
+      />
     </>
   )
 }

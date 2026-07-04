@@ -55,11 +55,18 @@ export default function Program() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // OnboardingWizard navigates here with a freshly-generated result in router
-  // state (Screen 10's "user must confirm first" requirement) so it can reuse
-  // this tab's existing ProgrammePreview/save flow instead of duplicating it.
+  // OnboardingWizard already saves the generated programme to Supabase
+  // (`programmes`/`programme_config`) before navigating here, so the active
+  // programme is the source of truth. The `previewResult` handed through
+  // router state is only used to render something instantly while the
+  // Supabase check below is in flight — it's a fallback for the initial
+  // render, not a persistence mechanism.
   const previewFromOnboarding =
-    (location.state as { previewResult?: GenerateResult } | null)?.previewResult ?? null
+    (location.state as { previewResult?: GenerateResult; alreadySaved?: boolean } | null)
+      ?.previewResult ?? null
+  const alreadySavedFromOnboarding = Boolean(
+    (location.state as { alreadySaved?: boolean } | null)?.alreadySaved
+  )
 
   const [tabState, setTabState] = useState<TabState>('loading')
   const [activeProgramme, setActiveProgramme] = useState<AnyData>(null)
@@ -67,30 +74,28 @@ export default function Program() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [health, setHealth] = useState<UserHealth | null>(null)
   const [previewResult, setPreviewResult] = useState<GenerateResult | null>(previewFromOnboarding)
+  const [previewAlreadySaved, setPreviewAlreadySaved] = useState(alreadySavedFromOnboarding)
   const [openPhaseIdx, setOpenPhaseIdx] = useState<number | null>(null)
   const [phaseDays, setPhaseDays] = useState<Record<string, AnyData[]>>({})
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [checkKey, setCheckKey] = useState(0)
-  // Deliberately state, not a ref: a ref's `.current` mutation would be visible
-  // to both passes of React StrictMode's dev-only double-invoke of this effect
-  // (mount -> cleanup -> mount, same closure, no re-render in between), so the
-  // second pass would see the flag already flipped and take the wrong branch.
-  // State reads the value captured by that render's closure, so both passes
-  // agree, and the flip only takes effect after the real subsequent re-render.
-  const [skipInitialCheck, setSkipInitialCheck] = useState(previewFromOnboarding !== null)
 
   // Reactively pick up a freshly-generated preview handed off via router state.
   // AppLayout keeps every tab mounted (display:none), so a later navigate() to
   // /program with new state (e.g. re-onboarding while this tab is still
   // mounted) must be picked up here too, not just captured once at first mount.
   useEffect(() => {
-    const incoming =
-      (location.state as { previewResult?: GenerateResult } | null)?.previewResult ?? null
+    const state = location.state as {
+      previewResult?: GenerateResult
+      alreadySaved?: boolean
+    } | null
+    const incoming = state?.previewResult ?? null
     if (incoming) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setPreviewResult(incoming)
+      setPreviewAlreadySaved(Boolean(state?.alreadySaved))
       void navigate(location.pathname, { replace: true, state: null })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -99,7 +104,6 @@ export default function Program() {
   // When the user navigates back to /program with a stale previewResult
   // (tab stays mounted via display:none), bump checkKey to re-run the check.
   useEffect(() => {
-    if (skipInitialCheck) return
     if (location.pathname === '/program' && previewResult !== null) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCheckKey((k) => k + 1)
@@ -113,19 +117,14 @@ export default function Program() {
     let cancelled = false
 
     const check = async () => {
-      if (skipInitialCheck) {
-        setSkipInitialCheck(false)
-        setTabState('no_programme')
-        return
-      }
-      // Clear any stale preview state before checking (handles navigation-back case)
-      setPreviewResult(null)
       setTabState('loading')
 
       const { data } = await getActiveProgramme(user.id)
       if (cancelled) return
 
       if (data) {
+        setPreviewResult(null)
+        setPreviewAlreadySaved(false)
         setActiveProgramme(data)
 
         const [phasesRes, profileRes, healthRes, cfgRes] = await Promise.all([
@@ -140,7 +139,7 @@ export default function Program() {
           supabase
             .from('user_health')
             .select(
-              'fitness_level, goal, available_days_per_week, session_duration_min, equipment, injuries, preferred_workout_time'
+              'current_weight_kg, fitness_level, goal, available_days_per_week, session_duration_min, equipment, injuries, preferred_workout_time'
             )
             .eq('user_id', user.id)
             .maybeSingle(),
@@ -175,6 +174,10 @@ export default function Program() {
 
         setTabState('has_programme')
       } else {
+        // No active programme found in Supabase — it's the source of truth,
+        // so drop any stale preview rather than trusting router state.
+        setPreviewResult(null)
+        setPreviewAlreadySaved(false)
         setTabState('no_programme')
       }
     }
@@ -183,10 +186,6 @@ export default function Program() {
     return () => {
       cancelled = true
     }
-    // skipInitialCheck intentionally omitted — read once per [user, checkKey]
-    // cycle; reacting to its own change here would immediately re-run this
-    // effect and clear the preview it just decided to skip clearing.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, checkKey])
 
   const togglePhase = useCallback(
@@ -270,6 +269,21 @@ export default function Program() {
 
   // ── Loading ──
   if (tabState === 'loading') {
+    // Render the just-generated preview instantly instead of a spinner while
+    // the Supabase active-programme check above confirms it — Supabase (not
+    // this router-state value) is what decides the final tabState.
+    if (previewResult) {
+      return (
+        <>
+          <TopBar title="PROGRAMME" />
+          <ProgrammePreview
+            result={previewResult}
+            alreadySaved={previewAlreadySaved}
+            onRegenerate={() => setPreviewResult(null)}
+          />
+        </>
+      )
+    }
     return (
       <>
         <TopBar title="PROGRAMME" />
@@ -286,7 +300,11 @@ export default function Program() {
       return (
         <>
           <TopBar title="PROGRAMME" />
-          <ProgrammePreview result={previewResult} onRegenerate={() => setPreviewResult(null)} />
+          <ProgrammePreview
+            result={previewResult}
+            alreadySaved={previewAlreadySaved}
+            onRegenerate={() => setPreviewResult(null)}
+          />
         </>
       )
     }

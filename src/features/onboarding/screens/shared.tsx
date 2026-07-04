@@ -313,6 +313,12 @@ export function NumberField({
   min?: number
   max?: number
 }) {
+  const parsed = value.trim() === '' ? null : parseFloat(value)
+  const outOfRange =
+    parsed != null &&
+    !isNaN(parsed) &&
+    ((min != null && parsed < min) || (max != null && parsed > max))
+
   return (
     <div className="mb-4">
       <SectionLabel label={label} className="mb-2" />
@@ -328,8 +334,14 @@ export function NumberField({
         className="h-[48px] w-full px-[14px] text-[#f0ede8] text-[15px] font-['DM_Sans'] placeholder:text-[#444444]"
         style={INPUT_STYLE}
       />
-      {hint && <FieldHelper text={hint} />}
-      {helper && !hint && <FieldHelper text={helper} />}
+      {outOfRange ? (
+        <FieldError text={`Must be between ${min} and ${max}`} />
+      ) : (
+        <>
+          {hint && <FieldHelper text={hint} />}
+          {helper && !hint && <FieldHelper text={helper} />}
+        </>
+      )}
     </div>
   )
 }
