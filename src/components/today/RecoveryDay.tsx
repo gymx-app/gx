@@ -95,7 +95,7 @@ const RecoveryDay = memo(function RecoveryDay({
   }
 
   return (
-    <div>
+    <div className="pt-2.5">
       <Text variant="pageTitle" className="!text-[26px]">
         RECOVERY DAY
       </Text>

@@ -194,7 +194,7 @@ const ConditioningDay = memo(function ConditioningDay({
   }
 
   return (
-    <div>
+    <div className="pt-2.5">
       <Text variant="pageTitle" as="h1" className="!text-[26px]">
         {item.activity_name}
       </Text>
