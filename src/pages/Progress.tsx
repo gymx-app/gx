@@ -1,129 +1,512 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { ArrowRight, ArrowUp, ChevronRight, X } from 'lucide-react'
 import TopBar from '../components/layout/TopBar'
+import {
+  BottomSheet,
+  Button,
+  Card,
+  ProgressBar,
+  SectionLabel,
+  Text,
+  Toggle,
+} from '../components/ui'
 import { colors } from '../styles/tokens'
-import { useAuth } from '../auth/AuthContext'
-import { supabase } from '../lib/supabase'
-import { logger } from '../lib/logger'
 
-interface BaselineRow {
-  exercise_name: string
-  estimated_1rm_kg: number
-  working_weight_kg: number
-  set3_weight_kg: number
-  set3_reps: number
-  tested_at: string | null
+// ── MOCK DATA — replace with real hooks in a later pass ──────────────────
+const mockSessions = { completed: 4, total: 5 }
+const mockStreak = { days: 18, personalBest: 31 }
+
+const GOAL_STATUS = {
+  onPace: { label: 'ON PACE', color: colors.success, bg: colors.successMuted },
+  behindPace: { label: 'BEHIND PACE', color: colors.accent, bg: colors.accentMuted },
+  justStarted: { label: 'JUST STARTED', color: colors.muted, bg: colors.surface2 },
+} as const
+const mockGoalStatus: keyof typeof GOAL_STATUS = 'behindPace'
+
+const mockGoal = {
+  label: 'GOAL · FAT LOSS BY SEP 2026',
+  current: 35.6,
+  target: 25.0,
+  startedAt: 40.2,
+  progressPercent: 30,
+  toGo: 10.6,
+  weeksLeft: 6,
+}
+
+// A goal is always set during onboarding, so day-one users still see this
+// card — just with zero progress instead of a fabricated pace.
+const emptyGoal = {
+  label: mockGoal.label,
+  current: mockGoal.startedAt,
+  target: mockGoal.target,
+  startedAt: mockGoal.startedAt,
+  progressPercent: 0,
+  toGo: Math.abs(mockGoal.startedAt - mockGoal.target),
+  weeksLeft: mockGoal.weeksLeft + 6,
+}
+
+// Total tonnage per week — the one signal that's always real no matter which
+// of the 300+ exercises made up a given session.
+const mockWeeklyVolume = [
+  17200, 18400, 18000, 19100, 20100, 19500, 21000, 21800, 21400, 22800, 23500, 24200,
+]
+
+// Baseline 1RM tests only happen a few times per programme (per phase), not
+// weekly — shown as discrete checkpoints instead of a fabricated smooth line.
+const mockBaselineTests = [
+  { phase: 'Foundation Phase', week: 'Wk 1', date: '3 Feb 2026', total: 460 },
+  { phase: 'Accumulation Phase', week: 'Wk 5', date: '3 Mar 2026', total: 480 },
+  { phase: 'Intensification Phase', week: 'Wk 9', date: '31 Mar 2026', total: 500 },
+]
+
+// 14 days, most recent last — 0 = missed, otherwise relative intensity 0-1
+const mockLast14Days = [1, 1, 0.6, 1, 1, 0, 1, 0.6, 1, 1, 1, 0, 1, 1]
+
+const mockPRs = [
+  { name: 'Back Squat', date: '1 Jul 2026', delta: '+2.5', value: '165', unit: 'KG' },
+  { name: 'Deadlift', date: '24 Jun 2026', delta: '+5', value: '185', unit: 'KG' },
+  { name: 'Bench Press', date: '18 Jun 2026', delta: '+1', value: '100', unit: 'KG' },
+  { name: 'Overhead Press', date: '10 Jun 2026', delta: '+2.5', value: '60', unit: 'KG' },
+  { name: 'Front Squat', date: '2 Jun 2026', delta: '+2.5', value: '125', unit: 'KG' },
+  { name: 'Romanian Deadlift', date: '27 May 2026', delta: '+5', value: '145', unit: 'KG' },
+  { name: 'Incline Bench', date: '20 May 2026', delta: '+2.5', value: '85', unit: 'KG' },
+  { name: 'Barbell Row', date: '14 May 2026', delta: '+2.5', value: '95', unit: 'KG' },
+  { name: 'Trap Bar Deadlift', date: '7 May 2026', delta: '+7.5', value: '195', unit: 'KG' },
+  { name: 'Push Press', date: '30 Apr 2026', delta: '+2.5', value: '70', unit: 'KG' },
+  { name: 'Pause Squat', date: '23 Apr 2026', delta: '+2.5', value: '145', unit: 'KG' },
+  { name: 'Close Grip Bench', date: '16 Apr 2026', delta: '+1', value: '90', unit: 'KG' },
+]
+const PR_PREVIEW_COUNT = 10
+// ── END MOCK DATA ──────────────────────────────────────────────────────
+
+const TABS = ['Training', 'Body Scan', 'Measure'] as const
+type TabName = (typeof TABS)[number]
+
+function SegmentedControl({
+  active,
+  onChange,
+}: {
+  active: TabName
+  onChange: (t: TabName) => void
+}) {
+  return (
+    <div className="flex w-full p-1 rounded-full" style={{ background: colors.surface2 }}>
+      {TABS.map((tab) => {
+        const isActive = tab === active
+        return (
+          <button
+            key={tab}
+            onClick={() => onChange(tab)}
+            className={`flex-1 py-2.5 rounded-full transition-all duration-150 ${
+              isActive
+                ? "font-['Bebas_Neue'] text-[15px] tracking-[1px]"
+                : "font-['DM_Sans'] text-[13px] font-bold"
+            }`}
+            style={{
+              background: isActive ? colors.accent : 'transparent',
+              color: colors.text,
+            }}
+          >
+            {tab}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function SessionDots({ completed, total }: { completed: number; total: number }) {
+  return (
+    <div className="flex gap-1.5">
+      {Array.from({ length: total }).map((_, i) => (
+        <span
+          key={i}
+          className="w-2.5 h-2.5 rounded-full"
+          style={{ background: i < completed ? colors.accent : colors.surface3 }}
+        />
+      ))}
+    </div>
+  )
+}
+
+function GoalStatusBadge({ status }: { status: keyof typeof GOAL_STATUS }) {
+  const { label, color, bg } = GOAL_STATUS[status]
+  return (
+    <span
+      className="px-[8px] py-[3px] text-[10px] font-bold tracking-[0.3px] uppercase rounded-[4px]"
+      style={{ color, background: bg }}
+    >
+      {label}
+    </span>
+  )
+}
+
+function VolumeBarChart({ weeks }: { weeks: number[] }) {
+  const w = 280
+  const h = 72
+  const max = Math.max(...weeks)
+  const gap = 4
+  const barWidth = w / weeks.length - gap
+
+  return (
+    <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+      {weeks.map((v, i) => {
+        const barH = (v / max) * h
+        const x = i * (w / weeks.length)
+        const isCurrent = i === weeks.length - 1
+        return (
+          <rect
+            key={i}
+            x={x}
+            y={h - barH}
+            width={barWidth}
+            height={barH}
+            rx={2}
+            fill={isCurrent ? colors.accent : colors.surface3}
+          />
+        )
+      })}
+    </svg>
+  )
+}
+
+function BaselineTestRow({
+  phase,
+  week,
+  date,
+  total,
+  delta,
+  isLast,
+}: {
+  phase: string
+  week: string
+  date: string
+  total: number
+  delta: number | null
+  isLast: boolean
+}) {
+  return (
+    <div className="flex gap-3">
+      <div className="flex flex-col items-center">
+        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: colors.accent }} />
+        {!isLast && (
+          <span className="w-px flex-1 mt-1" style={{ background: colors.borderSubtle }} />
+        )}
+      </div>
+      <div className={isLast ? '' : 'pb-5'}>
+        <Text variant="caption">
+          {phase} · {week} · {date}
+        </Text>
+        <div className="flex items-baseline gap-2 mt-1">
+          <span
+            className="font-['Bebas_Neue'] text-[22px] tracking-[1px]"
+            style={{ color: colors.text }}
+          >
+            {total} kg
+          </span>
+          {delta !== null && (
+            <span className="text-[12px] font-bold" style={{ color: colors.success }}>
+              +{delta} since last test
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Last14DaysRow({ days }: { days: number[] }) {
+  return (
+    <div className="flex justify-end gap-1.5">
+      {days.map((intensity, i) => (
+        <span
+          key={i}
+          className="w-3 h-3 rounded-[3px]"
+          style={
+            intensity === 0
+              ? { background: colors.surface3 }
+              : { background: colors.success, opacity: intensity }
+          }
+        />
+      ))}
+    </div>
+  )
+}
+
+function PrRow({
+  name,
+  date,
+  delta,
+  value,
+  unit,
+}: {
+  name: string
+  date: string
+  delta: string
+  value: string
+  unit: string
+}) {
+  return (
+    <div className="flex items-center justify-between py-3">
+      <div>
+        <Text variant="body" className="font-bold">
+          {name}
+        </Text>
+        <Text variant="caption" className="mt-0.5">
+          {date}
+        </Text>
+      </div>
+      <div className="flex items-baseline gap-2">
+        <span className="flex items-center gap-0.5" style={{ color: colors.success }}>
+          <ArrowUp size={12} strokeWidth={2.5} />
+          <span className="text-[12px] font-bold">{delta}</span>
+        </span>
+        <span
+          className="font-['Bebas_Neue'] text-[26px] tracking-[1px]"
+          style={{ color: colors.accent }}
+        >
+          {value}
+        </span>
+        <Text variant="micro">{unit}</Text>
+      </div>
+    </div>
+  )
+}
+
+function EmptyState({
+  message,
+  action,
+}: {
+  message: string
+  action?: { label: string; onPress: () => void }
+}) {
+  return (
+    <div className="py-4 text-center">
+      <Text variant="bodyMuted">{message}</Text>
+      {action && (
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="secondary"
+            label={action.label}
+            onPress={action.onPress}
+            fullWidth={false}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TrainingTab() {
+  const [showAllPRs, setShowAllPRs] = useState(false)
+  // ponytail: preview-only toggle so both states can be reviewed live; the
+  // conditional rendering below is the real logic once data is wired up.
+  const [previewEmpty, setPreviewEmpty] = useState(false)
+
+  const sessions = previewEmpty ? { completed: 0, total: mockSessions.total } : mockSessions
+  const streak = previewEmpty ? { days: 0, personalBest: null } : mockStreak
+  const goal = previewEmpty ? emptyGoal : mockGoal
+  const goalStatus: keyof typeof GOAL_STATUS = previewEmpty ? 'justStarted' : mockGoalStatus
+  const weeklyVolume = previewEmpty ? [] : mockWeeklyVolume
+  const baselineTests = previewEmpty ? [] : mockBaselineTests
+  const last14 = previewEmpty ? mockLast14Days.map(() => 0) : mockLast14Days
+  const prs = previewEmpty ? [] : mockPRs
+  const previewPRs = prs.slice(0, PR_PREVIEW_COUNT)
+
+  const currentVolume = weeklyVolume[weeklyVolume.length - 1]
+  const prior4wk = weeklyVolume.slice(-5, -1)
+  const prior4wkAvg = prior4wk.reduce((sum, v) => sum + v, 0) / prior4wk.length
+  const volumePct = Math.round(((currentVolume! - prior4wkAvg) / prior4wkAvg) * 100)
+
+  return (
+    <>
+      <div className="flex items-center justify-between mt-4">
+        <Text variant="micro">Preview: fresh-user empty state</Text>
+        <Toggle value={previewEmpty} onChange={() => setPreviewEmpty((v) => !v)} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mt-3">
+        <Card>
+          <SectionLabel label="This week" />
+          <div className="mt-3">
+            <SessionDots completed={sessions.completed} total={sessions.total} />
+          </div>
+          <Text variant="cardTitle" className="mt-3">
+            {sessions.completed} / {sessions.total} SESSIONS
+          </Text>
+        </Card>
+
+        <Card>
+          <SectionLabel label="Streak" />
+          <Text variant="pageTitle" className="mt-3">
+            {streak.days} DAYS
+          </Text>
+          <Text variant="caption" className="mt-1">
+            {streak.personalBest !== null
+              ? `Personal best: ${streak.personalBest}`
+              : 'Complete a workout to start your streak'}
+          </Text>
+        </Card>
+      </div>
+
+      <Card className="mt-3">
+        <div className="flex items-center justify-between">
+          <Text variant="caption">{goal.label}</Text>
+          <GoalStatusBadge status={goalStatus} />
+        </div>
+        <div className="mt-3">
+          <ProgressBar progress={goal.progressPercent} color="accent" />
+        </div>
+        <div className="flex items-baseline gap-2 mt-3">
+          <span
+            className="font-['Bebas_Neue'] text-[28px] tracking-[1px]"
+            style={{ color: colors.text }}
+          >
+            {goal.current}%
+          </span>
+          <ArrowRight size={14} strokeWidth={2} color={colors.muted} />
+          <Text variant="caption">{goal.target.toFixed(1)}% target</Text>
+        </div>
+        <Text variant="caption" className="mt-1">
+          {previewEmpty
+            ? `${goal.weeksLeft} weeks left · starting at ${goal.startedAt}%`
+            : `${goal.toGo}% to go · ${goal.weeksLeft} weeks left · started at ${goal.startedAt}%`}
+        </Text>
+      </Card>
+
+      <Card className="mt-3">
+        <Text variant="caption">TRAINING VOLUME · 12 WEEKS</Text>
+        {weeklyVolume.length > 0 ? (
+          <>
+            <div className="mt-3">
+              <VolumeBarChart weeks={weeklyVolume} />
+            </div>
+            <div className="flex items-baseline gap-2 mt-3">
+              <span
+                className="font-['Bebas_Neue'] text-[24px] tracking-[1px]"
+                style={{ color: colors.text }}
+              >
+                {currentVolume!.toLocaleString()} kg
+              </span>
+              <span
+                className="text-[12px] font-bold"
+                style={{ color: volumePct >= 0 ? colors.success : colors.error }}
+              >
+                {volumePct >= 0 ? '+' : ''}
+                {volumePct}% vs last 4wk avg
+              </span>
+            </div>
+          </>
+        ) : (
+          <EmptyState message="No training volume yet — complete your first workout to see trends here." />
+        )}
+      </Card>
+
+      <Card className="mt-3">
+        <Text variant="caption">BASELINE TESTS</Text>
+        {baselineTests.length > 0 ? (
+          <div className="mt-3">
+            {baselineTests.map((test, i) => (
+              <BaselineTestRow
+                key={test.phase}
+                {...test}
+                delta={i > 0 ? test.total - baselineTests[i - 1]!.total : null}
+                isLast={i === baselineTests.length - 1}
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            message="Complete your baseline test to unlock strength benchmarks."
+            action={{ label: 'Start Baseline Test', onPress: () => {} }}
+          />
+        )}
+      </Card>
+
+      <Card className="mt-3">
+        <div className="flex items-center justify-between">
+          <Text variant="caption">LAST 14 DAYS</Text>
+          <Last14DaysRow days={last14} />
+        </div>
+      </Card>
+
+      <Card className="mt-3" padding="p-4">
+        <Text variant="caption">Recent PRs</Text>
+        {prs.length > 0 ? (
+          <div className="mt-2" style={{ borderTop: `1px solid ${colors.borderSubtle}` }}>
+            {previewPRs.map((pr) => (
+              <PrRow key={pr.name} {...pr} />
+            ))}
+          </div>
+        ) : (
+          <EmptyState message="No PRs yet — they'll show up here as you set new records." />
+        )}
+        {prs.length > PR_PREVIEW_COUNT && (
+          <button
+            onClick={() => setShowAllPRs(true)}
+            className="w-full flex items-center justify-center gap-1 pt-3"
+            style={{ borderTop: `1px solid ${colors.borderSubtle}` }}
+          >
+            <span className="text-[12px] font-bold" style={{ color: colors.accent }}>
+              View more
+            </span>
+            <ChevronRight size={14} strokeWidth={2} color={colors.accent} />
+          </button>
+        )}
+      </Card>
+
+      <BottomSheet isOpen={showAllPRs} onClose={() => setShowAllPRs(false)} height="90vh">
+        <div className="px-4 pb-6 h-full flex flex-col">
+          <div className="flex items-center justify-between mb-2">
+            <Text variant="cardTitle">All PRs</Text>
+            <button onClick={() => setShowAllPRs(false)} aria-label="Close">
+              <X size={20} color={colors.muted} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {prs.map((pr, i) => (
+              <div
+                key={pr.name}
+                style={
+                  i < prs.length - 1
+                    ? { borderBottom: `1px solid ${colors.borderSubtle}` }
+                    : undefined
+                }
+              >
+                <PrRow {...pr} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </BottomSheet>
+    </>
+  )
+}
+
+function ComingSoonTab({ label }: { label: string }) {
+  return (
+    <Card className="mt-4">
+      <Text variant="cardTitle">{label}</Text>
+      <Text variant="bodyMuted" className="mt-1">
+        Coming soon.
+      </Text>
+    </Card>
+  )
 }
 
 export default function Progress() {
-  const { user } = useAuth()
-  const [baselines, setBaselines] = useState<BaselineRow[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!user?.id) return
-    let cancelled = false
-
-    async function load() {
-      try {
-        const { data: programme, error: progErr } = await supabase
-          .from('programmes')
-          .select('id')
-          .eq('user_id', user!.id)
-          .eq('is_active', true)
-          .limit(1)
-          .maybeSingle()
-        if (progErr) throw progErr
-
-        if (!programme) {
-          if (!cancelled) setBaselines([])
-          return
-        }
-
-        const { data, error } = await supabase
-          .from('strength_baselines')
-          .select(
-            'exercise_name, estimated_1rm_kg, working_weight_kg, set3_weight_kg, set3_reps, tested_at'
-          )
-          .eq('user_id', user!.id)
-          .eq('programme_id', programme.id)
-          .order('tested_at', { ascending: true })
-        if (error) throw error
-
-        if (!cancelled) setBaselines(data ?? [])
-      } catch (err) {
-        logger.error('Progress baseline load:', err)
-        if (!cancelled) setBaselines([])
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    void load()
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the user identity changes
-  }, [user?.id])
-
-  if (!loading && baselines.length > 0) {
-    const testedAt = baselines[0]?.tested_at
-    const testedLabel = testedAt
-      ? new Date(testedAt).toLocaleDateString('en-GB', {
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric',
-        })
-      : ''
-
-    return (
-      <>
-        <TopBar title="PROGRESS" />
-        <div className="flex-1 overflow-y-auto pb-8 px-4">
-          <h2 className="font-['Bebas_Neue'] text-2xl text-white mt-4">YOUR BASELINE STRENGTH</h2>
-          <p className="font-['DM_Sans'] text-sm text-zinc-400 mt-1 mb-4">
-            Tested on {testedLabel}. Used to prescribe your starting weights.
-          </p>
-
-          {baselines.map((b, i) => (
-            <div key={i} className="bg-zinc-900 rounded-xl p-4 mb-3">
-              <p className="font-['DM_Sans'] text-sm font-medium text-white">{b.exercise_name}</p>
-              <p className="text-xs text-zinc-400">Est. 1RM: {b.estimated_1rm_kg}kg</p>
-              <p className="text-xs text-orange-500">Day 1 weight: {b.working_weight_kg}kg</p>
-              <p className="text-xs text-zinc-600">
-                Test: {b.set3_weight_kg}kg × {b.set3_reps} reps
-              </p>
-            </div>
-          ))}
-
-          <p className="text-xs text-zinc-600 text-center mt-4">
-            Full progress tracking coming soon
-          </p>
-        </div>
-      </>
-    )
-  }
+  const [tab, setTab] = useState<TabName>('Training')
 
   return (
     <>
       <TopBar title="PROGRESS" />
-      <div className="flex-1 overflow-y-auto pb-8 flex flex-col items-center justify-center px-6">
-        <div
-          className="w-full max-w-[320px] p-8 text-center"
-          style={{
-            background: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: '16px',
-          }}
-        >
-          <p className="text-[40px] mb-3">📈</p>
-          <h2 className="font-['Bebas_Neue'] text-[22px] tracking-[2px] text-[#f0ede8] mb-2">
-            PROGRESS
-          </h2>
-          <p className="text-[13px] text-[#666666] leading-[1.6]">
-            Track your lifts, volume, and consistency over time.
-          </p>
-          <p className="text-[11px] text-[#444444] mt-3">Coming soon</p>
+      <div className="flex-1 overflow-y-auto px-4 pb-8">
+        <div className="pt-4">
+          <SegmentedControl active={tab} onChange={setTab} />
         </div>
+        {tab === 'Training' && <TrainingTab />}
+        {tab === 'Body Scan' && <ComingSoonTab label="Body Scan" />}
+        {tab === 'Measure' && <ComingSoonTab label="Measure" />}
       </div>
     </>
   )
