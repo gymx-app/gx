@@ -8,6 +8,7 @@ import {
   getActiveProgramme,
   getProgrammePhases,
   getProgrammeDays,
+  getProgrammeDayExercises,
   getProgrammeConfig,
   upsertProgrammeConfig,
 } from '../services/programmeService'
@@ -77,6 +78,7 @@ export default function Program() {
   const [previewAlreadySaved, setPreviewAlreadySaved] = useState(alreadySavedFromOnboarding)
   const [openPhaseIdx, setOpenPhaseIdx] = useState<number | null>(null)
   const [phaseDays, setPhaseDays] = useState<Record<string, AnyData[]>>({})
+  const [dayExercises, setDayExercises] = useState<Record<string, AnyData[]>>({})
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -197,7 +199,22 @@ export default function Program() {
       setOpenPhaseIdx(idx)
       if (!phaseDays[phase.id]) {
         const { data } = await getProgrammeDays(phase.id)
-        setPhaseDays((prev) => ({ ...prev, [phase.id]: data ?? [] }))
+        const days = data ?? []
+        setPhaseDays((prev) => ({ ...prev, [phase.id]: days }))
+
+        // getProgrammeDays only selects day columns — it never joins exercises,
+        // so each day needs a separate fetch to populate the accordion's leaf level.
+        const workoutDays = days.filter((d: AnyData) => d.workout_type !== 'rest')
+        const results = await Promise.all(
+          workoutDays.map((d: AnyData) => getProgrammeDayExercises(d.id))
+        )
+        setDayExercises((prev) => {
+          const next = { ...prev }
+          workoutDays.forEach((d: AnyData, i: number) => {
+            next[d.id] = results[i]?.data ?? []
+          })
+          return next
+        })
       }
     },
     [openPhaseIdx, phaseDays]
@@ -441,35 +458,69 @@ export default function Program() {
                       days.map((day: AnyData, di: number) => {
                         const isRest = day.workout_type === 'rest'
                         const dotColor = DAY_TYPE_COLOR[day.workout_type as string] ?? colors.muted
+                        const exercises: AnyData[] = dayExercises[day.id] ?? []
                         return (
                           <div
                             key={di}
-                            className="flex items-center gap-3 px-4 py-3"
                             style={{
                               borderBottom:
                                 di < days.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
                             }}
                           >
-                            <span
-                              className="flex-shrink-0 text-[10px] font-['DM_Sans'] font-bold tracking-[1px] w-8 text-center py-0.5"
-                              style={{
-                                background: isRest ? colors.surface3 : `${accent}22`,
-                                color: isRest ? colors.muted : accent,
-                                borderRadius: 4,
-                              }}
-                            >
-                              {day.day_of_week?.slice(0, 3) ?? `D${di + 1}`}
-                            </span>
-                            <p
-                              className="flex-1 text-[13px] font-['DM_Sans']"
-                              style={{ color: isRest ? colors.muted : colors.text }}
-                            >
-                              {day.title ?? (isRest ? 'Rest' : `Day ${di + 1}`)}
-                            </p>
-                            <div
-                              className="flex-shrink-0 w-2 h-2 rounded-full"
-                              style={{ background: dotColor }}
-                            />
+                            <div className="flex items-center gap-3 px-4 py-3">
+                              <span
+                                className="flex-shrink-0 text-[10px] font-['DM_Sans'] font-bold tracking-[1px] w-8 text-center py-0.5"
+                                style={{
+                                  background: isRest ? colors.surface3 : `${accent}22`,
+                                  color: isRest ? colors.muted : accent,
+                                  borderRadius: 4,
+                                }}
+                              >
+                                {day.day_of_week?.slice(0, 3) ?? `D${di + 1}`}
+                              </span>
+                              <p
+                                className="flex-1 text-[13px] font-['DM_Sans']"
+                                style={{ color: isRest ? colors.muted : colors.text }}
+                              >
+                                {day.title ?? (isRest ? 'Rest' : `Day ${di + 1}`)}
+                              </p>
+                              <div
+                                className="flex-shrink-0 w-2 h-2 rounded-full"
+                                style={{ background: dotColor }}
+                              />
+                            </div>
+                            {!isRest && exercises.length > 0 && (
+                              <div style={{ background: colors.surface2 }}>
+                                {exercises.map((ex: AnyData, ei: number) => (
+                                  <button
+                                    key={ex.id}
+                                    className="w-full flex items-center gap-3 pl-8 pr-4 py-3 text-left active:opacity-60"
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      borderTop:
+                                        ei > 0 ? `1px solid ${colors.borderSubtle}` : 'none',
+                                    }}
+                                  >
+                                    <p
+                                      className="flex-1 text-[12px] font-['DM_Sans']"
+                                      style={{ color: colors.textSecondary }}
+                                    >
+                                      {ex.exercises?.name ?? 'Exercise'}
+                                    </p>
+                                    {ex.sets_reps && (
+                                      <span
+                                        className="flex-shrink-0 text-[11px] font-['DM_Sans']"
+                                        style={{ color: colors.muted }}
+                                      >
+                                        {ex.sets_reps}
+                                      </span>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )
                       })
