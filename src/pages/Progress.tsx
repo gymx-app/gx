@@ -1,15 +1,10 @@
 import { useState } from 'react'
-import { ArrowRight, ArrowUp, ChevronRight, X } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowRight, ChevronRight } from 'lucide-react'
 import TopBar from '../components/layout/TopBar'
-import {
-  BottomSheet,
-  Button,
-  Card,
-  ProgressBar,
-  SectionLabel,
-  Text,
-  Toggle,
-} from '../components/ui'
+import PrRow from '../components/progress/PrRow'
+import { CURATED_PRS } from '../components/progress/prData'
+import { Button, Card, ProgressBar, SectionLabel, Text, Toggle } from '../components/ui'
 import { colors } from '../styles/tokens'
 
 // ── MOCK DATA — replace with real hooks in a later pass ──────────────────
@@ -62,21 +57,7 @@ const mockBaselineTests = [
 // 14 days, most recent last — 0 = missed, otherwise relative intensity 0-1
 const mockLast14Days = [1, 1, 0.6, 1, 1, 0, 1, 0.6, 1, 1, 1, 0, 1, 1]
 
-const mockPRs = [
-  { name: 'Back Squat', date: '1 Jul 2026', delta: '+2.5', value: '165', unit: 'KG' },
-  { name: 'Deadlift', date: '24 Jun 2026', delta: '+5', value: '185', unit: 'KG' },
-  { name: 'Bench Press', date: '18 Jun 2026', delta: '+1', value: '100', unit: 'KG' },
-  { name: 'Overhead Press', date: '10 Jun 2026', delta: '+2.5', value: '60', unit: 'KG' },
-  { name: 'Front Squat', date: '2 Jun 2026', delta: '+2.5', value: '125', unit: 'KG' },
-  { name: 'Romanian Deadlift', date: '27 May 2026', delta: '+5', value: '145', unit: 'KG' },
-  { name: 'Incline Bench', date: '20 May 2026', delta: '+2.5', value: '85', unit: 'KG' },
-  { name: 'Barbell Row', date: '14 May 2026', delta: '+2.5', value: '95', unit: 'KG' },
-  { name: 'Trap Bar Deadlift', date: '7 May 2026', delta: '+7.5', value: '195', unit: 'KG' },
-  { name: 'Push Press', date: '30 Apr 2026', delta: '+2.5', value: '70', unit: 'KG' },
-  { name: 'Pause Squat', date: '23 Apr 2026', delta: '+2.5', value: '145', unit: 'KG' },
-  { name: 'Close Grip Bench', date: '16 Apr 2026', delta: '+1', value: '90', unit: 'KG' },
-]
-const PR_PREVIEW_COUNT = 10
+const PR_PREVIEW_COUNT = 5
 // ── END MOCK DATA ──────────────────────────────────────────────────────
 
 const TABS = ['Training', 'Body Scan', 'Measure'] as const
@@ -233,46 +214,6 @@ function Last14DaysRow({ days }: { days: number[] }) {
   )
 }
 
-function PrRow({
-  name,
-  date,
-  delta,
-  value,
-  unit,
-}: {
-  name: string
-  date: string
-  delta: string
-  value: string
-  unit: string
-}) {
-  return (
-    <div className="flex items-center justify-between py-3">
-      <div>
-        <Text variant="body" className="font-bold">
-          {name}
-        </Text>
-        <Text variant="caption" className="mt-0.5">
-          {date}
-        </Text>
-      </div>
-      <div className="flex items-baseline gap-2">
-        <span className="flex items-center gap-0.5" style={{ color: colors.success }}>
-          <ArrowUp size={12} strokeWidth={2.5} />
-          <span className="text-[12px] font-bold">{delta}</span>
-        </span>
-        <span
-          className="font-['Bebas_Neue'] text-[26px] tracking-[1px]"
-          style={{ color: colors.accent }}
-        >
-          {value}
-        </span>
-        <Text variant="micro">{unit}</Text>
-      </div>
-    </div>
-  )
-}
-
 function EmptyState({
   message,
   action,
@@ -298,7 +239,7 @@ function EmptyState({
 }
 
 function TrainingTab() {
-  const [showAllPRs, setShowAllPRs] = useState(false)
+  const navigate = useNavigate()
   // ponytail: preview-only toggle so both states can be reviewed live; the
   // conditional rendering below is the real logic once data is wired up.
   const [previewEmpty, setPreviewEmpty] = useState(false)
@@ -310,7 +251,7 @@ function TrainingTab() {
   const weeklyVolume = previewEmpty ? [] : mockWeeklyVolume
   const baselineTests = previewEmpty ? [] : mockBaselineTests
   const last14 = previewEmpty ? mockLast14Days.map(() => 0) : mockLast14Days
-  const prs = previewEmpty ? [] : mockPRs
+  const prs = previewEmpty ? [] : CURATED_PRS
   const previewPRs = prs.slice(0, PR_PREVIEW_COUNT)
 
   const currentVolume = weeklyVolume[weeklyVolume.length - 1]
@@ -443,7 +384,7 @@ function TrainingTab() {
         )}
         {prs.length > PR_PREVIEW_COUNT && (
           <button
-            onClick={() => setShowAllPRs(true)}
+            onClick={() => void navigate('/progress/prs')}
             className="w-full flex items-center justify-center gap-1 pt-3"
             style={{ borderTop: `1px solid ${colors.borderSubtle}` }}
           >
@@ -454,31 +395,6 @@ function TrainingTab() {
           </button>
         )}
       </Card>
-
-      <BottomSheet isOpen={showAllPRs} onClose={() => setShowAllPRs(false)} height="90vh">
-        <div className="px-4 pb-6 h-full flex flex-col">
-          <div className="flex items-center justify-between mb-2">
-            <Text variant="cardTitle">All PRs</Text>
-            <button onClick={() => setShowAllPRs(false)} aria-label="Close">
-              <X size={20} color={colors.muted} />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {prs.map((pr, i) => (
-              <div
-                key={pr.name}
-                style={
-                  i < prs.length - 1
-                    ? { borderBottom: `1px solid ${colors.borderSubtle}` }
-                    : undefined
-                }
-              >
-                <PrRow {...pr} />
-              </div>
-            ))}
-          </div>
-        </div>
-      </BottomSheet>
     </>
   )
 }
