@@ -1,11 +1,21 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, ChevronRight } from 'lucide-react'
+import { ArrowRight, Check, ChevronRight, Upload } from 'lucide-react'
 import TopBar from '../components/layout/TopBar'
 import PrRow from '../components/progress/PrRow'
 import { CURATED_PRS } from '../components/progress/prData'
-import { Button, Card, ProgressBar, SectionLabel, Text, Toggle } from '../components/ui'
-import { colors } from '../styles/tokens'
+import ScanHistoryRow from '../components/progress/ScanHistoryRow'
+import { mockScanHistory } from '../components/progress/scanData'
+import {
+  BottomSheet,
+  Button,
+  Card,
+  ProgressBar,
+  SectionLabel,
+  Text,
+  Toggle,
+} from '../components/ui'
+import { colors, radius } from '../styles/tokens'
 
 // ── MOCK DATA — replace with real hooks in a later pass ──────────────────
 const mockSessions = { completed: 4, total: 5 }
@@ -58,6 +68,15 @@ const mockBaselineTests = [
 const mockLast14Days = [1, 1, 0.6, 1, 1, 0, 1, 0.6, 1, 1, 1, 0, 1, 1]
 
 const PR_PREVIEW_COUNT = 5
+
+const mockReminder = { dayCount: 24, cycleLength: 30 }
+
+const REMINDER_OPTIONS = [
+  { label: 'Weekly reminder', sublabel: 'Every 7 days', days: 7 },
+  { label: 'Fortnightly reminder', sublabel: 'Every 15 days', days: 15 },
+  { label: 'Monthly reminder', sublabel: 'Every 30 days', days: 30 },
+  { label: 'Bi-monthly reminder', sublabel: 'Every 60 days', days: 60 },
+] as const
 // ── END MOCK DATA ──────────────────────────────────────────────────────
 
 const TABS = ['Training', 'Body Scan', 'Measure'] as const
@@ -235,6 +254,127 @@ function EmptyState({
         </div>
       )}
     </div>
+  )
+}
+
+function BodyScanTab() {
+  const navigate = useNavigate()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showReminderSheet, setShowReminderSheet] = useState(false)
+  const [reminderDays, setReminderDays] = useState<number>(mockReminder.cycleLength)
+
+  const daysUntilDue = reminderDays - mockReminder.dayCount
+  const reminderPercent = Math.min(100, Math.round((mockReminder.dayCount / reminderDays) * 100))
+
+  return (
+    <>
+      <Card className="mt-4">
+        <div className="flex items-center justify-between">
+          <Text variant="body" className="!text-[15px] font-semibold">
+            {daysUntilDue > 0 ? `Next scan due in ${daysUntilDue} days` : 'Scan overdue'}
+          </Text>
+          <button
+            onClick={() => setShowReminderSheet(true)}
+            className="text-[15px] font-semibold shrink-0"
+            style={{ color: colors.accent }}
+          >
+            Edit
+          </button>
+        </div>
+        <div className="mt-3">
+          <ProgressBar progress={reminderPercent} color="accent" height={6} />
+        </div>
+        <Text variant="caption" className="mt-1.5">
+          Reminds every {reminderDays} days · day {mockReminder.dayCount} of {reminderDays}
+        </Text>
+      </Card>
+
+      <div
+        className="flex flex-col items-center text-center mt-3 px-4"
+        style={{
+          border: `1.5px dashed ${colors.border}`,
+          borderRadius: radius.card,
+          paddingTop: 22,
+          paddingBottom: 22,
+        }}
+      >
+        <Upload size={26} strokeWidth={1.5} color={colors.muted} />
+        <Text variant="body" className="!text-[14px] font-semibold mt-3">
+          Upload InBody scan
+        </Text>
+        <Text variant="caption" className="mt-1">
+          Photo of the printout or a PDF export
+        </Text>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,.pdf"
+          className="hidden"
+          onChange={() => {}}
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="mt-3 px-5 py-2 rounded-full text-[13px] font-bold"
+          style={{ border: `1.5px solid ${colors.border}`, color: colors.text }}
+        >
+          Choose file
+        </button>
+      </div>
+
+      <Text variant="caption" className="!text-[13px] font-medium mt-6">
+        History
+      </Text>
+      <Card className="mt-2" padding="p-4">
+        {mockScanHistory.length > 0 ? (
+          mockScanHistory.map((scan, i) => (
+            <ScanHistoryRow
+              key={scan.date}
+              scan={scan}
+              isLast={i === mockScanHistory.length - 1}
+              onPress={() => void navigate('/progress/scan', { state: { scan } })}
+            />
+          ))
+        ) : (
+          <EmptyState message="No scans yet — upload your first InBody scan to start tracking." />
+        )}
+      </Card>
+
+      <BottomSheet isOpen={showReminderSheet} onClose={() => setShowReminderSheet(false)}>
+        <div className="px-4 pb-6">
+          <Text variant="cardTitle" className="mb-2">
+            Reminder frequency
+          </Text>
+          {REMINDER_OPTIONS.map((option, i) => {
+            const isSelected = option.days === reminderDays
+            return (
+              <button
+                key={option.days}
+                onClick={() => {
+                  setReminderDays(option.days)
+                  setShowReminderSheet(false)
+                }}
+                className="w-full flex items-center justify-between py-3 text-left"
+                style={
+                  i < REMINDER_OPTIONS.length - 1
+                    ? { borderBottom: `1px solid ${colors.borderSubtle}` }
+                    : undefined
+                }
+              >
+                <div>
+                  <Text variant="body" className="font-bold">
+                    {option.label}
+                  </Text>
+                  <Text variant="caption" className="mt-0.5">
+                    {option.sublabel}
+                  </Text>
+                </div>
+                {isSelected && <Check size={18} strokeWidth={2.5} color={colors.accent} />}
+              </button>
+            )
+          })}
+        </div>
+      </BottomSheet>
+    </>
   )
 }
 
@@ -421,7 +561,7 @@ export default function Progress() {
           <SegmentedControl active={tab} onChange={setTab} />
         </div>
         {tab === 'Training' && <TrainingTab />}
-        {tab === 'Body Scan' && <ComingSoonTab label="Body Scan" />}
+        {tab === 'Body Scan' && <BodyScanTab />}
         {tab === 'Measure' && <ComingSoonTab label="Measure" />}
       </div>
     </>

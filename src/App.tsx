@@ -37,6 +37,7 @@ const Login = lazyWithRetry(() => import('./pages/Login'))
 const Today = lazyWithRetry(() => import('./pages/Today'))
 const Progress = lazyWithRetry(() => import('./pages/Progress'))
 const PRHistory = lazyWithRetry(() => import('./pages/PRHistory'))
+const ScanReport = lazyWithRetry(() => import('./pages/ScanReport'))
 const Program = lazyWithRetry(() => import('./pages/Program'))
 const Account = lazyWithRetry(() => import('./pages/Account'))
 const OnboardingWizard = lazyWithRetry(() => import('./features/onboarding/OnboardingWizard'))
@@ -103,6 +104,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <PRHistory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/progress/scan"
+            element={
+              <ProtectedRoute>
+                <ScanReport />
               </ProtectedRoute>
             }
           />
