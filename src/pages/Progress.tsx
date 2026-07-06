@@ -1,17 +1,21 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Check, ChevronRight, Upload } from 'lucide-react'
+import { ArrowRight, ChevronRight, Upload, X } from 'lucide-react'
 import TopBar from '../components/layout/TopBar'
 import PrRow from '../components/progress/PrRow'
 import { CURATED_PRS } from '../components/progress/prData'
+import ReminderCard from '../components/progress/ReminderCard'
 import ScanHistoryRow from '../components/progress/ScanHistoryRow'
 import { mockScanHistory } from '../components/progress/scanData'
+import { useToast } from '../hooks/useToast'
 import {
   BottomSheet,
   Button,
   Card,
+  Input,
   ProgressBar,
   SectionLabel,
+  StatBlock,
   Text,
   Toggle,
 } from '../components/ui'
@@ -70,13 +74,99 @@ const mockLast14Days = [1, 1, 0.6, 1, 1, 0, 1, 0.6, 1, 1, 1, 0, 1, 1]
 const PR_PREVIEW_COUNT = 5
 
 const mockReminder = { dayCount: 24, cycleLength: 30 }
+const mockMeasurementReminder = { dayCount: 12 }
+// TODO: source from the user's profile once height is captured there.
+const mockUserHeightCm = 178
 
-const REMINDER_OPTIONS = [
-  { label: 'Weekly reminder', sublabel: 'Every 7 days', days: 7 },
-  { label: 'Fortnightly reminder', sublabel: 'Every 15 days', days: 15 },
-  { label: 'Monthly reminder', sublabel: 'Every 30 days', days: 30 },
-  { label: 'Bi-monthly reminder', sublabel: 'Every 60 days', days: 60 },
-] as const
+type MeasurementKey =
+  | 'neck'
+  | 'shoulders'
+  | 'chest'
+  | 'bicepL'
+  | 'bicepR'
+  | 'waist'
+  | 'hip'
+  | 'thighL'
+  | 'thighR'
+  | 'calf'
+type MeasurementValues = Record<MeasurementKey, number>
+interface MeasurementField {
+  key: MeasurementKey
+  label: string
+}
+
+// Grouped by body region so the form and history both read logically
+// (top to bottom, matching how a lifter actually thinks about their body)
+// instead of an arbitrary insertion-order grid.
+const MEASUREMENT_GROUPS: { title: string; fields: MeasurementField[] }[] = [
+  {
+    title: 'Upper body',
+    fields: [
+      { key: 'neck', label: 'Neck' },
+      { key: 'shoulders', label: 'Shoulders' },
+      { key: 'chest', label: 'Chest' },
+      { key: 'bicepL', label: 'Bicep (L)' },
+      { key: 'bicepR', label: 'Bicep (R)' },
+    ],
+  },
+  {
+    title: 'Core',
+    fields: [
+      { key: 'waist', label: 'Waist' },
+      { key: 'hip', label: 'Hip' },
+    ],
+  },
+  {
+    title: 'Lower body',
+    fields: [
+      { key: 'thighL', label: 'Thigh (L)' },
+      { key: 'thighR', label: 'Thigh (R)' },
+      { key: 'calf', label: 'Calf' },
+    ],
+  },
+]
+const ALL_MEASUREMENT_FIELDS = MEASUREMENT_GROUPS.flatMap((g) => g.fields)
+
+interface MeasurementEntry {
+  id: number
+  date: string
+  values: MeasurementValues
+}
+
+const mockMeasurements: MeasurementEntry[] = [
+  {
+    id: 1,
+    date: '22 Jun 2026',
+    values: {
+      neck: 39.5,
+      shoulders: 118,
+      chest: 104,
+      waist: 86,
+      hip: 98,
+      bicepL: 37.2,
+      bicepR: 37.5,
+      thighL: 62,
+      thighR: 62.5,
+      calf: 39,
+    },
+  },
+  {
+    id: 0,
+    date: '25 May 2026',
+    values: {
+      neck: 39.5,
+      shoulders: 117,
+      chest: 102,
+      waist: 88,
+      hip: 98,
+      bicepL: 36.5,
+      bicepR: 36.8,
+      thighL: 61,
+      thighR: 61.5,
+      calf: 39,
+    },
+  },
+]
 // ── END MOCK DATA ──────────────────────────────────────────────────────
 
 const TABS = ['Training', 'Body Scan', 'Measure'] as const
@@ -260,34 +350,14 @@ function EmptyState({
 function BodyScanTab() {
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [showReminderSheet, setShowReminderSheet] = useState(false)
-  const [reminderDays, setReminderDays] = useState<number>(mockReminder.cycleLength)
-
-  const daysUntilDue = reminderDays - mockReminder.dayCount
-  const reminderPercent = Math.min(100, Math.round((mockReminder.dayCount / reminderDays) * 100))
 
   return (
     <>
-      <Card className="mt-4">
-        <div className="flex items-center justify-between">
-          <Text variant="body" className="!text-[15px] font-semibold">
-            {daysUntilDue > 0 ? `Next scan due in ${daysUntilDue} days` : 'Scan overdue'}
-          </Text>
-          <button
-            onClick={() => setShowReminderSheet(true)}
-            className="text-[15px] font-semibold shrink-0"
-            style={{ color: colors.accent }}
-          >
-            Edit
-          </button>
-        </div>
-        <div className="mt-3">
-          <ProgressBar progress={reminderPercent} color="accent" height={6} />
-        </div>
-        <Text variant="caption" className="mt-1.5">
-          Reminds every {reminderDays} days · day {mockReminder.dayCount} of {reminderDays}
-        </Text>
-      </Card>
+      <ReminderCard
+        label="Next scan"
+        dayCount={mockReminder.dayCount}
+        defaultCycleLength={mockReminder.cycleLength}
+      />
 
       <div
         className="flex flex-col items-center text-center mt-3 px-4"
@@ -338,42 +408,6 @@ function BodyScanTab() {
           <EmptyState message="No scans yet — upload your first InBody scan to start tracking." />
         )}
       </Card>
-
-      <BottomSheet isOpen={showReminderSheet} onClose={() => setShowReminderSheet(false)}>
-        <div className="px-4 pb-6">
-          <Text variant="cardTitle" className="mb-2">
-            Reminder frequency
-          </Text>
-          {REMINDER_OPTIONS.map((option, i) => {
-            const isSelected = option.days === reminderDays
-            return (
-              <button
-                key={option.days}
-                onClick={() => {
-                  setReminderDays(option.days)
-                  setShowReminderSheet(false)
-                }}
-                className="w-full flex items-center justify-between py-3 text-left"
-                style={
-                  i < REMINDER_OPTIONS.length - 1
-                    ? { borderBottom: `1px solid ${colors.borderSubtle}` }
-                    : undefined
-                }
-              >
-                <div>
-                  <Text variant="body" className="font-bold">
-                    {option.label}
-                  </Text>
-                  <Text variant="caption" className="mt-0.5">
-                    {option.sublabel}
-                  </Text>
-                </div>
-                {isSelected && <Check size={18} strokeWidth={2.5} color={colors.accent} />}
-              </button>
-            )
-          })}
-        </div>
-      </BottomSheet>
     </>
   )
 }
@@ -539,14 +573,187 @@ function TrainingTab() {
   )
 }
 
-function ComingSoonTab({ label }: { label: string }) {
+const CM_PER_INCH = 2.54
+
+function emptyFormValues(): Record<MeasurementKey, string> {
+  return ALL_MEASUREMENT_FIELDS.reduce(
+    (acc, f) => ({ ...acc, [f.key]: '' }),
+    {} as Record<MeasurementKey, string>
+  )
+}
+
+function toFormValues(values: MeasurementValues): Record<MeasurementKey, string> {
+  return ALL_MEASUREMENT_FIELDS.reduce(
+    (acc, f) => ({ ...acc, [f.key]: String(values[f.key]) }),
+    {} as Record<MeasurementKey, string>
+  )
+}
+
+function convertValue(value: string, fromUnit: 'cm' | 'in', toUnit: 'cm' | 'in'): string {
+  if (fromUnit === toUnit) return value
+  const num = parseFloat(value)
+  if (!Number.isFinite(num)) return value
+  const cm = fromUnit === 'cm' ? num : num * CM_PER_INCH
+  const converted = toUnit === 'cm' ? cm : cm / CM_PER_INCH
+  return String(Math.round(converted * 10) / 10)
+}
+
+function MeasureTab() {
+  const toast = useToast()
+  const [entries, setEntries] = useState<MeasurementEntry[]>(mockMeasurements)
+  const [showForm, setShowForm] = useState(false)
+  const [unit, setUnit] = useState<'cm' | 'in'>('cm')
+  const [formValues, setFormValues] = useState<Record<MeasurementKey, string>>(emptyFormValues())
+
+  const latest = entries[0] ?? null
+  const whr = latest ? (latest.values.waist / latest.values.hip).toFixed(2) : null
+  const whtr = latest ? (latest.values.waist / mockUserHeightCm).toFixed(2) : null
+
+  const todayDisplay = new Date().toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+
+  function openForm() {
+    setUnit('cm')
+    setFormValues(latest ? toFormValues(latest.values) : emptyFormValues())
+    setShowForm(true)
+  }
+
+  function toggleUnit() {
+    const nextUnit = unit === 'cm' ? 'in' : 'cm'
+    setFormValues((prev) => {
+      const next = {} as Record<MeasurementKey, string>
+      for (const field of ALL_MEASUREMENT_FIELDS) {
+        next[field.key] = convertValue(prev[field.key], unit, nextUnit)
+      }
+      return next
+    })
+    setUnit(nextUnit)
+  }
+
+  function handleSave() {
+    const values = ALL_MEASUREMENT_FIELDS.reduce((acc, f) => {
+      const raw = parseFloat(formValues[f.key])
+      const cm = Number.isFinite(raw) ? (unit === 'cm' ? raw : raw * CM_PER_INCH) : 0
+      return { ...acc, [f.key]: Math.round(cm * 10) / 10 }
+    }, {} as MeasurementValues)
+
+    setEntries((prev) => [{ id: Date.now(), date: todayDisplay, values }, ...prev])
+    setShowForm(false)
+    toast.show({ message: 'Measurements saved', type: 'success' })
+  }
+
   return (
-    <Card className="mt-4">
-      <Text variant="cardTitle">{label}</Text>
-      <Text variant="bodyMuted" className="mt-1">
-        Coming soon.
-      </Text>
-    </Card>
+    <>
+      {latest && (
+        <Card className="mt-4">
+          <SectionLabel label="Body ratios" className="mb-3" />
+          <div className="grid grid-cols-2 gap-3">
+            <StatBlock value={whr!} label="Waist-hip ratio" />
+            <StatBlock value={whtr!} label="Waist-height ratio" />
+          </div>
+        </Card>
+      )}
+
+      <ReminderCard
+        label="Next measurement"
+        dayCount={mockMeasurementReminder.dayCount}
+        defaultCycleLength={30}
+      />
+
+      <div className="mt-4" style={{ paddingBottom: 88 }}>
+        {entries.length === 0 ? (
+          <EmptyState message="No measurements yet — add your first to start tracking." />
+        ) : (
+          entries.map((entry) => (
+            <Card key={entry.id} className="mb-3">
+              <Text variant="cardTitle">{entry.date}</Text>
+              {MEASUREMENT_GROUPS.map((group, gi) => (
+                <div key={group.title} className={gi === 0 ? 'mt-3' : 'mt-4'}>
+                  <Text variant="caption" className="!text-[11px] font-medium mb-1">
+                    {group.title}
+                  </Text>
+                  <div style={{ borderTop: `1px solid ${colors.borderSubtle}` }}>
+                    {group.fields.map((field, i) => (
+                      <div
+                        key={field.key}
+                        className="flex items-center justify-between py-[10px]"
+                        style={
+                          i < group.fields.length - 1
+                            ? { borderBottom: `1px solid ${colors.borderSubtle}` }
+                            : undefined
+                        }
+                      >
+                        <span className="text-[14px]" style={{ color: colors.text }}>
+                          {field.label}
+                        </span>
+                        <span
+                          className="text-[14px] font-bold"
+                          style={{ color: colors.textSecondary }}
+                        >
+                          {entry.values[field.key]} cm
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </Card>
+          ))
+        )}
+      </div>
+
+      <div
+        className="fixed left-4 right-4 z-20"
+        style={{ bottom: 'calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 12px)' }}
+      >
+        <Button variant="primary" label="Add new measurement" onPress={openForm} />
+      </div>
+
+      <BottomSheet isOpen={showForm} onClose={() => setShowForm(false)} height="90vh">
+        <div className="px-4 pb-6 h-full flex flex-col">
+          <div className="flex items-center justify-between mb-3">
+            <Text variant="cardTitle">New Measurement</Text>
+            <button onClick={() => setShowForm(false)} aria-label="Close">
+              <X size={20} color={colors.muted} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            <div className="mb-4">
+              <Input label="Date" value={todayDisplay} onChange={() => {}} readOnly />
+            </div>
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Text variant="caption">CM</Text>
+              <Toggle value={unit === 'in'} onChange={toggleUnit} />
+              <Text variant="caption">IN</Text>
+            </div>
+            {MEASUREMENT_GROUPS.map((group) => (
+              <div key={group.title} className="mb-4">
+                <SectionLabel label={group.title} className="mb-2" />
+                <div className="grid grid-cols-2 gap-3">
+                  {group.fields.map((field) => (
+                    <Input
+                      key={field.key}
+                      label={`${field.label} (${unit})`}
+                      inputMode="decimal"
+                      value={formValues[field.key]}
+                      onChange={(e) =>
+                        setFormValues((v) => ({ ...v, [field.key]: e.target.value }))
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="pt-3">
+            <Button variant="primary" label="Save measurements" onPress={handleSave} />
+          </div>
+        </div>
+      </BottomSheet>
+    </>
   )
 }
 
@@ -562,7 +769,7 @@ export default function Progress() {
         </div>
         {tab === 'Training' && <TrainingTab />}
         {tab === 'Body Scan' && <BodyScanTab />}
-        {tab === 'Measure' && <ComingSoonTab label="Measure" />}
+        {tab === 'Measure' && <MeasureTab />}
       </div>
     </>
   )
