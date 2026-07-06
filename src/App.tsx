@@ -39,6 +39,9 @@ const Progress = lazyWithRetry(() => import('./pages/Progress'))
 const Program = lazyWithRetry(() => import('./pages/Program'))
 const Account = lazyWithRetry(() => import('./pages/Account'))
 const OnboardingWizard = lazyWithRetry(() => import('./features/onboarding/OnboardingWizard'))
+const DesignSystem = import.meta.env.DEV
+  ? lazyWithRetry(() => import('./pages/DesignSystem'))
+  : null
 
 function OnboardingGate({ children }: { children: ReactNode }) {
   const { status } = useProfileCompletion()
@@ -85,6 +88,7 @@ function AppRoutes() {
       <Suspense fallback={null}>
         <Routes>
           <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+          {DesignSystem && <Route path="/design-system" element={<DesignSystem />} />}
           <Route
             path="/onboarding"
             element={
