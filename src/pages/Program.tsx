@@ -78,6 +78,7 @@ export default function Program() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [health, setHealth] = useState<UserHealth | null>(null)
   const [currentWeek, setCurrentWeek] = useState<number | null>(null)
+  const [hasInbodyScan, setHasInbodyScan] = useState<boolean | null>(null)
   const [previewResult, setPreviewResult] = useState<GenerateResult | null>(previewFromOnboarding)
   const [previewAlreadySaved, setPreviewAlreadySaved] = useState(alreadySavedFromOnboarding)
   const [openPhaseIdx, setOpenPhaseIdx] = useState<number | null>(null)
@@ -133,7 +134,7 @@ export default function Program() {
         setPreviewAlreadySaved(false)
         setActiveProgramme(data)
 
-        const [phasesRes, profileRes, healthRes, cfgRes] = await Promise.all([
+        const [phasesRes, profileRes, healthRes, cfgRes, inbodyRes] = await Promise.all([
           getProgrammePhases((data as AnyData).id),
           supabase
             .from('user_profiles')
@@ -145,11 +146,12 @@ export default function Program() {
           supabase
             .from('user_health')
             .select(
-              'current_weight_kg, fitness_level, goal, available_days_per_week, session_duration_min, equipment, injuries, preferred_workout_time, body_fat_pct, target_body_fat_pct, target_weight_kg, target_timeframe_weeks'
+              'current_weight_kg, fitness_level, goal, available_days_per_week, session_duration_min, equipment, injuries, injuries_v2, lifestyle, preferred_workout_time, body_fat_pct, target_body_fat_pct, target_weight_kg, target_timeframe_weeks'
             )
             .eq('user_id', user.id)
             .maybeSingle(),
           getProgrammeConfig(user.id),
+          supabase.from('inbody_logs').select('id').eq('user_id', user.id).limit(1),
         ])
 
         if (cancelled) return
@@ -157,7 +159,8 @@ export default function Program() {
         const phaseData = phasesRes.data ?? []
         setPhases(phaseData)
         setProfile(profileRes.data ?? null)
-        setHealth(healthRes.data ?? null)
+        setHealth((healthRes.data as unknown as UserHealth) ?? null)
+        setHasInbodyScan((inbodyRes.data?.length ?? 0) > 0)
 
         const startDateForWeek =
           (cfgRes.data as AnyData)?.start_date ?? (data as AnyData).started_at?.slice(0, 10)
@@ -356,6 +359,7 @@ export default function Program() {
             totalWeeks={totalWeeks}
             currentWeek={currentWeek}
             injuries={health.injuries ?? []}
+            hasInbodyScan={hasInbodyScan}
           />
         )}
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { colors, radius, shadows } from '../../styles/tokens'
 import { calculateAge } from '../../utils/dateUtils'
 import { GOAL_LABELS } from './goalLabels'
-import { Pencil } from 'lucide-react'
+import { Pencil, ChevronDown } from 'lucide-react'
 
 export interface UserProfile {
   full_name: string | null
@@ -24,6 +24,7 @@ export interface UserHealth {
   injuries: string[] | null
   preferred_workout_time: string | null
   injuries_v2?: { area: string; modification: 'modify' | 'avoid' | null; notes: string }[] | null
+  lifestyle?: string[] | null
   body_fat_pct?: number | null
   target_body_fat_pct?: number | null
   target_weight_kg?: number | null
@@ -32,9 +33,9 @@ export interface UserHealth {
 
 const EQUIPMENT_LABELS: Record<string, string> = {
   full_gym: 'Full Gym',
-  dumbbells_only: 'Dumbbells Only',
-  bodyweight: 'Bodyweight Only',
-  bodyweight_only: 'Bodyweight Only',
+  dumbbells_only: 'Dumbbells',
+  bodyweight: 'Bodyweight',
+  bodyweight_only: 'Bodyweight',
   home_gym: 'Home Gym',
 }
 
@@ -79,25 +80,49 @@ function fmtNum(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1)
 }
 
+// "Sedentary (desk job, minimal movement)" -> "Sedentary" — the parenthetical
+// is onboarding-form helper text, not part of the tag itself.
+function shortLifestyleLabel(label: string): string {
+  return label.replace(/\s*\(.*\)$/, '')
+}
+
+const MODIFICATION_COLOR: Record<string, string> = {
+  modify: colors.warning,
+  avoid: colors.error,
+}
+
+interface GoalMetricValue {
+  current: string
+  target: string
+  unit: string
+  isBodyFat: boolean
+}
+
 // Only fat_loss/recomposition (body-fat %) and muscle_gain (weight) have a
 // real tracked target in user_health — this app never records a target
 // weight for fat-loss goals, so we don't fabricate one.
-function goalMetric(health: UserHealth): string | null {
-  const weeksLabel = health.target_timeframe_weeks
-    ? `${health.target_timeframe_weeks}-wk plan`
-    : null
-
+function goalMetric(health: UserHealth): GoalMetricValue | null {
   if (health.goal === 'fat_loss' || health.goal === 'recomposition') {
     if (health.body_fat_pct != null && health.target_body_fat_pct != null) {
-      return `${fmtNum(health.body_fat_pct)}% → ${fmtNum(health.target_body_fat_pct)}% body fat`
+      return {
+        current: fmtNum(health.body_fat_pct),
+        target: fmtNum(health.target_body_fat_pct),
+        unit: '%',
+        isBodyFat: true,
+      }
     }
   }
   if (health.goal === 'muscle_gain') {
     if (health.current_weight_kg != null && health.target_weight_kg != null) {
-      return `${fmtNum(health.current_weight_kg)}kg → ${fmtNum(health.target_weight_kg)}kg`
+      return {
+        current: fmtNum(health.current_weight_kg),
+        target: fmtNum(health.target_weight_kg),
+        unit: 'kg',
+        isBodyFat: false,
+      }
     }
   }
-  return weeksLabel
+  return null
 }
 
 function EditMenu() {
@@ -134,12 +159,12 @@ function EditMenu() {
     <div ref={containerRef} style={{ position: 'relative' }}>
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className="flex items-center gap-1.5 active:opacity-60"
-        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        className="w-full flex items-center justify-center gap-1.5 py-3 active:opacity-60"
+        style={{ background: 'none', border: 'none', cursor: 'pointer' }}
       >
-        <Pencil size={11} color={colors.accent} />
+        <Pencil size={13} color={colors.accent} />
         <span
-          className="text-[12px] font-['DM_Sans'] font-semibold"
+          className="text-[13px] font-['DM_Sans'] font-semibold"
           style={{ color: colors.accent }}
         >
           Edit
@@ -150,9 +175,10 @@ function EditMenu() {
         <div
           style={{
             position: 'absolute',
-            top: '100%',
-            right: 0,
-            marginTop: 8,
+            bottom: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            marginBottom: 8,
             zIndex: 50,
             minWidth: 200,
             background: colors.surface,
@@ -206,6 +232,7 @@ interface ProfileCardProps {
   totalWeeks: number
   currentWeek?: number | null
   injuries: string[]
+  hasInbodyScan?: boolean | null
 }
 
 export function ProfileCard({
@@ -214,25 +241,42 @@ export function ProfileCard({
   totalWeeks,
   currentWeek,
   injuries,
+  hasInbodyScan,
 }: ProfileCardProps) {
+  const [expanded, setExpanded] = useState(false)
+
   const chip = ageGenderChip(profile.date_of_birth, profile.gender)
   const heightCm = profile.height_cm != null ? `${Math.round(profile.height_cm)}cm` : '—'
   const weightKg = health.current_weight_kg != null ? `${health.current_weight_kg}kg` : '—'
   const goalKey = health.goal ?? 'general_fitness'
   const goalLabel = GOAL_LABELS[goalKey] ?? goalKey
   const goalColor = GOAL_COLORS[goalKey] ?? colors.accent
-  const equipLabel = EQUIPMENT_LABELS[health.equipment ?? ''] ?? health.equipment ?? '—'
-  const days = health.available_days_per_week ?? '—'
-  const duration = health.session_duration_min ? `${health.session_duration_min} min` : '—'
   const fitnessLevel = health.fitness_level ?? 'beginner'
   const fitnessIdx = FITNESS_LEVELS.indexOf(fitnessLevel.toLowerCase())
-  const limitationsText = injuries.length > 0 ? injuries.join(', ') : null
   const metric = goalMetric(health)
   const weeksTotal = health.target_timeframe_weeks ?? totalWeeks
   const weekProgressPct =
     currentWeek != null && weeksTotal > 0
       ? Math.min(100, Math.max(0, (currentWeek / weeksTotal) * 100))
       : null
+  const toGoText = metric
+    ? metric.isBodyFat
+      ? `${fmtNum(Math.max(0, Number(metric.current) - Number(metric.target)))}% to go`
+      : `${fmtNum(Math.max(0, Number(metric.target) - Number(metric.current)))}kg to go`
+    : null
+  const showInbodyBadge = expanded && metric?.isBodyFat && hasInbodyScan != null
+  const lifestyle = health.lifestyle ?? []
+  const injuryChips = health.injuries_v2?.length
+    ? health.injuries_v2
+    : injuries.map((area) => ({ area, modification: null as 'modify' | 'avoid' | null }))
+
+  const statParts = [
+    health.available_days_per_week != null ? `${health.available_days_per_week}D` : null,
+    health.session_duration_min != null ? `${health.session_duration_min}MIN` : null,
+    health.equipment
+      ? (EQUIPMENT_LABELS[health.equipment] ?? health.equipment).toUpperCase()
+      : null,
+  ].filter(Boolean)
 
   return (
     <div style={{ position: 'relative' }}>
@@ -249,8 +293,8 @@ export function ProfileCard({
         }}
       />
       <div style={{ position: 'relative' }}>
-        {/* Row 1 — Identity bar: age/gender chip + height/weight + goal + metric */}
-        <div className="flex items-start gap-3 px-4 pt-4 pb-3">
+        {/* Row 1 — Identity bar: age/gender chip + height/weight + goal */}
+        <div className="flex items-center gap-3 px-4 pt-4 pb-3">
           <div
             className="flex-shrink-0 px-3 py-2 flex items-center justify-center"
             style={{
@@ -266,7 +310,7 @@ export function ProfileCard({
               {chip}
             </span>
           </div>
-          <div className="flex-1 min-w-0 pt-1.5">
+          <div className="flex-1 min-w-0">
             <p
               className="font-['DM_Sans'] font-semibold text-[13px] leading-tight truncate"
               style={{ color: colors.text }}
@@ -274,90 +318,170 @@ export function ProfileCard({
               {heightCm} · {weightKg}
             </p>
           </div>
-          <div className="flex-shrink-0 text-right">
-            <span
-              className="inline-block text-[11px] font-['DM_Sans'] font-bold tracking-[0.5px] px-2.5 py-1"
-              style={{
-                background: `${goalColor}18`,
-                border: `1px solid ${goalColor}55`,
-                borderRadius: 8,
-                color: goalColor,
-              }}
-            >
-              {goalLabel}
-            </span>
-            {metric && (
-              <p
-                className="text-[11px] font-['DM_Sans'] mt-1.5 whitespace-nowrap"
-                style={{ color: colors.textSecondary }}
-              >
-                {metric}
-              </p>
-            )}
-          </div>
+          <span
+            className="flex-shrink-0 text-[11px] font-['DM_Sans'] font-bold tracking-[0.5px] px-2.5 py-1"
+            style={{
+              background: `${goalColor}18`,
+              border: `1px solid ${goalColor}55`,
+              borderRadius: 8,
+              color: goalColor,
+            }}
+          >
+            {goalLabel}
+          </span>
         </div>
 
-        {/* Row 1b — Goal timeline progress */}
-        {weekProgressPct != null && (
+        {/* Row 2 — Big goal-progress metric */}
+        {(metric != null || weekProgressPct != null) && (
           <div className="px-4 pb-3">
-            <div
-              className="h-[5px] rounded-full overflow-hidden"
-              style={{ background: colors.surface3 }}
-            >
-              <div
-                className="h-full rounded-full"
-                style={{ width: `${weekProgressPct}%`, background: goalColor }}
-              />
-            </div>
-            <div className="flex items-center justify-between mt-1">
-              <span className="text-[10px] font-['DM_Sans']" style={{ color: colors.muted }}>
-                Wk {currentWeek} of {weeksTotal}
-              </span>
-              {health.target_body_fat_pct != null && health.body_fat_pct != null && (
-                <span className="text-[10px] font-['DM_Sans']" style={{ color: colors.muted }}>
-                  {fmtNum(Math.max(0, health.body_fat_pct - health.target_body_fat_pct))}% to go
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-baseline flex-wrap gap-x-1.5 gap-y-1">
+                {metric ? (
+                  <>
+                    <span
+                      className="font-['DM_Sans'] font-bold text-[26px] leading-none"
+                      style={{ color: colors.text }}
+                    >
+                      {metric.current}
+                      {metric.unit}
+                    </span>
+                    <span className="text-[15px]" style={{ color: colors.muted }}>
+                      →
+                    </span>
+                    <span
+                      className="font-['DM_Sans'] font-bold text-[18px] leading-none"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      {metric.target}
+                      {metric.unit}
+                    </span>
+                  </>
+                ) : (
+                  weeksTotal > 0 && (
+                    <span
+                      className="text-[13px] font-['DM_Sans'] font-medium"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      {weeksTotal}-week programme
+                    </span>
+                  )
+                )}
+                {showInbodyBadge && (
+                  <span
+                    className="text-[9px] font-['DM_Sans'] font-bold uppercase px-1.5 py-0.5"
+                    style={{
+                      background: hasInbodyScan ? colors.accentMuted : colors.surface2,
+                      color: hasInbodyScan ? colors.accent : colors.muted,
+                      borderRadius: radius.pill,
+                    }}
+                  >
+                    {hasInbodyScan ? 'InBody' : 'Self-reported'}
+                  </span>
+                )}
+              </div>
+
+              {!expanded && weekProgressPct != null && (
+                <span
+                  className="text-[11px] font-['DM_Sans'] whitespace-nowrap flex-shrink-0 pt-1.5"
+                  style={{ color: colors.muted }}
+                >
+                  Wk {currentWeek}/{weeksTotal}
+                  {toGoText ? ` · ${toGoText}` : ''}
                 </span>
               )}
             </div>
+
+            {weekProgressPct != null && (
+              <>
+                <div
+                  className="h-[5px] rounded-full overflow-hidden mt-2"
+                  style={{ background: colors.surface3 }}
+                >
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${weekProgressPct}%`, background: goalColor }}
+                  />
+                </div>
+                {expanded && (
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-[10px] font-['DM_Sans']" style={{ color: colors.muted }}>
+                      Wk {currentWeek} of {weeksTotal}
+                    </span>
+                    {toGoText && (
+                      <span
+                        className="text-[10px] font-['DM_Sans']"
+                        style={{ color: colors.muted }}
+                      >
+                        {toGoText}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 
-        {/* Row 2 — Stats grid */}
-        <div className="grid grid-cols-3" style={{ borderTop: `1px solid ${colors.border}` }}>
-          {[
-            { label: 'DAYS / WK', value: String(days) },
-            { label: 'DURATION', value: duration },
-            { label: 'EQUIPMENT', value: equipLabel },
-          ].map((stat, i, arr) => (
-            <div
-              key={stat.label}
-              className="flex flex-col items-center justify-center py-3 px-2"
-              style={{
-                borderRight: i < arr.length - 1 ? `1px solid ${colors.border}` : 'none',
-              }}
-            >
-              <p
-                className="text-[9px] font-['DM_Sans'] font-bold tracking-[1.5px] mb-1"
-                style={{ color: colors.muted }}
-              >
-                {stat.label}
-              </p>
-              <p
-                className="font-['Bebas_Neue'] text-[18px] leading-none text-center"
-                style={{ color: colors.text }}
-              >
-                {stat.value}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* Row 3 — Level + Limitations */}
+        {/* Row 3 — Active + quick stats chips */}
         <div
-          className="flex items-center justify-between gap-3 px-4 py-3"
+          className="flex items-center flex-wrap gap-2 px-4 py-3"
           style={{ borderTop: `1px solid ${colors.border}` }}
         >
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <span
+            className="text-[10px] font-['DM_Sans'] font-bold tracking-[2px] uppercase px-2 py-1"
+            style={{
+              background: colors.accentMuted,
+              color: colors.accent,
+              borderRadius: radius.pill,
+            }}
+          >
+            Active
+          </span>
+          {statParts.length > 0 && (
+            <span
+              className="text-[10px] font-['DM_Sans'] font-bold tracking-[1px] uppercase px-2 py-1"
+              style={{
+                background: colors.surface2,
+                color: colors.textSecondary,
+                borderRadius: radius.pill,
+              }}
+            >
+              {statParts.join(' · ')}
+            </span>
+          )}
+        </div>
+
+        {/* Row 4 — Limitations chips */}
+        {injuryChips.length > 0 && (
+          <div className="px-4 pb-3 flex flex-wrap gap-1.5">
+            {injuryChips.map((injury) => {
+              const modColor = injury.modification
+                ? (MODIFICATION_COLOR[injury.modification] ?? colors.muted)
+                : colors.muted
+              return (
+                <span
+                  key={injury.area}
+                  className="text-[11px] font-['DM_Sans'] font-bold uppercase px-2.5 py-1 tracking-[0.5px]"
+                  style={{
+                    background: colors.surface2,
+                    color: modColor,
+                    borderRadius: radius.pill,
+                  }}
+                >
+                  {injury.area}
+                  {injury.modification ? ` · ${injury.modification}` : ''}
+                </span>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Row 5 — Level (only when expanded) */}
+        {expanded && (
+          <div
+            className="flex items-center gap-2 px-4 py-3"
+            style={{ borderTop: `1px solid ${colors.border}` }}
+          >
             <span
               className="text-[10px] font-['DM_Sans'] font-bold tracking-[1.5px] uppercase"
               style={{ color: colors.muted }}
@@ -383,55 +507,62 @@ export function ProfileCard({
               {fitnessLevel}
             </span>
           </div>
+        )}
 
-          <div className="flex items-center gap-1.5 min-w-0">
+        {/* Row 6 — Lifestyle (only when expanded) */}
+        {expanded && lifestyle.length > 0 && (
+          <div
+            className="flex items-center gap-2 px-4 py-3"
+            style={{ borderTop: `1px solid ${colors.border}` }}
+          >
             <span
-              className="text-[10px] font-['DM_Sans'] font-bold tracking-[1.5px] uppercase flex-shrink-0"
+              className="flex-shrink-0 text-[10px] font-['DM_Sans'] font-bold tracking-[1.5px] uppercase"
               style={{ color: colors.muted }}
             >
-              Limits
+              Lifestyle
             </span>
             <span
               className="text-[12px] font-['DM_Sans'] font-medium truncate"
-              style={{ color: limitationsText ? colors.textSecondary : colors.muted }}
-              title={limitationsText ?? undefined}
+              style={{ color: colors.textSecondary }}
             >
-              {limitationsText ?? 'None'}
+              {lifestyle.map(shortLifestyleLabel).join(' · ')}
             </span>
           </div>
-        </div>
+        )}
 
-        {/* Row 4 — Bottom bar: Active + weeks badges, Edit dropdown */}
-        <div
-          className="flex items-center justify-between px-4 py-3"
-          style={{ borderTop: `1px solid ${colors.border}` }}
+        {/* Disclosure toggle — sits right after whatever is currently visible */}
+        <button
+          onClick={() => setExpanded((prev) => !prev)}
+          className="w-full flex items-center justify-between px-4 py-3 active:opacity-70"
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            borderTop: `1px solid ${colors.border}`,
+          }}
         >
-          <div className="flex items-center gap-2">
-            <span
-              className="text-[10px] font-['DM_Sans'] font-bold tracking-[2px] uppercase px-2 py-1"
-              style={{
-                background: colors.accentMuted,
-                color: colors.accent,
-                borderRadius: radius.pill,
-              }}
-            >
-              Active
-            </span>
-            {totalWeeks > 0 && (
-              <span
-                className="text-[10px] font-['DM_Sans'] font-bold tracking-[2px] uppercase px-2 py-1"
-                style={{
-                  background: colors.surface2,
-                  color: colors.textSecondary,
-                  borderRadius: radius.pill,
-                }}
-              >
-                {totalWeeks} weeks
-              </span>
-            )}
+          <span
+            className="text-[12px] font-['DM_Sans'] font-medium"
+            style={{ color: colors.textSecondary }}
+          >
+            {expanded ? 'Hide details' : 'Show level, lifestyle & source'}
+          </span>
+          <ChevronDown
+            size={16}
+            color={colors.muted}
+            style={{
+              transform: expanded ? 'rotate(180deg)' : 'none',
+              transition: 'transform 0.2s',
+            }}
+          />
+        </button>
+
+        {/* Edit — only reachable once expanded */}
+        {expanded && (
+          <div style={{ borderTop: `1px solid ${colors.border}` }}>
+            <EditMenu />
           </div>
-          <EditMenu />
-        </div>
+        )}
       </div>
     </div>
   )
