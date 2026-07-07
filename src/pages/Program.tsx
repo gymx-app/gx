@@ -19,7 +19,9 @@ import GenerateProgrammeView, {
 import ProgrammePreview from '../features/programme/ProgrammePreview'
 import { ProfileCard } from '../components/programme/ProfileCard'
 import type { UserProfile, UserHealth } from '../components/programme/ProfileCard'
+import ProgrammeSkeleton from '../components/programme/ProgrammeSkeleton'
 import BottomSheet from '../components/ui/BottomSheet'
+import Skeleton from '../components/ui/Skeleton'
 import { Loader2, ChevronDown, RefreshCw, AlertTriangle } from 'lucide-react'
 
 type TabState = 'loading' | 'no_programme' | 'has_programme'
@@ -304,9 +306,7 @@ export default function Program() {
     return (
       <>
         <TopBar title="PROGRAMME" />
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 size={32} color={colors.accent} className="animate-spin" />
-        </div>
+        <ProgrammeSkeleton />
       </>
     )
   }
@@ -448,12 +448,20 @@ export default function Program() {
                 {isOpen && (
                   <div style={{ borderTop: `1px solid ${colors.border}` }}>
                     {days.length === 0 ? (
-                      <p
-                        className="px-4 py-3 text-[12px] font-['DM_Sans']"
-                        style={{ color: colors.muted }}
-                      >
-                        Loading…
-                      </p>
+                      <div>
+                        {[0, 1, 2].map((i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-3 px-4 py-3"
+                            style={{
+                              borderBottom: i < 2 ? `1px solid ${colors.borderSubtle}` : 'none',
+                            }}
+                          >
+                            <Skeleton width={32} height={16} />
+                            <Skeleton width={140} height={13} className="flex-1" />
+                          </div>
+                        ))}
+                      </div>
                     ) : (
                       days.map((day: AnyData, di: number) => {
                         const isRest = day.workout_type === 'rest'
