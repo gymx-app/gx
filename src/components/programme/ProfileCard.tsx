@@ -24,6 +24,10 @@ export interface UserHealth {
   injuries: string[] | null
   preferred_workout_time: string | null
   injuries_v2?: { area: string; modification: 'modify' | 'avoid' | null; notes: string }[] | null
+  body_fat_pct?: number | null
+  target_body_fat_pct?: number | null
+  target_weight_kg?: number | null
+  target_timeframe_weeks?: number | null
 }
 
 const EQUIPMENT_LABELS: Record<string, string> = {
@@ -69,6 +73,31 @@ function ageGenderChip(dob: string | null, gender: string | null): string {
   if (age === null) return '—'
   const initial = gender === 'female' ? 'F' : gender === 'other' ? 'O' : 'M'
   return `${age}${initial}`
+}
+
+function fmtNum(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(1)
+}
+
+// Only fat_loss/recomposition (body-fat %) and muscle_gain (weight) have a
+// real tracked target in user_health — this app never records a target
+// weight for fat-loss goals, so we don't fabricate one.
+function goalMetric(health: UserHealth): string | null {
+  const weeksLabel = health.target_timeframe_weeks
+    ? `${health.target_timeframe_weeks}-wk plan`
+    : null
+
+  if (health.goal === 'fat_loss' || health.goal === 'recomposition') {
+    if (health.body_fat_pct != null && health.target_body_fat_pct != null) {
+      return `${fmtNum(health.body_fat_pct)}% → ${fmtNum(health.target_body_fat_pct)}% body fat`
+    }
+  }
+  if (health.goal === 'muscle_gain') {
+    if (health.current_weight_kg != null && health.target_weight_kg != null) {
+      return `${fmtNum(health.current_weight_kg)}kg → ${fmtNum(health.target_weight_kg)}kg`
+    }
+  }
+  return weeksLabel
 }
 
 function EditMenu() {
@@ -175,10 +204,17 @@ interface ProfileCardProps {
   profile: UserProfile
   health: UserHealth
   totalWeeks: number
+  currentWeek?: number | null
   injuries: string[]
 }
 
-export function ProfileCard({ profile, health, totalWeeks, injuries }: ProfileCardProps) {
+export function ProfileCard({
+  profile,
+  health,
+  totalWeeks,
+  currentWeek,
+  injuries,
+}: ProfileCardProps) {
   const chip = ageGenderChip(profile.date_of_birth, profile.gender)
   const heightCm = profile.height_cm != null ? `${Math.round(profile.height_cm)}cm` : '—'
   const weightKg = health.current_weight_kg != null ? `${health.current_weight_kg}kg` : '—'
@@ -191,6 +227,12 @@ export function ProfileCard({ profile, health, totalWeeks, injuries }: ProfileCa
   const fitnessLevel = health.fitness_level ?? 'beginner'
   const fitnessIdx = FITNESS_LEVELS.indexOf(fitnessLevel.toLowerCase())
   const limitationsText = injuries.length > 0 ? injuries.join(', ') : null
+  const metric = goalMetric(health)
+  const weeksTotal = health.target_timeframe_weeks ?? totalWeeks
+  const weekProgressPct =
+    currentWeek != null && weeksTotal > 0
+      ? Math.min(100, Math.max(0, (currentWeek / weeksTotal) * 100))
+      : null
 
   return (
     <div style={{ position: 'relative' }}>
@@ -207,8 +249,8 @@ export function ProfileCard({ profile, health, totalWeeks, injuries }: ProfileCa
         }}
       />
       <div style={{ position: 'relative' }}>
-        {/* Row 1 — Identity bar: age/gender chip + height/weight + goal badge */}
-        <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+        {/* Row 1 — Identity bar: age/gender chip + height/weight + goal + metric */}
+        <div className="flex items-start gap-3 px-4 pt-4 pb-3">
           <div
             className="flex-shrink-0 px-3 py-2 flex items-center justify-center"
             style={{
@@ -224,7 +266,7 @@ export function ProfileCard({ profile, health, totalWeeks, injuries }: ProfileCa
               {chip}
             </span>
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 pt-1.5">
             <p
               className="font-['DM_Sans'] font-semibold text-[13px] leading-tight truncate"
               style={{ color: colors.text }}
@@ -232,22 +274,53 @@ export function ProfileCard({ profile, health, totalWeeks, injuries }: ProfileCa
               {heightCm} · {weightKg}
             </p>
           </div>
-          <div
-            className="flex-shrink-0 px-2.5 py-1"
-            style={{
-              background: `${goalColor}18`,
-              border: `1px solid ${goalColor}55`,
-              borderRadius: 8,
-            }}
-          >
+          <div className="flex-shrink-0 text-right">
             <span
-              className="text-[11px] font-['DM_Sans'] font-bold tracking-[0.5px]"
-              style={{ color: goalColor }}
+              className="inline-block text-[11px] font-['DM_Sans'] font-bold tracking-[0.5px] px-2.5 py-1"
+              style={{
+                background: `${goalColor}18`,
+                border: `1px solid ${goalColor}55`,
+                borderRadius: 8,
+                color: goalColor,
+              }}
             >
               {goalLabel}
             </span>
+            {metric && (
+              <p
+                className="text-[11px] font-['DM_Sans'] mt-1.5 whitespace-nowrap"
+                style={{ color: colors.textSecondary }}
+              >
+                {metric}
+              </p>
+            )}
           </div>
         </div>
+
+        {/* Row 1b — Goal timeline progress */}
+        {weekProgressPct != null && (
+          <div className="px-4 pb-3">
+            <div
+              className="h-[5px] rounded-full overflow-hidden"
+              style={{ background: colors.surface3 }}
+            >
+              <div
+                className="h-full rounded-full"
+                style={{ width: `${weekProgressPct}%`, background: goalColor }}
+              />
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[10px] font-['DM_Sans']" style={{ color: colors.muted }}>
+                Wk {currentWeek} of {weeksTotal}
+              </span>
+              {health.target_body_fat_pct != null && health.body_fat_pct != null && (
+                <span className="text-[10px] font-['DM_Sans']" style={{ color: colors.muted }}>
+                  {fmtNum(Math.max(0, health.body_fat_pct - health.target_body_fat_pct))}% to go
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Row 2 — Stats grid */}
         <div className="grid grid-cols-3" style={{ borderTop: `1px solid ${colors.border}` }}>
@@ -279,12 +352,12 @@ export function ProfileCard({ profile, health, totalWeeks, injuries }: ProfileCa
           ))}
         </div>
 
-        {/* Row 3 — Level bar */}
+        {/* Row 3 — Level + Limitations */}
         <div
-          className="flex items-center px-4 py-3"
+          className="flex items-center justify-between gap-3 px-4 py-3"
           style={{ borderTop: `1px solid ${colors.border}` }}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <span
               className="text-[10px] font-['DM_Sans'] font-bold tracking-[1.5px] uppercase"
               style={{ color: colors.muted }}
@@ -310,34 +383,25 @@ export function ProfileCard({ profile, health, totalWeeks, injuries }: ProfileCa
               {fitnessLevel}
             </span>
           </div>
-        </div>
 
-        {/* Row 4 — Limitations row */}
-        <div
-          className="flex items-center justify-between px-4 py-3"
-          style={{ borderTop: `1px solid ${colors.border}` }}
-        >
-          <span
-            className="text-[10px] font-['DM_Sans'] font-bold tracking-[1.5px] uppercase"
-            style={{ color: colors.muted }}
-          >
-            Limitations
-          </span>
-          {limitationsText ? (
+          <div className="flex items-center gap-1.5 min-w-0">
             <span
-              className="text-[12px] font-['DM_Sans'] font-medium text-right"
-              style={{ color: colors.textSecondary }}
+              className="text-[10px] font-['DM_Sans'] font-bold tracking-[1.5px] uppercase flex-shrink-0"
+              style={{ color: colors.muted }}
             >
-              {limitationsText}
+              Limits
             </span>
-          ) : (
-            <span className="text-[12px] font-['DM_Sans']" style={{ color: colors.muted }}>
-              None reported
+            <span
+              className="text-[12px] font-['DM_Sans'] font-medium truncate"
+              style={{ color: limitationsText ? colors.textSecondary : colors.muted }}
+              title={limitationsText ?? undefined}
+            >
+              {limitationsText ?? 'None'}
             </span>
-          )}
+          </div>
         </div>
 
-        {/* Row 5 — Bottom bar: Active + weeks badges, Edit dropdown */}
+        {/* Row 4 — Bottom bar: Active + weeks badges, Edit dropdown */}
         <div
           className="flex items-center justify-between px-4 py-3"
           style={{ borderTop: `1px solid ${colors.border}` }}

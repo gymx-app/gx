@@ -13,6 +13,7 @@ import {
   upsertProgrammeConfig,
 } from '../services/programmeService'
 import { rehydrateProgramme, deleteAllUserData } from '../services/programmeManager'
+import { getWeekNumber, toDateStr } from '../utils/programme'
 import GenerateProgrammeView, {
   type GenerateResult,
 } from '../features/programme/GenerateProgrammeView'
@@ -76,6 +77,7 @@ export default function Program() {
   const [phases, setPhases] = useState<AnyData[]>([])
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [health, setHealth] = useState<UserHealth | null>(null)
+  const [currentWeek, setCurrentWeek] = useState<number | null>(null)
   const [previewResult, setPreviewResult] = useState<GenerateResult | null>(previewFromOnboarding)
   const [previewAlreadySaved, setPreviewAlreadySaved] = useState(alreadySavedFromOnboarding)
   const [openPhaseIdx, setOpenPhaseIdx] = useState<number | null>(null)
@@ -143,7 +145,7 @@ export default function Program() {
           supabase
             .from('user_health')
             .select(
-              'current_weight_kg, fitness_level, goal, available_days_per_week, session_duration_min, equipment, injuries, preferred_workout_time'
+              'current_weight_kg, fitness_level, goal, available_days_per_week, session_duration_min, equipment, injuries, preferred_workout_time, body_fat_pct, target_body_fat_pct, target_weight_kg, target_timeframe_weeks'
             )
             .eq('user_id', user.id)
             .maybeSingle(),
@@ -156,6 +158,12 @@ export default function Program() {
         setPhases(phaseData)
         setProfile(profileRes.data ?? null)
         setHealth(healthRes.data ?? null)
+
+        const startDateForWeek =
+          (cfgRes.data as AnyData)?.start_date ?? (data as AnyData).started_at?.slice(0, 10)
+        setCurrentWeek(
+          startDateForWeek ? getWeekNumber(startDateForWeek, toDateStr(new Date())) : null
+        )
 
         // Auto-repair programme_config if start_date is missing
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -346,6 +354,7 @@ export default function Program() {
             profile={profile}
             health={health}
             totalWeeks={totalWeeks}
+            currentWeek={currentWeek}
             injuries={health.injuries ?? []}
           />
         )}
