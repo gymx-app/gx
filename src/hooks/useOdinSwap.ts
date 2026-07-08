@@ -5,6 +5,8 @@ import { odinPost, OdinResponseError } from './useOdinGenerate'
 const SWAP_OPTIONS_URL = 'https://lzftkohidnykwnmekdyq.supabase.co/functions/v1/swap-options'
 const CONFIRM_SWAP_URL = 'https://lzftkohidnykwnmekdyq.supabase.co/functions/v1/confirm-swap'
 const TIMEOUT_MS = 20000
+export const MAX_ATTEMPTS = 3
+const RETRY_DELAY_MS = 600
 
 export interface SwapOption {
   exercise_id: string
@@ -36,34 +38,78 @@ async function getAuthToken(): Promise<string> {
   return session.access_token
 }
 
+// Timeouts and generic network failures are almost always transient — worth
+// an automatic retry. A structured Odin validation error (e.g. this specific
+// exercise has no valid substitution group) will never become valid by
+// retrying the same request, so those fail immediately instead.
+function isRetryable(err: unknown): boolean {
+  if (err instanceof OdinResponseError) return !err.isValidationError
+  return true
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+type CallResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string; code: string | null }
+
+// Retries up to MAX_ATTEMPTS times on timeout/infra failures. `onAttempt`
+// reports the 1-based attempt number so the UI can show "Retrying… (2/3)"
+// instead of sitting through a second multi-second wait with no feedback.
+export async function callWithRetry<T>(
+  call: (signal: AbortSignal) => Promise<T>,
+  onAttempt: (attempt: number) => void
+): Promise<CallResult<T>> {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    onAttempt(attempt)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS)
+    try {
+      const data = await call(controller.signal)
+      return { success: true, data }
+    } catch (err) {
+      if (attempt === MAX_ATTEMPTS || !isRetryable(err)) {
+        return {
+          success: false,
+          error: describeError(err),
+          code: err instanceof OdinResponseError ? err.code : null,
+        }
+      }
+      await sleep(RETRY_DELAY_MS)
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
+  // Unreachable — the loop above always returns.
+  return { success: false, error: 'Something went wrong. Please try again.', code: null }
+}
+
 export function useOdinSwap() {
   const [loadingOptions, setLoadingOptions] = useState(false)
+  const [optionsAttempt, setOptionsAttempt] = useState(1)
   const [confirming, setConfirming] = useState(false)
+  const [confirmAttempt, setConfirmAttempt] = useState(1)
 
   const getSwapOptions = useCallback(
     async (
       exerciseId: string,
       substitutionOptions: { approved_exercise_ids: string[] } | null,
       athlete: unknown
-    ): Promise<
-      { success: true; data: SwapOptionsResponse } | { success: false; error: string }
-    > => {
+    ): Promise<CallResult<SwapOptionsResponse>> => {
       setLoadingOptions(true)
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS)
       try {
-        const token = await getAuthToken()
-        const data = (await odinPost(
-          SWAP_OPTIONS_URL,
-          { exercise_id: exerciseId, substitution_options: substitutionOptions, athlete },
-          token,
-          controller.signal
-        )) as SwapOptionsResponse
-        return { success: true, data }
-      } catch (err) {
-        return { success: false, error: describeError(err) }
+        return await callWithRetry<SwapOptionsResponse>(async (signal) => {
+          const token = await getAuthToken()
+          return (await odinPost(
+            SWAP_OPTIONS_URL,
+            { exercise_id: exerciseId, substitution_options: substitutionOptions, athlete },
+            token,
+            signal
+          )) as SwapOptionsResponse
+        }, setOptionsAttempt)
       } finally {
-        clearTimeout(timeout)
         setLoadingOptions(false)
       }
     },
@@ -75,37 +121,33 @@ export function useOdinSwap() {
       exerciseId: string,
       chosenAlternativeId: string,
       athlete: unknown
-    ): Promise<
-      | { success: true; data: ConfirmSwapResponse }
-      | { success: false; error: string; code: string | null }
-    > => {
+    ): Promise<CallResult<ConfirmSwapResponse>> => {
       setConfirming(true)
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS)
       try {
-        const token = await getAuthToken()
-        const data = (await odinPost(
-          CONFIRM_SWAP_URL,
-          { exercise_id: exerciseId, chosen_alternative_id: chosenAlternativeId, athlete },
-          token,
-          controller.signal
-        )) as ConfirmSwapResponse
-        return { success: true, data }
-      } catch (err) {
-        return {
-          success: false,
-          error: describeError(err),
-          code: err instanceof OdinResponseError ? err.code : null,
-        }
+        return await callWithRetry<ConfirmSwapResponse>(async (signal) => {
+          const token = await getAuthToken()
+          return (await odinPost(
+            CONFIRM_SWAP_URL,
+            { exercise_id: exerciseId, chosen_alternative_id: chosenAlternativeId, athlete },
+            token,
+            signal
+          )) as ConfirmSwapResponse
+        }, setConfirmAttempt)
       } finally {
-        clearTimeout(timeout)
         setConfirming(false)
       }
     },
     []
   )
 
-  return { getSwapOptions, confirmSwap, loadingOptions, confirming }
+  return {
+    getSwapOptions,
+    confirmSwap,
+    loadingOptions,
+    optionsAttempt,
+    confirming,
+    confirmAttempt,
+  }
 }
 
 function describeError(err: unknown): string {

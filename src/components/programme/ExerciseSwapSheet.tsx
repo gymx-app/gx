@@ -3,7 +3,7 @@ import { colors, radius } from '../../styles/tokens'
 import BottomSheet from '../ui/BottomSheet'
 import Skeleton from '../ui/Skeleton'
 import { useAthleteOdinPayload } from '../../hooks/useAthleteOdinPayload'
-import { useOdinSwap, type SwapOption } from '../../hooks/useOdinSwap'
+import { useOdinSwap, MAX_ATTEMPTS, type SwapOption } from '../../hooks/useOdinSwap'
 import { humanizeSwapReasons, getSharedRationale } from '../../utils/swapReasons'
 import { Loader2, AlertTriangle, ChevronRight, Info, X } from 'lucide-react'
 
@@ -47,7 +47,10 @@ function OptionSkeletonRow() {
     <div
       className="w-full flex items-center gap-3 px-4 py-3"
       style={{
-        background: colors.surface2,
+        // Skeleton bars render at colors.surface2 (#1c1c1c) — this container
+        // must NOT use that same color or the pulse animation has nothing to
+        // contrast against and looks static/frozen instead of loading.
+        background: colors.surface,
         border: `1px solid ${colors.border}`,
         borderRadius: radius.chip,
       }}
@@ -67,9 +70,10 @@ export function ExerciseSwapSheet({ target, onClose, onConfirmed }: ExerciseSwap
     loading: loadingAthlete,
     error: athleteError,
   } = useAthleteOdinPayload(target !== null)
-  const { getSwapOptions, confirmSwap, confirming } = useOdinSwap()
+  const { getSwapOptions, confirmSwap, confirming, optionsAttempt } = useOdinSwap()
 
   const [state, setState] = useState<SheetState>({ status: 'loading' })
+  const [retryKey, setRetryKey] = useState(0)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [confirmError, setConfirmError] = useState<string | null>(null)
   // Odin validation and gx's own persistence write are two separate awaited
@@ -134,7 +138,12 @@ export function ExerciseSwapSheet({ target, onClose, onConfirmed }: ExerciseSwap
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target, loadingAthlete, athlete, athleteError])
+  }, [target, loadingAthlete, athlete, athleteError, retryKey])
+
+  const retry = () => {
+    setState({ status: 'loading' })
+    setRetryKey((k) => k + 1)
+  }
 
   const handleSelect = async (option: SwapOption) => {
     if (!target || !athlete) return
@@ -234,6 +243,14 @@ export function ExerciseSwapSheet({ target, onClose, onConfirmed }: ExerciseSwap
 
         {(state.status === 'loading' || loadingAthlete) && (
           <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-1">
+              <Loader2 size={14} className="animate-spin flex-shrink-0" color={colors.muted} />
+              <p className="text-[12px] font-['DM_Sans']" style={{ color: colors.muted }}>
+                {optionsAttempt > 1
+                  ? `Retrying… (${optionsAttempt}/${MAX_ATTEMPTS})`
+                  : 'Finding alternatives…'}
+              </p>
+            </div>
             <OptionSkeletonRow />
             <OptionSkeletonRow />
             <OptionSkeletonRow />
@@ -241,12 +258,24 @@ export function ExerciseSwapSheet({ target, onClose, onConfirmed }: ExerciseSwap
         )}
 
         {state.status === 'error' && (
-          <p
-            className="text-[13px] font-['DM_Sans'] py-6 text-center"
-            style={{ color: colors.muted }}
-          >
-            {state.message}
-          </p>
+          <div className="py-6 text-center">
+            <p className="text-[13px] font-['DM_Sans']" style={{ color: colors.muted }}>
+              {state.message}
+            </p>
+            <button
+              onClick={retry}
+              className="text-[13px] font-['DM_Sans'] font-semibold mt-2 active:opacity-60"
+              style={{
+                color: colors.accent,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              Try Again
+            </button>
+          </div>
         )}
 
         {state.status === 'empty' && (

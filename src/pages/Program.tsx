@@ -31,7 +31,7 @@ import { useToast } from '../hooks/useToast'
 import { Loader2, ChevronDown, RefreshCw, AlertTriangle, ArrowLeftRight } from 'lucide-react'
 
 type TabState = 'loading' | 'no_programme' | 'has_programme'
-type ConfirmAction = 'refresh' | 'regen' | null
+type ConfirmAction = 'refresh' | 'restart' | 'regen' | null
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyData = any
@@ -309,29 +309,35 @@ export default function Program() {
     weekCache.clearUserWeekCache(user.id)
   }, [user])
 
-  const handleRefresh = useCallback(async () => {
-    if (!user || !activeProgramme) return
-    setActionLoading(true)
-    setActionError(null)
+  // Shared by both Refresh (fix structure, keep progress) and Restart
+  // (fix structure AND reset start_date back to today / Week 1) — they're
+  // the same rebuild with one flag, not two flows worth duplicating.
+  const handleRehydrate = useCallback(
+    async (resetStartDate: boolean) => {
+      if (!user || !activeProgramme) return
+      setActionLoading(true)
+      setActionError(null)
 
-    const result = await rehydrateProgramme(activeProgramme.id, user.id)
+      const result = await rehydrateProgramme(activeProgramme.id, user.id, resetStartDate)
 
-    if (!result.success) {
-      setActionError(result.error ?? 'Refresh failed')
+      if (!result.success) {
+        setActionError(result.error ?? (resetStartDate ? 'Restart failed' : 'Refresh failed'))
+        setActionLoading(false)
+        return
+      }
+
+      await bustCaches()
+
+      // Reload phases + reset accordion
+      const { data: freshPhases } = await getProgrammePhases(activeProgramme.id)
+      setPhases(freshPhases ?? [])
+      setPhaseDays({})
+      setOpenPhaseIdx(null)
+      setConfirmAction(null)
       setActionLoading(false)
-      return
-    }
-
-    await bustCaches()
-
-    // Reload phases + reset accordion
-    const { data: freshPhases } = await getProgrammePhases(activeProgramme.id)
-    setPhases(freshPhases ?? [])
-    setPhaseDays({})
-    setOpenPhaseIdx(null)
-    setConfirmAction(null)
-    setActionLoading(false)
-  }, [user, activeProgramme, bustCaches])
+    },
+    [user, activeProgramme, bustCaches]
+  )
 
   const closeSheet = useCallback(() => {
     if (actionLoading) return
@@ -445,7 +451,7 @@ export default function Program() {
               disabled={actionLoading}
               className="p-2 -mr-1 active:opacity-50"
               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-              title="Refresh programme"
+              title="Refresh programme structure"
             >
               <RefreshCw size={17} color={colors.muted} />
             </button>
@@ -643,6 +649,28 @@ export default function Program() {
           })}
         </div>
 
+        {/* Restart Programme button — separate from the header's Refresh
+            icon (structure-only) since restarting also resets progress
+            back to Week 1, and separate from Generate New Programme
+            (which deletes everything) since history is kept. */}
+        <button
+          onClick={() => {
+            setConfirmAction('restart')
+            setActionError(null)
+          }}
+          disabled={actionLoading}
+          className="w-full py-3.5 text-[13px] font-['DM_Sans'] font-medium active:opacity-60"
+          style={{
+            background: 'none',
+            border: `1px solid ${colors.border}`,
+            borderRadius: radius.button,
+            color: colors.textSecondary,
+            cursor: actionLoading ? 'default' : 'pointer',
+          }}
+        >
+          Restart Programme
+        </button>
+
         {/* Generate New Programme button */}
         <button
           onClick={() => {
@@ -691,8 +719,8 @@ export default function Program() {
               className="text-[13px] font-['DM_Sans'] leading-relaxed mb-5"
               style={{ color: colors.textSecondary }}
             >
-              This will re-build your workout days from the original AI plan and reset your start
-              date to today. Your exercise history is kept.
+              This will re-build your workout days from the original AI plan. Your progress and
+              exercise history are untouched.
             </p>
 
             {actionError && (
@@ -725,7 +753,7 @@ export default function Program() {
                 Cancel
               </button>
               <button
-                onClick={() => void handleRefresh()}
+                onClick={() => void handleRehydrate(false)}
                 disabled={actionLoading}
                 className="flex-1 py-3.5 text-[14px] font-['Bebas_Neue'] tracking-[1px] active:scale-[0.98] transition-transform"
                 style={{
@@ -744,6 +772,91 @@ export default function Program() {
                   </span>
                 ) : (
                   'Refresh'
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {confirmAction === 'restart' && (
+          <div className="px-5 pb-8 pt-2">
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className="w-10 h-10 flex items-center justify-center flex-shrink-0"
+                style={{ background: `${colors.orange}18`, borderRadius: 12 }}
+              >
+                <RefreshCw size={18} color={colors.orange} />
+              </div>
+              <div>
+                <p
+                  className="font-['Bebas_Neue'] text-[20px] tracking-[1px] leading-none"
+                  style={{ color: colors.text }}
+                >
+                  Restart Programme
+                </p>
+                <p className="text-[12px] font-['DM_Sans'] mt-0.5" style={{ color: colors.muted }}>
+                  Resets your progress back to Week 1
+                </p>
+              </div>
+            </div>
+
+            <p
+              className="text-[13px] font-['DM_Sans'] leading-relaxed mb-5"
+              style={{ color: colors.textSecondary }}
+            >
+              This will rebuild your workout days from the original AI plan and set your start date
+              to today, restarting from Week 1. Your exercise history is kept.
+            </p>
+
+            {actionError && (
+              <p
+                className="text-[12px] font-['DM_Sans'] mb-4 px-3 py-2"
+                style={{
+                  background: `${colors.error}18`,
+                  border: `1px solid ${colors.error}44`,
+                  borderRadius: 8,
+                  color: colors.error,
+                }}
+              >
+                {actionError}
+              </p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={closeSheet}
+                disabled={actionLoading}
+                className="flex-1 py-3.5 text-[14px] font-['DM_Sans'] font-medium active:opacity-60"
+                style={{
+                  background: 'none',
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: radius.button,
+                  color: colors.textSecondary,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void handleRehydrate(true)}
+                disabled={actionLoading}
+                className="flex-1 py-3.5 text-[14px] font-['Bebas_Neue'] tracking-[1px] active:scale-[0.98] transition-transform"
+                style={{
+                  background: colors.orange,
+                  border: 'none',
+                  borderRadius: radius.button,
+                  color: '#fff',
+                  cursor: actionLoading ? 'default' : 'pointer',
+                  opacity: actionLoading ? 0.6 : 1,
+                }}
+              >
+                {actionLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 size={14} className="animate-spin" />
+                    Restarting…
+                  </span>
+                ) : (
+                  'Restart'
                 )}
               </button>
             </div>
