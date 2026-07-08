@@ -9,22 +9,21 @@ interface CompletedSet {
 
 interface Workout {
   title?: string
-  ex?: unknown[]
 }
 
 interface WorkoutCompleteSheetProps {
   workout: Workout
   completedSets: Record<string, CompletedSet>
+  exerciseCount: number
   onDismiss: () => void
 }
 
 const WorkoutCompleteSheet = memo(function WorkoutCompleteSheet({
   workout,
   completedSets,
+  exerciseCount,
   onDismiss,
 }: WorkoutCompleteSheetProps) {
-  const exercises = workout?.ex ?? []
-
   let totalSetsLogged = 0
   let totalVolume = 0
   for (const [, set] of Object.entries(completedSets)) {
@@ -71,7 +70,7 @@ const WorkoutCompleteSheet = memo(function WorkoutCompleteSheet({
             value={totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume}
             label="Volume kg"
           />
-          <StatBlock value={exercises.length} label="Exercises" />
+          <StatBlock value={exerciseCount} label="Exercises" />
         </div>
 
         <div className="mt-6">

@@ -40,7 +40,7 @@ interface SetLogSheetProps {
   exerciseIndex: number
   exerciseMap: Record<string, string>
   onClose: () => void
-  onLogged: (sessionId: string, weight: number) => void
+  onLogged: (sessionId: string, weight: number, reps: number) => void
 }
 
 const RPE_COLORS: Record<number, string> = {
@@ -110,7 +110,7 @@ const SetLogSheet = memo(function SetLogSheet({
     void execute({
       optimisticUpdate: () => {
         if (navigator.vibrate) navigator.vibrate(50)
-        onLogged(sid, weightVal)
+        onLogged(sid, weightVal, repsVal)
       },
       idbWrite: async () => {
         await idbCache.invalidate('workout-data', `${user!.id}_${dateStr}`)

@@ -125,6 +125,7 @@ export default function Today() {
   const [activeSheet, setActiveSheet] = useState(null)
   const [restTimer, setRestTimer] = useState(null)
   const [localCompletedSets, setLocalCompletedSets] = useState({})
+  const dismissedCompleteRef = useRef(false)
 
   // ── Swipe navigation ──
   const touchRef = useRef({ startX: 0, startY: 0, startTime: 0, tracking: false, locked: false })
@@ -363,7 +364,17 @@ export default function Today() {
   }, [logs, displayExercises, dayType])
 
   useEffect(() => {
-    if (dayType !== 'workout' || displayExercises.length === 0 || screenState === 'complete') return
+    dismissedCompleteRef.current = false
+  }, [dateStr])
+
+  useEffect(() => {
+    if (
+      dayType !== 'workout' ||
+      displayExercises.length === 0 ||
+      screenState === 'complete' ||
+      dismissedCompleteRef.current
+    )
+      return
     const allDone = displayExercises.every((ex) => {
       const sets = parseInt(ex.s.split('×')[0])
       const logged = logs.filter((l) => l.exercise_name === ex.n && !l.is_mm_set && l.completed)
@@ -372,7 +383,7 @@ export default function Today() {
     if (allDone && logs.length > 0) {
       setScreenState('complete')
     }
-  }, [logs, displayExercises, dayType, screenState])
+  }, [logs, displayExercises, dayType, screenState, dateStr])
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // ── Today date for comparisons ──
@@ -558,7 +569,7 @@ export default function Today() {
   }, [])
 
   const handleLogged = useCallback(
-    (sid, weight = 0) => {
+    (sid, weight = 0, reps = 0) => {
       const restSec = activeSheet?.restSec ?? 60
       const exName = activeSheet?.exercise?.n ?? ''
       const setNum = activeSheet?.setNumber
@@ -570,7 +581,7 @@ export default function Today() {
       if (exName && setNum) {
         setLocalCompletedSets((prev) => ({
           ...prev,
-          [`${exName}-${setNum}`]: { weight: weight || 0, reps: 0, rpe: null },
+          [`${exName}-${setNum}`]: { weight: weight || 0, reps: reps || 0, rpe: null },
         }))
       }
 
@@ -903,7 +914,11 @@ export default function Today() {
         <WorkoutCompleteSheet
           workout={workout}
           completedSets={completedSets}
-          onDismiss={() => setScreenState('orientation')}
+          exerciseCount={displayExercises.length}
+          onDismiss={() => {
+            dismissedCompleteRef.current = true
+            setScreenState('orientation')
+          }}
         />
       )}
     </>
