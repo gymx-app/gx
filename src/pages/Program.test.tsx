@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi } from 'vitest'
 import Program from './Program'
+import { ToastProvider } from '../hooks/useToast'
 import type { GenerateResult } from '../features/programme/GenerateProgrammeView'
 
 const testUser = { id: 'test-user' }
@@ -34,6 +35,7 @@ vi.mock('../services/programmeService', () => ({
   getProgrammeDays: () => Promise.resolve({ data: [], error: null }),
   getProgrammeConfig: () => Promise.resolve({ data: null, error: null }),
   upsertProgrammeConfig: () => Promise.resolve({ data: null, error: null }),
+  updateProgrammeExerciseId: () => Promise.resolve({ data: null, error: null }),
 }))
 
 vi.mock('../services/programmeManager', () => ({
@@ -60,11 +62,15 @@ describe('Program - onboarding hand-off preview survives StrictMode double-invok
   it('shows the freshly-generated preview instantly, then confirms it against Supabase, without ever falling back to the generate form — even under StrictMode', async () => {
     render(
       <StrictMode>
-        <MemoryRouter
-          initialEntries={[{ pathname: '/program', state: { previewResult, alreadySaved: true } }]}
-        >
-          <Program />
-        </MemoryRouter>
+        <ToastProvider>
+          <MemoryRouter
+            initialEntries={[
+              { pathname: '/program', state: { previewResult, alreadySaved: true } },
+            ]}
+          >
+            <Program />
+          </MemoryRouter>
+        </ToastProvider>
       </StrictMode>
     )
 

@@ -38,21 +38,31 @@ interface UseOdinGenerateReturn {
   reset: () => void
 }
 
-class OdinResponseError extends Error {
+export class OdinResponseError extends Error {
   // A well-formed { success: false, error } response is Odin rejecting the
   // input (validation) — distinct from a network failure/timeout/5xx.
   isValidationError: boolean
   // 410 means this client is calling a deprecated/retired endpoint version —
   // distinct from validation and generic infra failures.
   isGone: boolean
-  constructor(message: string, isValidationError: boolean, isGone = false) {
+  // Odin's structured error code (e.g. SUBSTITUTION_GROUP_INVALID) when the
+  // response body had one — callers that need to branch on the exact code
+  // rather than just displaying the message can use this.
+  code: string | null
+  constructor(
+    message: string,
+    isValidationError: boolean,
+    isGone = false,
+    code: string | null = null
+  ) {
     super(message)
     this.isValidationError = isValidationError
     this.isGone = isGone
+    this.code = code
   }
 }
 
-async function odinPost(
+export async function odinPost(
   url: string,
   body: unknown,
   token: string,
@@ -73,7 +83,12 @@ async function odinPost(
     throw new OdinResponseError('App needs to be updated. Please refresh the page.', false, true)
   }
 
-  let data: { success?: boolean; error?: { message?: string }; message?: string; data?: unknown }
+  let data: {
+    success?: boolean
+    error?: { message?: string; code?: string }
+    message?: string
+    data?: unknown
+  }
   try {
     data = await res.json()
   } catch {
@@ -85,7 +100,7 @@ async function odinPost(
     // A 4xx with a structured error body is Odin telling us the input was bad;
     // anything else (5xx, malformed body) is an infrastructure failure.
     const isValidationError = res.status >= 400 && res.status < 500 && !!data?.error?.message
-    throw new OdinResponseError(message, isValidationError)
+    throw new OdinResponseError(message, isValidationError, false, data?.error?.code ?? null)
   }
 
   return data.data

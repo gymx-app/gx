@@ -13,6 +13,9 @@ import {
   upsertProgrammeConfig,
 } from '../services/programmeService'
 import { rehydrateProgramme, deleteAllUserData } from '../services/programmeManager'
+import { findOdinPrescription } from '../services/programmeHydrator'
+import { applyExerciseSwap } from '../services/exerciseSwap'
+import { updateExerciseInDay } from '../utils/programmeState'
 import { getWeekNumber, toDateStr } from '../utils/programme'
 import GenerateProgrammeView, {
   type GenerateResult,
@@ -21,9 +24,11 @@ import ProgrammePreview from '../features/programme/ProgrammePreview'
 import { ProfileCard } from '../components/programme/ProfileCard'
 import type { UserProfile, UserHealth } from '../components/programme/ProfileCard'
 import ProgrammeSkeleton from '../components/programme/ProgrammeSkeleton'
+import { ExerciseSwapSheet, type SwapTarget } from '../components/programme/ExerciseSwapSheet'
 import BottomSheet from '../components/ui/BottomSheet'
 import Skeleton from '../components/ui/Skeleton'
-import { Loader2, ChevronDown, RefreshCw, AlertTriangle } from 'lucide-react'
+import { useToast } from '../hooks/useToast'
+import { Loader2, ChevronDown, RefreshCw, AlertTriangle, ArrowLeftRight } from 'lucide-react'
 
 type TabState = 'loading' | 'no_programme' | 'has_programme'
 type ConfirmAction = 'refresh' | 'regen' | null
@@ -58,6 +63,7 @@ export default function Program() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const toast = useToast()
 
   // OnboardingWizard already saves the generated programme to Supabase
   // (`programmes`/`programme_config`) before navigating here, so the active
@@ -88,6 +94,8 @@ export default function Program() {
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [checkKey, setCheckKey] = useState(0)
+  const [swapTarget, setSwapTarget] = useState<SwapTarget | null>(null)
+  const [justSwappedId, setJustSwappedId] = useState<string | null>(null)
 
   // Reactively pick up a freshly-generated preview handed off via router state.
   // AppLayout keeps every tab mounted (display:none), so a later navigate() to
@@ -232,6 +240,63 @@ export default function Program() {
     },
     [openPhaseIdx, phaseDays]
   )
+
+  const openSwap = useCallback(
+    (phaseIndex: number, day: AnyData, ex: AnyData) => {
+      const lookup = findOdinPrescription(
+        activeProgramme?.programme_data,
+        phaseIndex,
+        day.day_of_week,
+        ex.display_order
+      )
+      if (!lookup) {
+        toast.show({ message: "Couldn't find this exercise in your plan.", type: 'error' })
+        return
+      }
+      setSwapTarget({
+        exerciseId: lookup.exercise_id,
+        exerciseName: ex.exercises?.name ?? 'Exercise',
+        substitutionOptions: lookup.substitution_options,
+        dayExerciseId: ex.id,
+        dayId: day.id,
+      })
+    },
+    [activeProgramme, toast]
+  )
+
+  const handleSwapConfirmed = useCallback(
+    async (chosen: { exercise_id: string; name: string }) => {
+      if (!user || !swapTarget) {
+        return { success: false, error: 'Missing swap context.' }
+      }
+
+      const result = await applyExerciseSwap(
+        user.id,
+        swapTarget.dayId,
+        swapTarget.dayExerciseId,
+        chosen
+      )
+      if (!result.success) {
+        return { success: false, error: result.error }
+      }
+
+      setDayExercises((prev) =>
+        updateExerciseInDay(prev, swapTarget.dayId, swapTarget.dayExerciseId, result.updatedRow)
+      )
+      setJustSwappedId(swapTarget.dayExerciseId)
+      toast.show({ message: `Swapped to ${chosen.name}`, type: 'success' })
+      return { success: true }
+    },
+    [user, swapTarget, toast]
+  )
+
+  // Brief highlight on the swapped row, then clear — no list reload needed
+  // to show it changed.
+  useEffect(() => {
+    if (!justSwappedId) return
+    const timer = setTimeout(() => setJustSwappedId(null), 1600)
+    return () => clearTimeout(timer)
+  }, [justSwappedId])
 
   const bustCaches = useCallback(async () => {
     if (!user) return
@@ -513,15 +578,17 @@ export default function Program() {
                             {!isRest && exercises.length > 0 && (
                               <div style={{ background: colors.surface2 }}>
                                 {exercises.map((ex: AnyData, ei: number) => (
-                                  <button
+                                  <div
                                     key={ex.id}
-                                    className="w-full flex items-center gap-3 pl-8 pr-4 py-3 text-left active:opacity-60"
+                                    className="w-full flex items-center gap-3 pl-8 pr-4 py-3"
                                     style={{
-                                      background: 'none',
-                                      border: 'none',
-                                      cursor: 'pointer',
                                       borderTop:
                                         ei > 0 ? `1px solid ${colors.borderSubtle}` : 'none',
+                                      background:
+                                        ex.id === justSwappedId
+                                          ? `${colors.accent}22`
+                                          : 'transparent',
+                                      transition: 'background-color 1.4s ease-out',
                                     }}
                                   >
                                     <p
@@ -538,7 +605,30 @@ export default function Program() {
                                         {ex.sets_reps}
                                       </span>
                                     )}
-                                  </button>
+                                    <button
+                                      onClick={() => openSwap(pi, day, ex)}
+                                      className="flex-shrink-0 -mr-2 flex items-center justify-center gap-1 active:opacity-60"
+                                      style={{
+                                        minWidth: 44,
+                                        minHeight: 44,
+                                        padding: '0 10px',
+                                        background: colors.surface3,
+                                        border: 'none',
+                                        borderRadius: radius.chip,
+                                        cursor: 'pointer',
+                                      }}
+                                      title="Swap exercise"
+                                      aria-label={`Swap ${ex.exercises?.name ?? 'exercise'}`}
+                                    >
+                                      <ArrowLeftRight size={13} color={colors.textSecondary} />
+                                      <span
+                                        className="text-[10px] font-['DM_Sans'] font-bold uppercase tracking-[0.5px]"
+                                        style={{ color: colors.textSecondary }}
+                                      >
+                                        Swap
+                                      </span>
+                                    </button>
+                                  </div>
                                 ))}
                               </div>
                             )}
@@ -745,6 +835,12 @@ export default function Program() {
           </div>
         )}
       </BottomSheet>
+
+      <ExerciseSwapSheet
+        target={swapTarget}
+        onClose={() => setSwapTarget(null)}
+        onConfirmed={handleSwapConfirmed}
+      />
     </>
   )
 }

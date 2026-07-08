@@ -154,6 +154,41 @@ export async function getProgrammeDayExercises(dayId) {
 }
 
 /**
+ * Update the exercise on a single programme_exercises row (e.g. after a
+ * validated swap) and return the row re-joined with exercise details, so
+ * callers can splice it straight into local state without a second fetch.
+ * @param {string} prescriptionId - programme_exercises.id
+ * @param {string} exerciseId - exercises.id (gx UUID) to swap in
+ * @returns {Promise<{ data: object|null, error: string|null }>}
+ */
+export async function updateProgrammeExerciseId(prescriptionId, exerciseId) {
+  try {
+    const { data, error } = await supabase
+      .from('programme_exercises')
+      .update({ exercise_id: exerciseId })
+      .eq('id', prescriptionId)
+      .select(
+        `
+        *,
+        exercises:exercise_id (
+          name,
+          gif_url,
+          equipment,
+          body_part,
+          target_muscle
+        )
+      `
+      )
+      .single()
+    if (error) throw error
+    return { data, error: null }
+  } catch (err) {
+    logger.error('updateProgrammeExerciseId:', err)
+    return { data: null, error: 'Failed to save the swap' }
+  }
+}
+
+/**
  * Get warmup items for a programme.
  * @param {string} programmeId
  * @returns {Promise<{ data: Array|null, error: string|null }>}

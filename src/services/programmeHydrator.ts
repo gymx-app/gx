@@ -11,6 +11,7 @@ import {
 } from '../utils/odinMappers'
 
 const CONDITIONING_ONLY_DAY_TYPES = new Set(['conditioning', 'sport', 'recovery'])
+const DAY_ORDER = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type OdinData = any
@@ -252,5 +253,53 @@ export async function hydrateProgramme(
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Hydration failed'
     return { success: false, error: msg }
+  }
+}
+
+export interface OdinPrescriptionLookup {
+  exercise_id: string
+  substitution_options: { approved_exercise_ids: string[] } | null
+}
+
+// programme_exercises never stored Odin's own exercise_id or
+// substitution_options — hydration only kept exercise_name (see
+// resolveExercises above). Both still live in the raw programme_data JSON
+// every active programme already has loaded, so this reconstructs which
+// JSON node a given (phase, day, exercise) DB row came from — using the
+// exact same day_of_week assignment (mapDayLabel + de-dup) hydration used,
+// so it lands on the same day even when the raw label was missing/duplicate.
+export function findOdinPrescription(
+  odinData: OdinData,
+  phaseIndex: number,
+  dayOfWeek: string,
+  displayOrder: number
+): OdinPrescriptionLookup | null {
+  const phase = odinData?.programme?.phases?.[phaseIndex]
+  const days: OdinData[] = phase?.weeks?.[0]?.days ?? []
+
+  const usedDays = new Set<string>()
+  let matchedDay: OdinData = null
+
+  for (let di = 0; di < days.length; di++) {
+    const day = days[di]
+    let dow = mapDayLabel(day.day_of_week ?? '', di)
+    while (usedDays.has(dow)) {
+      const idx = DAY_ORDER.indexOf(dow)
+      dow = DAY_ORDER[(idx + 1) % 7] ?? 'MON'
+    }
+    usedDays.add(dow)
+
+    if (dow === dayOfWeek) {
+      matchedDay = day
+      break
+    }
+  }
+
+  const exercise = matchedDay?.exercises?.[displayOrder - 1]
+  if (!exercise?.exercise_id) return null
+
+  return {
+    exercise_id: exercise.exercise_id,
+    substitution_options: exercise.substitution_options ?? null,
   }
 }
