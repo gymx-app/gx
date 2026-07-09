@@ -70,10 +70,10 @@ describe('Button component', () => {
     expect(btn).toHaveTextContent('Loading...')
   })
 
-  it('uses warm cream text, not pure white', () => {
+  it('uses the text token, not pure white', () => {
     const { container } = render(<Button variant="primary" label="TEST" />)
     const btn = container.querySelector('button')
-    expect(btn.className).toContain('text-[#f0ede8]')
+    expect(btn.className).toContain('text-text')
     expect(btn.className).not.toContain('text-white')
   })
 })

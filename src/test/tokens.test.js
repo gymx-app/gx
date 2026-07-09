@@ -1,5 +1,26 @@
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
 import { describe, it, expect } from 'vitest'
 import { colors, radius, typography, shadows } from '../styles/tokens'
+
+// Colors live in styles/globals.css (:root), not as literals in tokens.ts —
+// resolve the CSS custom properties here so the semantic invariants below
+// stay meaningful across palette changes instead of pinning exact hex values.
+const cssPath = join(dirname(fileURLToPath(import.meta.url)), '../styles/globals.css')
+const css = readFileSync(cssPath, 'utf-8')
+const rawVars = Object.fromEntries(
+  [...css.matchAll(/--([\w-]+):\s*([^;]+);/g)].map(([, name, value]) => [name, value.trim()])
+)
+const resolveVar = (value, seen = new Set()) => {
+  const match = value.match(/^var\(--([\w-]+)\)$/)
+  if (!match) return value
+  const name = match[1]
+  if (seen.has(name)) throw new Error(`circular var reference: --${name}`)
+  return resolveVar(rawVars[name], new Set(seen).add(name))
+}
+const cssVar = (name) => resolveVar(rawVars[name])
+const toNum = (hex) => parseInt(hex.replace('#', ''), 16)
 
 describe('Design tokens', () => {
   it('exports all required color groups', () => {
@@ -11,23 +32,31 @@ describe('Design tokens', () => {
     expect(colors.error).toBeDefined()
   })
 
-  it('has semantic text color tokens', () => {
-    expect(colors.textSecondary).toBe('#aaaaaa')
-    expect(colors.placeholder).toBe('#444444')
-    expect(colors.disabled).toBe('#555555')
-    expect(colors.muted).toBe('#666666')
+  it('exposes colors as CSS var references, not hardcoded hex', () => {
+    for (const value of Object.values(colors)) {
+      expect(value).toMatch(/^var\(--[\w-]+\)$/)
+    }
   })
 
-  it('uses warm cream for primary text, not pure white', () => {
-    expect(colors.text).toBe('#f0ede8')
-    expect(colors.text).not.toBe('#ffffff')
+  it('has semantic text color tokens that resolve to distinct colors', () => {
+    const values = [
+      cssVar('text-secondary'),
+      cssVar('placeholder'),
+      cssVar('disabled'),
+      cssVar('muted'),
+    ]
+    for (const v of values) expect(v).toMatch(/^#[0-9a-f]{6}$/i)
+    expect(new Set(values).size).toBe(values.length)
+  })
+
+  it('uses a warm/soft primary text color, not pure white', () => {
+    expect(cssVar('text').toLowerCase()).not.toBe('#ffffff')
   })
 
   it('has consistent surface hierarchy (darker → lighter)', () => {
-    const toNum = (hex) => parseInt(hex.replace('#', ''), 16)
-    expect(toNum(colors.bg)).toBeLessThan(toNum(colors.surface))
-    expect(toNum(colors.surface)).toBeLessThan(toNum(colors.surface2))
-    expect(toNum(colors.surface2)).toBeLessThan(toNum(colors.surface3))
+    expect(toNum(cssVar('bg'))).toBeLessThan(toNum(cssVar('surface')))
+    expect(toNum(cssVar('surface'))).toBeLessThan(toNum(cssVar('surface-2')))
+    expect(toNum(cssVar('surface-2'))).toBeLessThan(toNum(cssVar('surface-3')))
   })
 
   it('exports radius tokens for all component types', () => {
