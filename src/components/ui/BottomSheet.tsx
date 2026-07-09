@@ -81,13 +81,13 @@ function BottomSheet({ isOpen, onClose, children, height = 'auto' }: BottomSheet
         ref={sheetRef}
         role="dialog"
         aria-modal="true"
-        className={`relative w-full bg-[#141414] rounded-t-[20px] z-50 animate-slide-up ${HEIGHT_MAP[height] || HEIGHT_MAP.auto}`}
+        className={`relative w-full bg-surface rounded-t-[20px] z-50 animate-slide-up ${HEIGHT_MAP[height] || HEIGHT_MAP.auto}`}
         style={{ transform: translateY > 0 ? `translateY(${translateY}px)` : undefined }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <div className="w-10 h-1 bg-[#2a2a2a] rounded-full mx-auto mt-3 mb-2" />
+        <div className="w-10 h-1 bg-border rounded-full mx-auto mt-3 mb-2" />
         {children}
       </div>
     </div>

@@ -54,7 +54,7 @@ export function Screen7Logistics({ wizardState, setField, goToStep, onContinue }
 
   return (
     <>
-      <h1 className="font-['Bebas_Neue'] text-[32px] tracking-[2px] text-[#f0ede8] leading-none">
+      <h1 className="font-['Bebas_Neue'] text-[32px] tracking-[2px] text-text leading-none">
         YOUR TRAINING SETUP
       </h1>
       <p

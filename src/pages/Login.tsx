@@ -66,10 +66,10 @@ const Login = memo(function Login() {
       style={{ background: colors.bg, height: '100dvh' }}
     >
       <div className="pt-16 pb-0">
-        <h1 className="font-['Bebas_Neue'] text-[36px] tracking-[6px] text-[#f0ede8] uppercase">
-          G<span className="text-[#ff4520]">x</span>
+        <h1 className="font-['Bebas_Neue'] text-[36px] tracking-[6px] text-text uppercase">
+          G<span className="text-accent">x</span>
         </h1>
-        <p className="text-[11px] font-medium tracking-[3px] uppercase text-[#666666] mt-1">
+        <p className="text-[11px] font-medium tracking-[3px] uppercase text-muted mt-1">
           Built for Discipline
         </p>
       </div>
@@ -90,13 +90,13 @@ const Login = memo(function Login() {
         />
 
         {error && (
-          <Text variant="body" className="text-[#ef4444] text-[13px] -mt-1" role="alert">
+          <Text variant="body" className="text-error text-[13px] -mt-1" role="alert">
             {error}
           </Text>
         )}
 
         {success && (
-          <Text variant="body" className="text-[#22c55e] text-[13px] -mt-1" role="status">
+          <Text variant="body" className="text-success text-[13px] -mt-1" role="status">
             {success}
           </Text>
         )}
@@ -121,15 +121,15 @@ const Login = memo(function Login() {
 
         <button
           onClick={switchMode}
-          className="text-[13px] text-[#666666] mt-2 text-center active:text-[#f0ede8] transition-colors"
+          className="text-[13px] text-muted mt-2 text-center active:text-text transition-colors"
         >
           {mode === 'login' ? (
             <>
-              Don&apos;t have an account? <span className="text-[#ff4520] font-bold">Sign Up</span>
+              Don&apos;t have an account? <span className="text-accent font-bold">Sign Up</span>
             </>
           ) : (
             <>
-              Already have an account? <span className="text-[#ff4520] font-bold">Sign In</span>
+              Already have an account? <span className="text-accent font-bold">Sign In</span>
             </>
           )}
         </button>

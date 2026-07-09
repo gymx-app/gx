@@ -107,9 +107,9 @@ const WarmupSection = memo(function WarmupSection({
         rightContent={
           <div className="flex items-center gap-2">
             {allDone ? (
-              <span className="text-[11px] font-semibold text-[#22c55e]">Done</span>
+              <span className="text-[11px] font-semibold text-success">Done</span>
             ) : (
-              <span className="text-[11px] text-[#666666]">
+              <span className="text-[11px] text-muted">
                 {completedCount}/{items.length}
               </span>
             )}
@@ -118,7 +118,7 @@ const WarmupSection = memo(function WarmupSection({
               aria-label={collapsed ? 'Expand warmup' : 'Collapse warmup'}
             >
               <span
-                className={`text-[10px] text-[#666666] transition-transform duration-200 inline-block ${
+                className={`text-[10px] text-muted transition-transform duration-200 inline-block ${
                   collapsed ? '' : 'rotate-180'
                 }`}
               >
@@ -155,13 +155,11 @@ const WarmupSection = memo(function WarmupSection({
                 <Checkbox checked={done} />
                 <div className="flex-1 min-w-0">
                   <p
-                    className={`text-[13px] leading-tight ${done ? 'text-[#666666] line-through opacity-40' : 'text-[#aaa]'}`}
+                    className={`text-[13px] leading-tight ${done ? 'text-muted line-through opacity-40' : 'text-text-secondary'}`}
                   >
                     {item.label}
                   </p>
-                  {item.detail && (
-                    <p className="text-[11px] text-[#666666] mt-0.5">{item.detail}</p>
-                  )}
+                  {item.detail && <p className="text-[11px] text-muted mt-0.5">{item.detail}</p>}
                 </div>
                 <span className="text-[16px] shrink-0">{item.ic}</span>
               </button>

@@ -109,7 +109,7 @@ export function Screen6GoalPrecision({ wizardState, setField, onContinue }: Prop
   return (
     <>
       <div className="flex items-center justify-between mb-2">
-        <h1 className="font-['Bebas_Neue'] text-[32px] tracking-[2px] text-[#f0ede8] leading-none">
+        <h1 className="font-['Bebas_Neue'] text-[32px] tracking-[2px] text-text leading-none">
           MAKE IT PRECISE
         </h1>
         <button

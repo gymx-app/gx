@@ -93,7 +93,7 @@ function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }: FinisherBlockP
     <div className="mt-6">
       <SectionLabel label="Finisher" className="mb-3" />
 
-      <h4 className="font-['Bebas_Neue'] text-[18px] tracking-[1.5px] text-[#ff4520] mb-[5px]">
+      <h4 className="font-['Bebas_Neue'] text-[18px] tracking-[1.5px] text-accent mb-[5px]">
         {fin.title}
       </h4>
       {fin.desc && (
@@ -117,11 +117,11 @@ function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }: FinisherBlockP
       )}
 
       <div className="flex items-center gap-2 mt-2">
-        {fin.dur && <span className="text-[12px] text-[#666666]">{fin.dur}</span>}
+        {fin.dur && <span className="text-[12px] text-muted">{fin.dur}</span>}
         {fin.kcal && (
           <>
-            <span className="text-[12px] text-[#666666]">·</span>
-            <span className="text-[12px] text-[#666666]">{fin.kcal}</span>
+            <span className="text-[12px] text-muted">·</span>
+            <span className="text-[12px] text-muted">{fin.kcal}</span>
           </>
         )}
       </div>
@@ -135,14 +135,14 @@ function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }: FinisherBlockP
           ].map(({ name, unit, placeholder }) => (
             <div
               key={name}
-              className="flex-1 focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-all duration-150"
+              className="flex-1 focus-within:border-accent p-4 flex flex-col items-center transition-all duration-150"
               style={{
                 background: colors.surface2,
                 border: `1.5px solid ${colors.border}`,
                 borderRadius: radius.input,
               }}
             >
-              <label className="text-[9px] font-bold tracking-[1px] uppercase text-[#666666] mb-2">
+              <label className="text-[9px] font-bold tracking-[1px] uppercase text-muted mb-2">
                 {name.charAt(0).toUpperCase() + name.slice(1)}
               </label>
               <input
@@ -152,7 +152,7 @@ function FinisherBlock({ fin, dateStr, checklistLogs, onUpdate }: FinisherBlockP
                 value={finInputs[name] ?? ''}
                 onChange={(e) => setFinInputs((prev) => ({ ...prev, [name]: e.target.value }))}
                 readOnly={isLogged}
-                className="w-full bg-transparent text-center text-[24px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] focus:outline-none"
+                className="w-full bg-transparent text-center text-[24px] font-['Bebas_Neue'] tracking-[1px] text-text focus:outline-none"
                 style={{ color: colors.text }}
                 placeholder={placeholder}
                 aria-label={`${name} value`}

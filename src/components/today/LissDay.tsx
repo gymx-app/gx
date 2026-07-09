@@ -294,14 +294,12 @@ const LissDay = memo(function LissDay({
 
   return (
     <div>
-      <p className="text-[11px] text-[#666666] uppercase tracking-[2px] pt-2.5 mb-1">
-        {dateContext}
-      </p>
+      <p className="text-[11px] text-muted uppercase tracking-[2px] pt-2.5 mb-1">{dateContext}</p>
 
       {readOnly && (
         <span
-          className="text-[11px] tracking-[0.08em] uppercase text-[#555555] px-3 py-1 inline-flex mb-2"
-          style={{ background: '#111111', border: '1px solid #1a1a1a' }}
+          className="text-[11px] tracking-[0.08em] uppercase text-disabled px-3 py-1 inline-flex mb-2"
+          style={{ background: colors.bgSubtle, border: `1px solid ${colors.surface}` }}
         >
           UPCOMING ·{' '}
           {(() => {
@@ -315,7 +313,7 @@ const LissDay = memo(function LissDay({
       <div className="flex items-baseline justify-between">
         <Text variant="pageTitle">{title}</Text>
         {duration && (
-          <span className="font-['Bebas_Neue'] text-[20px] text-[#ff4520] shrink-0 ml-3">
+          <span className="font-['Bebas_Neue'] text-[20px] text-accent shrink-0 ml-3">
             {duration}&prime;
           </span>
         )}
@@ -348,11 +346,11 @@ const LissDay = memo(function LissDay({
                 style={{
                   borderRadius: radius.pill,
                   ...(isActive
-                    ? { background: colors.accent, color: '#fff', border: 'none' }
+                    ? { background: colors.accent, color: colors.white, border: 'none' }
                     : {
                         background: colors.surface,
                         border: `1.5px solid ${colors.border}`,
-                        color: '#666666',
+                        color: colors.muted,
                       }),
                 }}
               >
@@ -367,7 +365,7 @@ const LissDay = memo(function LissDay({
       <div className="mt-5">
         <SectionLabel label="How to" className="mb-3" />
         {config.instructions.map((line, i) => (
-          <p key={i} className="text-[14px] text-[#f0ede8] leading-[1.9]">
+          <p key={i} className="text-[14px] text-text leading-[1.9]">
             {line}
           </p>
         ))}
@@ -379,14 +377,14 @@ const LissDay = memo(function LissDay({
             {config.inputs.map((name) => (
               <div
                 key={name}
-                className="flex-1 focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-colors"
+                className="flex-1 focus-within:border-accent p-4 flex flex-col items-center transition-colors"
                 style={{
                   background: colors.surface2,
                   border: `1.5px solid ${colors.border}`,
                   borderRadius: radius.input,
                 }}
               >
-                <label className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#555555] mb-2">
+                <label className="text-[9px] font-bold tracking-[0.1em] uppercase text-disabled mb-2">
                   {name.charAt(0).toUpperCase() + name.slice(1)}
                 </label>
                 <input
@@ -396,11 +394,11 @@ const LissDay = memo(function LissDay({
                   value={inputValues[name] ?? ''}
                   onChange={(e) => handleInputChange(name, e.target.value)}
                   readOnly={isLogged}
-                  className="w-full bg-transparent text-center text-[24px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] placeholder-[#555555] focus:outline-none"
+                  className="w-full bg-transparent text-center text-[24px] font-['Bebas_Neue'] tracking-[1px] text-text placeholder-disabled focus:outline-none"
                   placeholder={config.placeholders[name] ?? ''}
                   aria-label={`${name} value`}
                 />
-                <span className="text-[10px] text-[#444444] mt-1">{config.units[name]}</span>
+                <span className="text-[10px] text-placeholder mt-1">{config.units[name]}</span>
               </div>
             ))}
           </div>

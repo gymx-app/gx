@@ -95,8 +95,8 @@ function CooldownSection({
             >
               <Checkbox checked={done} />
               <span
-                className={`text-[13px] ${done ? 'text-[#666666] line-through opacity-40' : ''}`}
-                style={done ? {} : { color: '#aaaaaa' }}
+                className={`text-[13px] ${done ? 'text-muted line-through opacity-40' : ''}`}
+                style={done ? {} : { color: 'var(--text-secondary)' }}
               >
                 {item}
               </span>

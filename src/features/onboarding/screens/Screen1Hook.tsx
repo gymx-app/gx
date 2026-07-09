@@ -50,7 +50,7 @@ export function Screen1Hook({ onContinue }: { onContinue: () => void }) {
       </div>
 
       <div className="px-6 pb-4">
-        <h1 className="font-['Bebas_Neue'] text-[36px] tracking-[1px] text-[#f0ede8] leading-[1.05]">
+        <h1 className="font-['Bebas_Neue'] text-[36px] tracking-[1px] text-text leading-[1.05]">
           YOUR PROGRAMME.
           <br />
           BUILT BY <span style={{ color: colors.accent }}>AI</span>.
@@ -70,7 +70,7 @@ export function Screen1Hook({ onContinue }: { onContinue: () => void }) {
           style={{
             borderRadius: radius.button,
             background: colors.accent,
-            color: '#fff',
+            color: colors.white,
             border: 'none',
             cursor: 'pointer',
           }}

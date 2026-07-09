@@ -60,7 +60,7 @@ export function Screen2Identity({ wizardState, setField, userId, onSaved }: Prop
 
   return (
     <>
-      <h1 className="font-['Bebas_Neue'] text-[32px] tracking-[2px] text-[#f0ede8] leading-none">
+      <h1 className="font-['Bebas_Neue'] text-[32px] tracking-[2px] text-text leading-none">
         LET'S START WITH YOU
       </h1>
       <p
@@ -77,7 +77,7 @@ export function Screen2Identity({ wizardState, setField, userId, onSaved }: Prop
           value={wizardState.full_name}
           onChange={(e) => setField('full_name', e.target.value)}
           placeholder="Enter your full name"
-          className="h-[52px] w-full px-[14px] text-[#f0ede8] text-[16px] font-['DM_Sans'] placeholder:text-[#444444]"
+          className="h-[52px] w-full px-[14px] text-text text-[16px] font-['DM_Sans'] placeholder:text-placeholder"
           style={INPUT_STYLE}
         />
         {attempted && !wizardState.full_name.trim() ? (
@@ -120,7 +120,7 @@ export function Screen2Identity({ wizardState, setField, userId, onSaved }: Prop
           value={wizardState.date_of_birth ?? ''}
           max={maxDob}
           onChange={(e) => setField('date_of_birth', e.target.value)}
-          className="h-[52px] w-full px-[14px] text-[#f0ede8] text-[16px] font-['DM_Sans']"
+          className="h-[52px] w-full px-[14px] text-text text-[16px] font-['DM_Sans']"
           style={{ ...INPUT_STYLE, colorScheme: 'dark' }}
         />
         {attempted && !wizardState.date_of_birth && <FieldError text="Date of birth is required" />}

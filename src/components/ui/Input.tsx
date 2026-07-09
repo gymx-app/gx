@@ -4,9 +4,9 @@ import { colors, radius } from '../../styles/tokens'
 
 const VARIANT_CLASSES = {
   field:
-    "h-[52px] w-full px-[14px] text-[#f0ede8] text-[16px] font-['DM_Sans'] placeholder:text-[#444444] focus:border-[#ff4520] transition-all duration-150",
+    "h-[52px] w-full px-[14px] text-text text-[16px] font-['DM_Sans'] placeholder:text-placeholder focus:border-accent transition-all duration-150",
   large:
-    "text-[24px] font-black text-[#f0ede8] text-center bg-transparent focus:outline-none w-full placeholder-[#555555] font-['Bebas_Neue'] tracking-[1px]",
+    "text-[24px] font-black text-text text-center bg-transparent focus:outline-none w-full placeholder-disabled font-['Bebas_Neue'] tracking-[1px]",
 } as const
 
 type InputVariant = keyof typeof VARIANT_CLASSES
@@ -81,7 +81,7 @@ function Input({
         style={VARIANT_STYLES[variant]}
         aria-label={label}
       />
-      {unit && <span className="text-[10px] text-[#666666] mt-1 block text-center">{unit}</span>}
+      {unit && <span className="text-[10px] text-muted mt-1 block text-center">{unit}</span>}
     </div>
   )
 }

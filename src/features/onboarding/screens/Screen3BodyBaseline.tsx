@@ -214,7 +214,7 @@ export function Screen3BodyBaseline({
 
   return (
     <>
-      <h1 className="font-['Bebas_Neue'] text-[32px] tracking-[2px] text-[#f0ede8] leading-none">
+      <h1 className="font-['Bebas_Neue'] text-[32px] tracking-[2px] text-text leading-none">
         YOUR BODY BASELINE
       </h1>
       <p
@@ -357,7 +357,7 @@ export function Screen3BodyBaseline({
               className="p-4"
               style={{
                 background: colors.surface2,
-                border: `1px solid #14532d`,
+                border: `1px solid ${colors.success}`,
                 borderRadius: radius.button,
               }}
             >
@@ -395,7 +395,7 @@ export function Screen3BodyBaseline({
                           overrideInbodyField(key, v)
                           setEditingField(null)
                         }}
-                        className="w-24 h-[36px] px-2 text-right text-[13px] font-['DM_Sans'] text-[#f0ede8]"
+                        className="w-24 h-[36px] px-2 text-right text-[13px] font-['DM_Sans'] text-text"
                         style={INPUT_STYLE}
                       />
                     ) : value != null ? (
@@ -421,7 +421,7 @@ export function Screen3BodyBaseline({
                           const v = e.target.value.trim() === '' ? null : parseFloat(e.target.value)
                           overrideInbodyField(key, v)
                         }}
-                        className="w-32 h-[32px] px-2 text-right text-[12px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
+                        className="w-32 h-[32px] px-2 text-right text-[12px] font-['DM_Sans'] text-text placeholder:text-placeholder"
                         style={INPUT_STYLE}
                       />
                     )}
@@ -473,7 +473,7 @@ export function Screen3BodyBaseline({
                   setField('height_cm', e.target.value === '' ? null : parseFloat(e.target.value))
                 }
                 placeholder="170"
-                className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
+                className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-text placeholder:text-placeholder"
                 style={INPUT_STYLE}
               />
             ) : (
@@ -489,7 +489,7 @@ export function Screen3BodyBaseline({
                     )
                   }}
                   placeholder="5 ft"
-                  className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
+                  className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-text placeholder:text-placeholder"
                   style={INPUT_STYLE}
                 />
                 <input
@@ -503,7 +503,7 @@ export function Screen3BodyBaseline({
                     )
                   }}
                   placeholder="7 in"
-                  className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
+                  className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-text placeholder:text-placeholder"
                   style={INPUT_STYLE}
                 />
               </div>
@@ -539,7 +539,7 @@ export function Screen3BodyBaseline({
                 )
               }}
               placeholder={weightUnit === 'kg' ? '75' : '165'}
-              className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
+              className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-text placeholder:text-placeholder"
               style={INPUT_STYLE}
             />
             {wizardState.current_weight_kg != null && !weightValid && (
@@ -563,7 +563,7 @@ export function Screen3BodyBaseline({
                 setField('inbody_field_sources.body_fat_pct', 'manual')
               }}
               placeholder="—"
-              className="w-full h-[48px] px-[14px] text-[15px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
+              className="w-full h-[48px] px-[14px] text-[15px] font-['DM_Sans'] text-text placeholder:text-placeholder"
               style={INPUT_STYLE}
             />
             {wizardState.body_fat_pct != null && !bodyFatValid ? (

@@ -23,7 +23,7 @@ function PhaseBottomSheet({
               {programme?.name ?? 'Programme'}
             </h2>
             {programme?.goal && (
-              <p className="text-[13px] text-[#555555] mt-1 leading-relaxed">{programme.goal}</p>
+              <p className="text-[13px] text-disabled mt-1 leading-relaxed">{programme.goal}</p>
             )}
           </div>
 
@@ -50,18 +50,22 @@ function PhaseBottomSheet({
               return (
                 <div
                   key={p}
-                  className="flex items-start gap-4 py-4 border-b border-[#1a1a1a]"
+                  className="flex items-start gap-4 py-4 border-b border-surface"
                   style={isCompleted ? { opacity: 0.6 } : undefined}
                 >
                   <div
                     className="w-8 h-8 flex items-center justify-center shrink-0"
                     style={{
-                      background: isCompleted ? '#22c55e' : isCurrent ? '#ff4520' : '#1a1a1a',
+                      background: isCompleted
+                        ? 'var(--success)'
+                        : isCurrent
+                          ? 'var(--accent)'
+                          : 'var(--surface)',
                     }}
                   >
                     <span
                       className="text-[13px] font-black"
-                      style={{ color: isFuture ? '#444444' : '#ffffff' }}
+                      style={{ color: isFuture ? 'var(--placeholder)' : 'var(--white)' }}
                     >
                       {p}
                     </span>
@@ -70,25 +74,25 @@ function PhaseBottomSheet({
                   <div className="flex-1 min-w-0">
                     <span
                       className="text-[16px] font-bold block"
-                      style={{ color: isFuture ? '#555555' : '#ffffff' }}
+                      style={{ color: isFuture ? 'var(--disabled)' : 'var(--white)' }}
                     >
                       {name.toUpperCase()}
                     </span>
                     {goal && (
                       <span
                         className="text-[13px] mt-0.5 leading-relaxed block"
-                        style={{ color: isFuture ? '#333333' : '#888888' }}
+                        style={{ color: isFuture ? 'var(--placeholder)' : 'var(--text-secondary)' }}
                       >
                         {goal}
                       </span>
                     )}
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[11px] text-[#555555]">{weekRange}</span>
+                      <span className="text-[11px] text-disabled">{weekRange}</span>
                       {isCurrent && (
-                        <span className="text-[11px] text-[#ff4520] font-semibold">● CURRENT</span>
+                        <span className="text-[11px] text-accent font-semibold">● CURRENT</span>
                       )}
                       {isCompleted && (
-                        <span className="text-[11px] text-[#22c55e] font-semibold">✓ COMPLETE</span>
+                        <span className="text-[11px] text-success font-semibold">✓ COMPLETE</span>
                       )}
                     </div>
                   </div>

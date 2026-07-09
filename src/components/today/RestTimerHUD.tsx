@@ -48,27 +48,27 @@ const RestTimerHUD = memo(function RestTimerHUD({
       }}
     >
       <div style={{ maxWidth: 80 }}>
-        <span className="font-['Bebas_Neue'] text-[10px] tracking-[1px] text-[#666666] block uppercase">
+        <span className="font-['Bebas_Neue'] text-[10px] tracking-[1px] text-muted block uppercase">
           REST
         </span>
-        <span className="text-[11px] text-[#444444] block truncate leading-tight mt-[2px]">
+        <span className="text-[11px] text-placeholder block truncate leading-tight mt-[2px]">
           {exerciseName}
         </span>
       </div>
       <span
-        className={`font-['Bebas_Neue'] text-[28px] tracking-[2px] min-w-[52px] text-center ${isDone ? 'text-[#22c55e]' : 'text-[#f0ede8]'}`}
+        className={`font-['Bebas_Neue'] text-[28px] tracking-[2px] min-w-[52px] text-center ${isDone ? 'text-success' : 'text-text'}`}
       >
         {isDone ? 'GO' : timeStr}
       </span>
-      <div className="w-[80px] h-1 bg-[#2a2a2a] rounded-[4px] overflow-hidden">
+      <div className="w-[80px] h-1 bg-border rounded-[4px] overflow-hidden">
         <div
-          className={`h-full rounded-[4px] transition-[width] duration-[0.9s] linear bg-[#22c55e]`}
+          className={`h-full rounded-[4px] transition-[width] duration-[0.9s] linear bg-success`}
           style={{ width: `${progressPct}%` }}
         />
       </div>
       <button
         onClick={onDismiss}
-        className="text-[11px] font-bold text-[#666666] px-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-[6px] tracking-[0.5px] active:opacity-60"
+        className="text-[11px] font-bold text-muted px-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-[6px] tracking-[0.5px] active:opacity-60"
         aria-label="Skip rest timer"
       >
         SKIP

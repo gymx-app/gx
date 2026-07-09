@@ -86,7 +86,7 @@ export function Screen10ProgrammeProfile({ wizardState, setField, goToStep, onGe
       <OdinStatusPill />
 
       <h1
-        className="font-['Bebas_Neue'] text-[26px] tracking-[2px] text-[#f0ede8] leading-none"
+        className="font-['Bebas_Neue'] text-[26px] tracking-[2px] text-text leading-none"
         style={{ paddingRight: 100 }}
       >
         THIS IS WHO ODIN IS BUILDING FOR
@@ -274,7 +274,7 @@ export function Screen10ProgrammeProfile({ wizardState, setField, goToStep, onGe
           value={wizardState.start_date}
           min={getISTTodayStr()}
           onChange={(e) => setField('start_date', e.target.value)}
-          className="h-[52px] w-full px-[14px] text-[#f0ede8] text-[16px] font-['DM_Sans']"
+          className="h-[52px] w-full px-[14px] text-text text-[16px] font-['DM_Sans']"
           style={{ ...INPUT_STYLE, colorScheme: 'dark' }}
         />
       </div>
@@ -305,7 +305,7 @@ export function Screen10ProgrammeProfile({ wizardState, setField, goToStep, onGe
           className="p-4 mb-4"
           style={{
             background: colors.surface2,
-            border: `1px solid #7f1d1d`,
+            border: `1px solid ${colors.dangerBorder}`,
             borderRadius: radius.button,
           }}
         >

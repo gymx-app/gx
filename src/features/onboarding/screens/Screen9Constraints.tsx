@@ -184,7 +184,7 @@ export function Screen9Constraints({
 
   return (
     <>
-      <h1 className="font-['Bebas_Neue'] text-[32px] tracking-[2px] text-[#f0ede8] leading-none">
+      <h1 className="font-['Bebas_Neue'] text-[32px] tracking-[2px] text-text leading-none">
         LET'S WORK AROUND YOU
       </h1>
       <p
@@ -239,7 +239,7 @@ export function Screen9Constraints({
             </div>
             <p
               className="text-[13px] font-['DM_Sans'] leading-relaxed"
-              style={{ color: '#fde68a' }}
+              style={{ color: colors.warning }}
             >
               Programme generation is not available during pregnancy or postpartum. Your profile
               will be saved and ready when you're cleared to train. Please consult a certified
@@ -276,7 +276,7 @@ export function Screen9Constraints({
               }
             }}
             placeholder="Type an area + press Enter"
-            className="flex-1 h-[48px] px-[14px] text-[14px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
+            className="flex-1 h-[48px] px-[14px] text-[14px] font-['DM_Sans'] text-text placeholder:text-placeholder"
             style={INPUT_STYLE}
           />
           <button
@@ -286,7 +286,7 @@ export function Screen9Constraints({
             style={{
               borderRadius: radius.input,
               background: injuryInput.trim() ? colors.accent : colors.surface3,
-              color: injuryInput.trim() ? '#fff' : colors.muted,
+              color: injuryInput.trim() ? colors.white : colors.muted,
               border: 'none',
               cursor: injuryInput.trim() ? 'pointer' : 'default',
             }}

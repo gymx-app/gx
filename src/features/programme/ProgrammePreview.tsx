@@ -170,7 +170,7 @@ export default function ProgrammePreview({
             borderRadius: radius.button,
             background: colors.accent,
             border: 'none',
-            color: '#fff',
+            color: colors.white,
             cursor: 'pointer',
           }}
         >
@@ -549,7 +549,7 @@ export default function ProgrammePreview({
             borderRadius: radius.button,
             border: 'none',
             background: saving ? colors.surface3 : colors.accent,
-            color: saving ? colors.muted : '#fff',
+            color: saving ? colors.muted : colors.white,
             cursor: saving ? 'default' : 'pointer',
           }}
         >

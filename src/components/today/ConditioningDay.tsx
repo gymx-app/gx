@@ -201,7 +201,7 @@ const ConditioningDay = memo(function ConditioningDay({
       <Text variant="bodyMuted" className="mt-0.5">
         {mapConditioningTypeLabel(item.conditioning_type)}
       </Text>
-      {item.purpose && <p className="text-[12px] text-[#666666] italic mt-1">{item.purpose}</p>}
+      {item.purpose && <p className="text-[12px] text-muted italic mt-1">{item.purpose}</p>}
 
       <div className="grid grid-cols-3 gap-2 mt-4">
         <div
@@ -212,10 +212,8 @@ const ConditioningDay = memo(function ConditioningDay({
             borderRadius: radius.card,
           }}
         >
-          <span className="font-['Bebas_Neue'] text-[22px] text-[#f0ede8]">
-            {item.duration_min}
-          </span>
-          <span className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#666666] mt-1">
+          <span className="font-['Bebas_Neue'] text-[22px] text-text">{item.duration_min}</span>
+          <span className="text-[9px] font-bold tracking-[0.1em] uppercase text-muted mt-1">
             Duration (min)
           </span>
         </div>
@@ -227,10 +225,10 @@ const ConditioningDay = memo(function ConditioningDay({
             borderRadius: radius.card,
           }}
         >
-          <span className="font-['Bebas_Neue'] text-[22px] text-[#ff4520]">
+          <span className="font-['Bebas_Neue'] text-[22px] text-accent">
             {item.target_rpe ?? '—'}
           </span>
-          <span className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#666666] mt-1">
+          <span className="text-[9px] font-bold tracking-[0.1em] uppercase text-muted mt-1">
             Effort level
           </span>
         </div>
@@ -242,17 +240,17 @@ const ConditioningDay = memo(function ConditioningDay({
             borderRadius: radius.card,
           }}
         >
-          <span className="font-['Bebas_Neue'] text-[22px] text-[#f0ede8]">
+          <span className="font-['Bebas_Neue'] text-[22px] text-text">
             {item.heart_rate_zone ?? '—'}
           </span>
-          <span className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#666666] mt-1">
+          <span className="text-[9px] font-bold tracking-[0.1em] uppercase text-muted mt-1">
             Heart rate zone
           </span>
         </div>
       </div>
 
       {item.intervals && (
-        <p className="text-[13px] text-[#aaaaaa] mt-3">
+        <p className="text-[13px] text-text-secondary mt-3">
           {item.intervals.rounds} rounds · {item.intervals.work_duration_s}s on ·{' '}
           {item.intervals.rest_duration_s}s off
         </p>
@@ -268,12 +266,12 @@ const ConditioningDay = memo(function ConditioningDay({
         <div className="mt-3">
           <button
             onClick={() => setShowRationale((v) => !v)}
-            className="text-[11px] font-bold tracking-[0.08em] uppercase text-[#666666]"
+            className="text-[11px] font-bold tracking-[0.08em] uppercase text-muted"
           >
             {showRationale ? '▾' : '▸'} Why this session?
           </button>
           {showRationale && (
-            <p className="text-[13px] text-[#aaaaaa] leading-[1.6] mt-2">{item.rationale}</p>
+            <p className="text-[13px] text-text-secondary leading-[1.6] mt-2">{item.rationale}</p>
           )}
         </div>
       )}
@@ -294,11 +292,11 @@ const ConditioningDay = memo(function ConditioningDay({
                     style={{
                       borderRadius: radius.pill,
                       ...(isActive
-                        ? { background: colors.accent, color: '#fff', border: 'none' }
+                        ? { background: colors.accent, color: colors.white, border: 'none' }
                         : {
                             background: colors.surface,
                             border: `1.5px solid ${colors.border}`,
-                            color: '#666666',
+                            color: colors.muted,
                           }),
                     }}
                   >
@@ -311,14 +309,14 @@ const ConditioningDay = memo(function ConditioningDay({
 
           <div className="flex gap-2 mt-5">
             <div
-              className="flex-1 focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-colors"
+              className="flex-1 focus-within:border-accent p-4 flex flex-col items-center transition-colors"
               style={{
                 background: colors.surface2,
                 border: `1.5px solid ${colors.border}`,
                 borderRadius: radius.input,
               }}
             >
-              <label className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#555555] mb-2">
+              <label className="text-[9px] font-bold tracking-[0.1em] uppercase text-disabled mb-2">
                 Actual Duration
               </label>
               <input
@@ -326,21 +324,21 @@ const ConditioningDay = memo(function ConditioningDay({
                 inputMode="decimal"
                 value={actualDuration}
                 onChange={(e) => setActualDuration(e.target.value)}
-                className="w-full bg-transparent text-center text-[24px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] focus:outline-none"
+                className="w-full bg-transparent text-center text-[24px] font-['Bebas_Neue'] tracking-[1px] text-text focus:outline-none"
                 aria-label="Actual duration in minutes"
               />
-              <span className="text-[10px] text-[#444444] mt-1">min</span>
+              <span className="text-[10px] text-placeholder mt-1">min</span>
             </div>
             {showDistance && (
               <div
-                className="flex-1 focus-within:border-[#ff4520] p-4 flex flex-col items-center transition-colors"
+                className="flex-1 focus-within:border-accent p-4 flex flex-col items-center transition-colors"
                 style={{
                   background: colors.surface2,
                   border: `1.5px solid ${colors.border}`,
                   borderRadius: radius.input,
                 }}
               >
-                <label className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#555555] mb-2">
+                <label className="text-[9px] font-bold tracking-[0.1em] uppercase text-disabled mb-2">
                   Distance
                 </label>
                 <input
@@ -349,19 +347,19 @@ const ConditioningDay = memo(function ConditioningDay({
                   value={distance}
                   onChange={(e) => setDistance(e.target.value)}
                   placeholder="optional"
-                  className="w-full bg-transparent text-center text-[24px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] placeholder-[#555555] focus:outline-none"
+                  className="w-full bg-transparent text-center text-[24px] font-['Bebas_Neue'] tracking-[1px] text-text placeholder-disabled focus:outline-none"
                   aria-label="Distance"
                 />
                 <button
                   onClick={() => setDistanceUnit((u) => (u === 'km' ? 'miles' : 'km'))}
-                  className="text-[10px] text-[#666666] mt-1"
+                  className="text-[10px] text-muted mt-1"
                 >
                   {distanceUnit}
                 </button>
               </div>
             )}
           </div>
-          <p className="text-[11px] text-[#555555] mt-1">Adjust if you did more or less</p>
+          <p className="text-[11px] text-disabled mt-1">Adjust if you did more or less</p>
 
           <div className="mt-5">
             <SectionLabel label="How hard was it?" className="mb-2" />
@@ -377,11 +375,11 @@ const ConditioningDay = memo(function ConditioningDay({
                     style={{
                       borderRadius: radius.buttonSm,
                       ...(isActive
-                        ? { background: colors.accent, color: '#fff', border: 'none' }
+                        ? { background: colors.accent, color: colors.white, border: 'none' }
                         : {
                             background: colors.surface,
                             border: `1.5px solid ${colors.border}`,
-                            color: '#666666',
+                            color: colors.muted,
                           }),
                     }}
                   >
@@ -408,7 +406,7 @@ const ConditioningDay = memo(function ConditioningDay({
                 >
                   −
                 </button>
-                <span className="font-['Bebas_Neue'] text-[24px] text-[#f0ede8] min-w-[2ch] text-center">
+                <span className="font-['Bebas_Neue'] text-[24px] text-text min-w-[2ch] text-center">
                   {roundsCompleted}
                 </span>
                 <button
@@ -423,7 +421,7 @@ const ConditioningDay = memo(function ConditioningDay({
                 >
                   +
                 </button>
-                <span className="text-[12px] text-[#666666]">of {item.intervals.rounds}</span>
+                <span className="text-[12px] text-muted">of {item.intervals.rounds}</span>
               </div>
             </div>
           )}
@@ -435,7 +433,7 @@ const ConditioningDay = memo(function ConditioningDay({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="How did it feel?"
-              className="w-full bg-transparent text-[14px] text-[#f0ede8] placeholder-[#555555] focus:outline-none p-3"
+              className="w-full bg-transparent text-[14px] text-text placeholder-disabled focus:outline-none p-3"
               style={{
                 background: colors.surface2,
                 border: `1.5px solid ${colors.border}`,
@@ -445,7 +443,7 @@ const ConditioningDay = memo(function ConditioningDay({
           </div>
 
           {submitError && (
-            <Text variant="caption" className="mt-2 text-[#ef4444]">
+            <Text variant="caption" className="mt-2 text-error">
               {submitError}
             </Text>
           )}
@@ -464,7 +462,7 @@ const ConditioningDay = memo(function ConditioningDay({
       {isLogged && loggedSummary && (
         <div className="mt-6 flex flex-col items-center py-6 text-center">
           <CheckCircle2 size={36} color={colors.success} />
-          <Text variant="cardTitle" className="mt-2 text-[#22c55e]">
+          <Text variant="cardTitle" className="mt-2 text-success">
             SESSION COMPLETE
           </Text>
           <Text variant="bodyMuted" className="mt-1">

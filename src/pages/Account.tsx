@@ -10,7 +10,7 @@ import { Heart, Bell, ShieldCheck, Link, Trash2, LogOut, ChevronRight } from 'lu
 import type { LucideIcon } from 'lucide-react'
 import { version } from '../../package.json'
 
-const DESTRUCTIVE_COLOR = '#FF3B30'
+const DESTRUCTIVE_COLOR = colors.error
 
 function getInitials(email: string, fullName?: string): string {
   if (fullName) {
@@ -227,7 +227,7 @@ export default function Account() {
                 width: 48,
                 height: 48,
                 background: colors.accent,
-                color: '#ffffff',
+                color: colors.white,
                 flexShrink: 0,
               }}
             >
@@ -286,23 +286,23 @@ export default function Account() {
       <BottomSheet isOpen={confirmSheet === 'signout'} onClose={() => setConfirmSheet(null)}>
         <div className="p-6 text-center">
           <LogOut size={32} color={colors.muted} className="mx-auto mb-3" />
-          <h3 className="font-['Bebas_Neue'] text-[22px] tracking-[2px] text-[#f0ede8] mb-2">
+          <h3 className="font-['Bebas_Neue'] text-[22px] tracking-[2px] text-text mb-2">
             SIGN OUT
           </h3>
-          <p className="text-[13px] text-[#888888] mb-6">
+          <p className="text-[13px] text-text-secondary mb-6">
             Are you sure you want to sign out? Your cached data will be cleared.
           </p>
           <div className="flex gap-3">
             <button
               onClick={() => setConfirmSheet(null)}
-              className="flex-1 py-3 font-['Bebas_Neue'] text-[16px] tracking-[1px] text-[#888888] active:opacity-70"
+              className="flex-1 py-3 font-['Bebas_Neue'] text-[16px] tracking-[1px] text-text-secondary active:opacity-70"
               style={{ background: colors.surface2, borderRadius: 12, border: 'none' }}
             >
               CANCEL
             </button>
             <button
               onClick={() => void handleSignOut()}
-              className="flex-1 py-3 font-['Bebas_Neue'] text-[16px] tracking-[1px] text-[#f0ede8] active:opacity-70"
+              className="flex-1 py-3 font-['Bebas_Neue'] text-[16px] tracking-[1px] text-text active:opacity-70"
               style={{ background: DESTRUCTIVE_COLOR, borderRadius: 12, border: 'none' }}
             >
               SIGN OUT
@@ -315,24 +315,24 @@ export default function Account() {
       <BottomSheet isOpen={confirmSheet === 'delete'} onClose={() => setConfirmSheet(null)}>
         <div className="p-6 text-center">
           <Trash2 size={32} color={colors.error} className="mx-auto mb-3" />
-          <h3 className="font-['Bebas_Neue'] text-[22px] tracking-[2px] text-[#f0ede8] mb-2">
+          <h3 className="font-['Bebas_Neue'] text-[22px] tracking-[2px] text-text mb-2">
             DELETE ALL DATA
           </h3>
-          <p className="text-[13px] text-[#888888] mb-6">
+          <p className="text-[13px] text-text-secondary mb-6">
             This will permanently delete all your workout logs, programme data and body
             measurements. This cannot be undone.
           </p>
           <div className="flex gap-3">
             <button
               onClick={() => setConfirmSheet(null)}
-              className="flex-1 py-3 font-['Bebas_Neue'] text-[16px] tracking-[1px] text-[#888888] active:opacity-70"
+              className="flex-1 py-3 font-['Bebas_Neue'] text-[16px] tracking-[1px] text-text-secondary active:opacity-70"
               style={{ background: colors.surface2, borderRadius: 12, border: 'none' }}
             >
               CANCEL
             </button>
             <button
               onClick={() => void handleDeleteData()}
-              className="flex-1 py-3 font-['Bebas_Neue'] text-[16px] tracking-[1px] text-[#f0ede8] active:opacity-70"
+              className="flex-1 py-3 font-['Bebas_Neue'] text-[16px] tracking-[1px] text-text active:opacity-70"
               style={{ background: colors.error, borderRadius: 12, border: 'none' }}
             >
               DELETE

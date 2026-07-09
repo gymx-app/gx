@@ -40,26 +40,26 @@ function SyncIndicator() {
 
   let dotColor, labelText, shouldPulse
   if (!isOnline) {
-    dotColor = 'bg-[#666666]'
+    dotColor = 'bg-muted'
     labelText = 'offline'
     shouldPulse = false
   } else if (activeWrites > 0) {
-    dotColor = 'bg-[#f59e0b]'
+    dotColor = 'bg-warning'
     labelText = 'saving'
     shouldPulse = true
   } else if (pendingQueue > 0) {
-    dotColor = 'bg-[#eab308]'
+    dotColor = 'bg-warning'
     labelText = `${pendingQueue} pending`
     shouldPulse = true
   } else {
-    dotColor = 'bg-[#22c55e]'
+    dotColor = 'bg-success'
     labelText = 'synced'
     shouldPulse = false
   }
 
   return (
     <div className="flex items-center gap-[6px] min-h-[44px] min-w-[44px] justify-end">
-      <span className="text-[11px] text-[#666666]">{labelText}</span>
+      <span className="text-[11px] text-muted">{labelText}</span>
       <div
         className={`w-2 h-2 rounded-full shrink-0 ${dotColor} ${shouldPulse ? 'animate-pulse' : ''}`}
         style={{ transition: 'background .3s' }}
@@ -81,7 +81,7 @@ const TodayTopBar = memo(function TodayTopBar({ phase, totalWeek }) {
 const RestDay = memo(function RestDay({ workout }) {
   return (
     <div className="pt-2.5">
-      <Text variant="pageTitle" className="text-[#666666]">
+      <Text variant="pageTitle" className="text-muted">
         {workout?.title ?? 'REST DAY'}
       </Text>
       <Text variant="bodyMuted" className="mt-2">
@@ -89,14 +89,16 @@ const RestDay = memo(function RestDay({ workout }) {
       </Text>
       <div
         className="mt-4 p-8 text-center"
-        style={{ background: '#141414', border: '1px solid #2a2a2a', borderRadius: '16px' }}
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: '16px',
+        }}
       >
         <div className="mb-3 flex justify-center">
-          <Moon size={44} strokeWidth={1} color="#2a2a2a" />
+          <Moon size={44} strokeWidth={1} color="var(--border)" />
         </div>
-        <h2 className="font-['Bebas_Neue'] text-[26px] tracking-[2px] text-[#f0ede8] mb-2">
-          REST DAY
-        </h2>
+        <h2 className="font-['Bebas_Neue'] text-[26px] tracking-[2px] text-text mb-2">REST DAY</h2>
         <Text variant="bodyMuted">Nothing to log today.</Text>
         <Text variant="caption" className="mt-1 max-w-[260px] mx-auto leading-[1.6]">
           Rest is part of the programme.
@@ -659,7 +661,7 @@ export default function Today() {
             ref={contentRef}
             className="px-4 mt-6"
             style={{
-              background: 'linear-gradient(180deg, #1a1a1a, #0a0a0a)',
+              background: 'linear-gradient(180deg, var(--surface), var(--bg))',
               transform:
                 swipePhase === 'tracking'
                   ? `translateX(${Math.sign(swipeX) * Math.min(Math.abs(swipeX) * 0.3, 40)}px)`
@@ -737,7 +739,7 @@ export default function Today() {
                 {/* Workout day */}
                 {dayType === 'workout' && (
                   <>
-                    <p className="text-[11px] text-[#666666] uppercase tracking-[2px] pt-2.5 mb-1">
+                    <p className="text-[11px] text-muted uppercase tracking-[2px] pt-2.5 mb-1">
                       {(() => {
                         const d = new Date(dateStr + 'T00:00:00')
                         return `${d.getDate()} ${MONTHS[d.getMonth()]}`
@@ -747,8 +749,11 @@ export default function Today() {
 
                     {isFutureDate && (
                       <span
-                        className="text-[11px] tracking-[0.08em] uppercase text-[#555555] px-3 py-1 inline-flex mb-2"
-                        style={{ background: '#111111', border: '1px solid #1a1a1a' }}
+                        className="text-[11px] tracking-[0.08em] uppercase text-disabled px-3 py-1 inline-flex mb-2"
+                        style={{
+                          background: 'var(--bg-subtle)',
+                          border: '1px solid var(--surface)',
+                        }}
                       >
                         UPCOMING ·{' '}
                         {(() => {
@@ -761,7 +766,7 @@ export default function Today() {
                     <div className="flex items-baseline justify-between">
                       <Text variant="pageTitle">{workout.title}</Text>
                       {workout.dur && (
-                        <span className="font-['Bebas_Neue'] text-[20px] text-[#ff4520] shrink-0 ml-3">
+                        <span className="font-['Bebas_Neue'] text-[20px] text-accent shrink-0 ml-3">
                           {workout.dur}&prime;
                         </span>
                       )}
@@ -775,7 +780,7 @@ export default function Today() {
 
                     <div className="flex items-center gap-2 mt-2">
                       {workout.kcal && (
-                        <span className="text-[11px] text-[#666666]">{workout.kcal} kcal</span>
+                        <span className="text-[11px] text-muted">{workout.kcal} kcal</span>
                       )}
                       {workout.tags?.map((tag) => (
                         <Badge key={tag} label={tag} />
@@ -819,8 +824,8 @@ export default function Today() {
                       <div
                         className="py-6 text-center"
                         style={{
-                          background: '#141414',
-                          border: '1px solid #2a2a2a',
+                          background: 'var(--surface)',
+                          border: '1px solid var(--border)',
                           borderRadius: '16px',
                         }}
                       >
@@ -867,7 +872,7 @@ export default function Today() {
                 {/* No data */}
                 {dayType === 'none' && (
                   <div className="mt-8 pt-2.5">
-                    <Text variant="pageTitle" className="text-[#2a2a2a]">
+                    <Text variant="pageTitle" className="text-border">
                       NO DATA
                     </Text>
                     <Text variant="bodyMuted" className="mt-2">

@@ -132,7 +132,7 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
         />
       )}
 
-      <h2 className="font-['Bebas_Neue'] text-[22px] tracking-[2px] text-[#f0ede8] mt-5 mb-1">
+      <h2 className="font-['Bebas_Neue'] text-[22px] tracking-[2px] text-text mt-5 mb-1">
         GENERATE PROGRAMME
       </h2>
       <p className="text-[13px] font-['DM_Sans'] mb-5" style={{ color: colors.muted }}>
@@ -146,7 +146,7 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
           value={startDate}
           min={getISTTodayStr()}
           onChange={(e) => setStartDate(e.target.value)}
-          className="h-[52px] w-full px-[14px] text-[#f0ede8] text-[16px] font-['DM_Sans']"
+          className="h-[52px] w-full px-[14px] text-text text-[16px] font-['DM_Sans']"
           style={{
             background: colors.surface2,
             border: `1.5px solid ${colors.border}`,
@@ -193,7 +193,11 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
       {errorType === 'VALIDATION_ERROR' && (
         <div
           className="mb-5 p-4 flex items-start gap-3"
-          style={{ background: colors.surface2, border: `1px solid #7f1d1d`, borderRadius: 12 }}
+          style={{
+            background: colors.surface2,
+            border: `1px solid ${colors.dangerBorder}`,
+            borderRadius: 12,
+          }}
         >
           <AlertCircle size={20} color={colors.error} className="flex-shrink-0 mt-0.5" />
           <div className="flex-1">
@@ -231,7 +235,7 @@ export default function GenerateProgrammeView({ onSuccess }: GenerateProgrammeVi
           style={{
             borderRadius: radius.button,
             background: profile && health ? colors.accent : colors.surface3,
-            color: profile && health ? '#fff' : colors.muted,
+            color: profile && health ? colors.white : colors.muted,
             border: 'none',
             cursor: profile && health ? 'pointer' : 'default',
           }}

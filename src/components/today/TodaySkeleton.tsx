@@ -4,7 +4,7 @@ import { Skeleton } from '../ui'
 const TodaySkeleton = memo(function TodaySkeleton() {
   return (
     <>
-      <div className="bg-[#141414] border-b border-[#2a2a2a] flex-shrink-0 safe-area-top">
+      <div className="bg-surface border-b border-border flex-shrink-0 safe-area-top">
         <div className="h-[52px] px-4 flex items-center justify-between">
           <Skeleton width={32} height={24} />
           <Skeleton width={160} height={12} />
@@ -16,8 +16,8 @@ const TodaySkeleton = memo(function TodaySkeleton() {
         <div
           className="mx-4 mt-3"
           style={{
-            background: '#141414',
-            border: '1px solid #2a2a2a',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
             borderRadius: '14px',
             padding: '14px',
           }}
@@ -32,7 +32,7 @@ const TodaySkeleton = memo(function TodaySkeleton() {
               <div
                 key={i}
                 className="flex-1 h-[32px] rounded-[8px]"
-                style={{ background: '#1c1c1c', border: '1px solid #2a2a2a' }}
+                style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
               />
             ))}
           </div>
@@ -46,7 +46,11 @@ const TodaySkeleton = memo(function TodaySkeleton() {
             <div
               key={i}
               className="rounded-[12px]"
-              style={{ minHeight: 72, background: '#141414', border: '1.5px solid #2a2a2a' }}
+              style={{
+                minHeight: 72,
+                background: 'var(--surface)',
+                border: '1.5px solid var(--border)',
+              }}
             />
           ))}
         </div>
@@ -66,8 +70,8 @@ const TodaySkeleton = memo(function TodaySkeleton() {
             <div
               key={i}
               style={{
-                background: '#141414',
-                border: '1px solid #2a2a2a',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
                 borderRadius: '16px',
                 padding: '11px 16px',
               }}
@@ -103,8 +107,8 @@ export const DayContentSkeleton = memo(function DayContentSkeleton() {
           <div
             key={i}
             style={{
-              background: '#141414',
-              border: '1px solid #2a2a2a',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
               borderRadius: '16px',
               padding: '11px 16px',
             }}

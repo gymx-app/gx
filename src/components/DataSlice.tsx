@@ -34,7 +34,7 @@ export default class DataSlice extends Component<Props, State> {
               margin: '8px 0',
             }}
           >
-            <p style={{ fontSize: '13px', color: '#ef4444', fontWeight: 600 }}>
+            <p style={{ fontSize: '13px', color: 'var(--error)', fontWeight: 600 }}>
               Failed to load {this.props.name}
             </p>
             <button
@@ -42,7 +42,7 @@ export default class DataSlice extends Component<Props, State> {
               style={{
                 marginTop: '8px',
                 fontSize: '12px',
-                color: '#f0ede8',
+                color: 'var(--text)',
                 background: 'rgba(255,255,255,0.08)',
                 border: 'none',
                 borderRadius: '8px',

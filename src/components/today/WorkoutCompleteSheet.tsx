@@ -45,9 +45,9 @@ const WorkoutCompleteSheet = memo(function WorkoutCompleteSheet({
           borderRadius: radius.card,
         }}
       >
-        <div className="w-16 h-16 rounded-full bg-[#22c55e]/10 flex items-center justify-center mx-auto mb-4">
+        <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
           <svg
-            className="w-8 h-8 text-[#22c55e]"
+            className="w-8 h-8 text-success"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -64,7 +64,7 @@ const WorkoutCompleteSheet = memo(function WorkoutCompleteSheet({
           {workout?.title}
         </Text>
 
-        <div className="flex justify-center gap-6 mt-5 pt-4 border-t border-[#2a2a2a]">
+        <div className="flex justify-center gap-6 mt-5 pt-4 border-t border-border">
           <StatBlock value={totalSetsLogged} label="Sets" />
           <StatBlock
             value={totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume}

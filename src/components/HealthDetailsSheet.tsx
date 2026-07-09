@@ -111,7 +111,7 @@ function UnitToggle<T extends string>({
             className="px-3 py-1 text-[11px] font-['DM_Sans'] font-semibold tracking-[0.5px] transition-colors"
             style={{
               background: active ? colors.accent : 'transparent',
-              color: active ? '#fff' : colors.muted,
+              color: active ? colors.white : colors.muted,
               border: 'none',
               cursor: 'pointer',
             }}
@@ -152,7 +152,7 @@ function InjuryEditor({
       <select
         value={bodyPart}
         onChange={(e) => setBodyPart(e.target.value as InjuryBodyPart | '')}
-        className="w-full h-[44px] px-3 text-[14px] font-['DM_Sans'] text-[#f0ede8] mb-3"
+        className="w-full h-[44px] px-3 text-[14px] font-['DM_Sans'] text-text mb-3"
         style={{
           background: colors.surface,
           border: `1.5px solid ${colors.border}`,
@@ -204,7 +204,7 @@ function InjuryEditor({
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         placeholder="e.g. pain on deep flexion"
-        className="w-full h-[44px] px-3 text-[14px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444] mb-3"
+        className="w-full h-[44px] px-3 text-[14px] font-['DM_Sans'] text-text placeholder:text-placeholder mb-3"
         style={{
           background: colors.surface,
           border: `1.5px solid ${colors.border}`,
@@ -237,7 +237,7 @@ function InjuryEditor({
             background: bodyPart ? colors.accent : colors.surface3,
             border: 'none',
             borderRadius: 10,
-            color: bodyPart ? '#fff' : colors.muted,
+            color: bodyPart ? colors.white : colors.muted,
             cursor: bodyPart ? 'pointer' : 'default',
           }}
         >
@@ -257,7 +257,7 @@ function SeverityBadge({ status }: { status: Injury['status'] }) {
       className="text-[10px] font-bold tracking-[0.5px] uppercase px-2 py-[2px] rounded-[4px]"
       style={{
         background: isAvoid ? colors.error : colors.warning,
-        color: isAvoid ? '#fff' : '#1a1a1a',
+        color: isAvoid ? colors.white : colors.surface,
       }}
     >
       {isAvoid ? 'AVOID' : 'MODIFY'}
@@ -546,7 +546,7 @@ export default function HealthDetailsSheet({ open, onClose }: HealthDetailsSheet
           >
             Cancel
           </button>
-          <h3 className="font-['Bebas_Neue'] text-[20px] tracking-[2px] text-[#f0ede8]">
+          <h3 className="font-['Bebas_Neue'] text-[20px] tracking-[2px] text-text">
             HEALTH DETAILS
           </h3>
           <button
@@ -604,7 +604,7 @@ export default function HealthDetailsSheet({ open, onClose }: HealthDetailsSheet
                     value={form.height_cm}
                     onChange={(e) => updateHeightCm(e.target.value)}
                     placeholder="170"
-                    className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
+                    className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-text placeholder:text-placeholder"
                     style={inputStyle}
                     aria-label="Height in centimeters"
                   />
@@ -616,7 +616,7 @@ export default function HealthDetailsSheet({ open, onClose }: HealthDetailsSheet
                       value={heightFt}
                       onChange={(e) => updateHeightFtIn(e.target.value, heightIn)}
                       placeholder="5"
-                      className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
+                      className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-text placeholder:text-placeholder"
                       style={inputStyle}
                       aria-label="Height feet"
                     />
@@ -626,7 +626,7 @@ export default function HealthDetailsSheet({ open, onClose }: HealthDetailsSheet
                       value={heightIn}
                       onChange={(e) => updateHeightFtIn(heightFt, e.target.value)}
                       placeholder="7"
-                      className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
+                      className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-text placeholder:text-placeholder"
                       style={inputStyle}
                       aria-label="Height inches"
                     />
@@ -654,7 +654,7 @@ export default function HealthDetailsSheet({ open, onClose }: HealthDetailsSheet
                   value={displayWeight}
                   onChange={(e) => updateWeightDisplay(e.target.value)}
                   placeholder={weightUnit === 'kg' ? '75' : '165'}
-                  className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
+                  className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-text placeholder:text-placeholder"
                   style={inputStyle}
                   aria-label={`Weight in ${weightUnit}`}
                 />
@@ -747,7 +747,7 @@ export default function HealthDetailsSheet({ open, onClose }: HealthDetailsSheet
                     setForm((prev) => ({ ...prev, primary_activity: e.target.value }))
                   }
                   placeholder="e.g. Cricket, Running, nothing outside gym"
-                  className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
+                  className="w-full h-[52px] px-[14px] text-[16px] font-['DM_Sans'] text-text placeholder:text-placeholder"
                   style={inputStyle}
                   aria-label="Primary sport or activity"
                 />
@@ -857,7 +857,7 @@ export default function HealthDetailsSheet({ open, onClose }: HealthDetailsSheet
                   placeholder="Any conditions your trainer should know about e.g. hypertension, diabetes, heart condition, asthma"
                   maxLength={500}
                   rows={3}
-                  className="w-full px-[14px] py-3 text-[16px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444] resize-none"
+                  className="w-full px-[14px] py-3 text-[16px] font-['DM_Sans'] text-text placeholder:text-placeholder resize-none"
                   style={inputStyle}
                   aria-label="Medical conditions"
                 />

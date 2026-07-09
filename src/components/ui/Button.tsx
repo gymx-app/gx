@@ -8,31 +8,30 @@ type VariantStyles = { base: CSSProperties; disabled: CSSProperties; loading: CS
 
 const VARIANTS: Record<ButtonVariant, VariantClasses> = {
   primary: {
-    base: 'w-full py-4 text-[#f0ede8] font-bold text-[18px] tracking-[2px] active:opacity-80 transition-opacity duration-150',
-    disabled: 'w-full py-4 text-[#666666] pointer-events-none',
-    loading:
-      'w-full py-4 text-[#f0ede8]/70 font-bold text-[18px] animate-pulse pointer-events-none',
+    base: 'w-full py-4 text-text font-bold text-[18px] tracking-[2px] active:opacity-80 transition-opacity duration-150',
+    disabled: 'w-full py-4 text-muted pointer-events-none',
+    loading: 'w-full py-4 text-text/70 font-bold text-[18px] animate-pulse pointer-events-none',
   },
   secondary: {
-    base: 'w-full py-[13px] border border-[#2a2a2a] text-[#666666] text-[13px] font-bold tracking-[0.5px] active:bg-[#242424] transition-all duration-150',
-    disabled: 'w-full py-[13px] border border-[#1c1c1c] text-[#444444] pointer-events-none',
+    base: 'w-full py-[13px] border border-border text-muted text-[13px] font-bold tracking-[0.5px] active:bg-surface-3 transition-all duration-150',
+    disabled: 'w-full py-[13px] border border-surface-2 text-placeholder pointer-events-none',
     loading:
-      'w-full py-[13px] border border-[#2a2a2a] text-[#555555] animate-pulse pointer-events-none',
+      'w-full py-[13px] border border-border text-disabled animate-pulse pointer-events-none',
   },
   ghost: {
-    base: 'text-[#ff4520] text-[12px] font-bold active:opacity-60',
-    disabled: 'text-[#444444] text-[12px] font-bold pointer-events-none',
-    loading: 'text-[#ff4520]/50 text-[12px] font-bold animate-pulse pointer-events-none',
+    base: 'text-accent text-[12px] font-bold active:opacity-60',
+    disabled: 'text-placeholder text-[12px] font-bold pointer-events-none',
+    loading: 'text-accent/50 text-[12px] font-bold animate-pulse pointer-events-none',
   },
   success: {
-    base: 'w-full py-4 text-[#f0ede8] font-bold active:opacity-80 transition-opacity duration-150',
-    disabled: 'w-full py-4 bg-[#22c55e]/40 text-[#f0ede8]/50 pointer-events-none',
-    loading: 'w-full py-4 bg-[#22c55e]/70 text-[#f0ede8]/70 animate-pulse pointer-events-none',
+    base: 'w-full py-4 text-text font-bold active:opacity-80 transition-opacity duration-150',
+    disabled: 'w-full py-4 bg-success/40 text-text/50 pointer-events-none',
+    loading: 'w-full py-4 bg-success/70 text-text/70 animate-pulse pointer-events-none',
   },
   danger: {
-    base: 'w-full py-4 text-[#f0ede8] font-bold active:opacity-80 transition-opacity duration-150',
-    disabled: 'w-full py-4 text-[#f0ede8]/50 pointer-events-none',
-    loading: 'w-full py-4 text-[#f0ede8]/70 animate-pulse pointer-events-none',
+    base: 'w-full py-4 text-text font-bold active:opacity-80 transition-opacity duration-150',
+    disabled: 'w-full py-4 text-text/50 pointer-events-none',
+    loading: 'w-full py-4 text-text/70 animate-pulse pointer-events-none',
   },
 }
 

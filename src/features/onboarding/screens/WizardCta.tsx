@@ -31,7 +31,7 @@ export function WizardCta({ label, disabled, saving, onTap, variant = 'default' 
         style={{
           borderRadius: radius.button,
           background: active ? bg : colors.surface3,
-          color: active ? '#fff' : colors.muted,
+          color: active ? colors.white : colors.muted,
           border: 'none',
           cursor: active ? 'pointer' : 'default',
           opacity: saving ? 0.7 : 1,

@@ -160,7 +160,7 @@ export function UnitToggle<T extends string>({
             className="px-3 py-1 text-[11px] font-['DM_Sans'] font-semibold tracking-[0.5px] transition-colors"
             style={{
               background: active ? colors.accent : 'transparent',
-              color: active ? '#fff' : colors.muted,
+              color: active ? colors.white : colors.muted,
               border: 'none',
               cursor: 'pointer',
             }}
@@ -200,7 +200,7 @@ export function Stepper({
       >
         −
       </button>
-      <span className="font-['Bebas_Neue'] text-[48px] text-[#f0ede8] leading-none w-16 text-center">
+      <span className="font-['Bebas_Neue'] text-[48px] text-text leading-none w-16 text-center">
         {value}
       </span>
       <button
@@ -251,7 +251,7 @@ export function SearchableSelect({
         onChange={(e) => setQuery(e.target.value)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder="Search country…"
-        className="h-[52px] w-full px-[14px] text-[#f0ede8] text-[16px] font-['DM_Sans'] placeholder:text-[#444444]"
+        className="h-[52px] w-full px-[14px] text-text text-[16px] font-['DM_Sans'] placeholder:text-placeholder"
         style={INPUT_STYLE}
       />
       {open && (
@@ -331,7 +331,7 @@ export function NumberField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="—"
-        className="h-[48px] w-full px-[14px] text-[#f0ede8] text-[15px] font-['DM_Sans'] placeholder:text-[#444444]"
+        className="h-[48px] w-full px-[14px] text-text text-[15px] font-['DM_Sans'] placeholder:text-placeholder"
         style={INPUT_STYLE}
       />
       {outOfRange ? (

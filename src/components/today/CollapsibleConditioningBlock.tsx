@@ -36,7 +36,7 @@ const CollapsibleConditioningBlock = memo(function CollapsibleConditioningBlock(
           className="w-full flex items-center justify-between px-4 py-3 text-left"
           aria-expanded={expanded}
         >
-          <span className="text-[12px] font-bold tracking-[0.06em] uppercase text-[#f0ede8]">
+          <span className="text-[12px] font-bold tracking-[0.06em] uppercase text-text">
             Conditioning Finisher · {item.activity_name} · {item.duration_min} min
           </span>
           <ChevronDown

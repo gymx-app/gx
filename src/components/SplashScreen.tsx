@@ -49,16 +49,16 @@ export default function SplashScreen() {
         <div
           className="w-9 h-9 rounded-full"
           style={{
-            border: '2.5px solid #1c1c1c',
-            borderTopColor: '#ff4520',
+            border: '2.5px solid var(--border-subtle)',
+            borderTopColor: 'var(--accent)',
             animation: 'gx-spin 700ms linear infinite',
           }}
         />
 
-        <p className="text-[11px] tracking-[3px] uppercase text-[#666666] font-medium text-center font-['DM_Sans']">
+        <p className="text-[11px] tracking-[3px] uppercase text-muted font-medium text-center font-['DM_Sans']">
           {statusText}
         </p>
-        <p className="text-[9px] text-[#333333] font-mono mt-1">v{BUILD_VERSION}</p>
+        <p className="text-[9px] text-placeholder font-mono mt-1">v{BUILD_VERSION}</p>
       </div>
 
       <style>{`

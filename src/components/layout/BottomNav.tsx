@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { label: 'Account', path: '/account', icon: CircleUser },
 ] as const
 
-const ACTIVE_COLOR = '#FF4520'
+const ACTIVE_COLOR = 'var(--accent)'
 const INACTIVE_COLOR = 'var(--muted)'
 
 function BottomNav() {
@@ -19,8 +19,8 @@ function BottomNav() {
   return (
     <nav
       style={{
-        background: '#141414',
-        borderTop: '1px solid #2a2a2a',
+        background: 'var(--surface)',
+        borderTop: '1px solid var(--border)',
         flexShrink: 0,
         zIndex: 10,
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',

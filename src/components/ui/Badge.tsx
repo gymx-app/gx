@@ -1,6 +1,6 @@
 import { memo, type ReactNode } from 'react'
 
-const BADGE_CLS = 'border border-[#2a2a2a] text-[#555555] bg-transparent'
+const BADGE_CLS = 'border border-border text-disabled bg-transparent'
 
 interface BadgeProps {
   label: string

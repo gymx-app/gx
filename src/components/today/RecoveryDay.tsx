@@ -102,7 +102,7 @@ const RecoveryDay = memo(function RecoveryDay({
       <Text variant="bodyMuted" className="mt-0.5">
         {item.activity_name} · {item.duration_min} min
       </Text>
-      {item.purpose && <p className="text-[12px] text-[#666666] italic mt-1">{item.purpose}</p>}
+      {item.purpose && <p className="text-[12px] text-muted italic mt-1">{item.purpose}</p>}
       {item.intensity_description && (
         <Text variant="bodyMuted" className="mt-2">
           {item.intensity_description}
@@ -128,7 +128,7 @@ const RecoveryDay = memo(function RecoveryDay({
       </div>
 
       {submitError && (
-        <Text variant="caption" className="mt-2 text-[#ef4444]">
+        <Text variant="caption" className="mt-2 text-error">
           {submitError}
         </Text>
       )}
@@ -142,7 +142,7 @@ const RecoveryDay = memo(function RecoveryDay({
       {isLogged && (
         <div className="mt-6 flex flex-col items-center py-6 text-center">
           <CheckCircle2 size={36} color={colors.success} />
-          <Text variant="cardTitle" className="mt-2 text-[#22c55e]">
+          <Text variant="cardTitle" className="mt-2 text-success">
             RECOVERY COMPLETE
           </Text>
         </div>

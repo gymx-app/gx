@@ -99,7 +99,7 @@ export function Screen4Capability({ wizardState, setField, userId, onSaved }: Pr
 
   return (
     <>
-      <h1 className="font-['Bebas_Neue'] text-[32px] tracking-[2px] text-[#f0ede8] leading-none">
+      <h1 className="font-['Bebas_Neue'] text-[32px] tracking-[2px] text-text leading-none">
         HOW HARD CAN WE PUSH YOU?
       </h1>
       <p
@@ -171,7 +171,7 @@ export function Screen4Capability({ wizardState, setField, userId, onSaved }: Pr
         <select
           value={wizardState.occupation ?? ''}
           onChange={(e) => setField('occupation', e.target.value || null)}
-          className="h-[52px] w-full px-[14px] text-[#f0ede8] text-[15px] font-['DM_Sans']"
+          className="h-[52px] w-full px-[14px] text-text text-[15px] font-['DM_Sans']"
           style={INPUT_STYLE}
         >
           <option value="">Select (optional)</option>

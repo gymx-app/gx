@@ -35,7 +35,7 @@ class SectionBoundary extends Component<
   render() {
     if (this.state.failed) {
       return (
-        <p className="text-[13px] text-[#ef4444]">
+        <p className="text-[13px] text-error">
           Component failed to render — check {this.props.name}.tsx
         </p>
       )

@@ -49,7 +49,7 @@ export default function LoadingBar() {
   return (
     <div className="fixed top-0 left-0 right-0 z-[100] pointer-events-none">
       <div
-        className="h-[2px] bg-[#ff4520]"
+        className="h-[2px] bg-accent"
         style={{
           width: `${width}%`,
           opacity: done ? 0 : 1,

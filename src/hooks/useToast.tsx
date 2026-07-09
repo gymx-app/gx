@@ -26,10 +26,10 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null)
 
 const TOAST_COLORS: Record<ToastType, string> = {
-  success: 'border-[#22c55e]/30 text-[#22c55e]',
-  error: 'border-[#ef4444]/30 text-[#ef4444]',
-  warning: 'border-[#f59e0b]/30 text-[#f59e0b]',
-  info: 'border-[#2a2a2a] text-[#888888]',
+  success: 'border-success/30 text-success',
+  error: 'border-error/30 text-error',
+  warning: 'border-warning/30 text-warning',
+  info: 'border-border text-text-secondary',
 }
 
 const MAX_TOASTS = 3
@@ -99,7 +99,7 @@ const ToastStack = memo(function ToastStack({
         <div
           key={toast.id}
           onClick={() => onDismiss(toast.id)}
-          className={`bg-[#1a1a1a] border px-4 py-2 animate-slide-up pointer-events-auto ${
+          className={`bg-surface border px-4 py-2 animate-slide-up pointer-events-auto ${
             TOAST_COLORS[toast.type] || TOAST_COLORS.info
           }`}
         >

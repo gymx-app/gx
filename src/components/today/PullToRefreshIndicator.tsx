@@ -25,8 +25,8 @@ const PullToRefreshIndicator = memo(function PullToRefreshIndicator({
         top: 52,
         width: 120,
         height: 32,
-        background: '#141414',
-        border: '1px solid #2a2a2a',
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
         borderRadius: 20,
         opacity: visible ? 1 : 0,
         transform: `translateX(-50%) translateY(${yOffset}px)`,
@@ -38,14 +38,14 @@ const PullToRefreshIndicator = memo(function PullToRefreshIndicator({
       }}
     >
       <svg width={18} height={18} viewBox="0 0 18 18">
-        <circle cx={9} cy={9} r={6} fill="none" stroke="#2a2a2a" strokeWidth={1.5} />
+        <circle cx={9} cy={9} r={6} fill="none" stroke="var(--border)" strokeWidth={1.5} />
         {ptrState === 'refreshing' ? (
           <circle
             cx={9}
             cy={9}
             r={6}
             fill="none"
-            stroke="#ff4520"
+            stroke="var(--accent)"
             strokeWidth={1.5}
             strokeDasharray="28 9.7"
             strokeLinecap="round"
@@ -57,7 +57,7 @@ const PullToRefreshIndicator = memo(function PullToRefreshIndicator({
             cy={9}
             r={6}
             fill="none"
-            stroke="#ff4520"
+            stroke="var(--accent)"
             strokeWidth={1.5}
             strokeDasharray={`${pullProgress * 37.7} 37.7`}
             strokeLinecap="round"
@@ -67,10 +67,10 @@ const PullToRefreshIndicator = memo(function PullToRefreshIndicator({
       </svg>
       <span
         className="text-[11px] font-medium tracking-[0.5px] uppercase"
-        style={{ color: '#666666', fontFamily: "'DM Sans', sans-serif" }}
+        style={{ color: 'var(--muted)', fontFamily: "'DM Sans', sans-serif" }}
       >
         {ptrState === 'done' ? (
-          <Check size={12} strokeWidth={2.5} color="#22c55e" />
+          <Check size={12} strokeWidth={2.5} color="var(--success)" />
         ) : ptrState === 'refreshing' ? (
           'SYNCING'
         ) : ptrState === 'triggered' ? (

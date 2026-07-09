@@ -22,13 +22,13 @@ export default function PWAUpdatePrompt() {
     <>
       {needRefresh && (
         <div
-          className="fixed bottom-0 left-0 right-0 z-[90] bg-[#111111] border-t border-[#2a2a2a] px-4 py-3 flex justify-between items-center"
+          className="fixed bottom-0 left-0 right-0 z-[90] bg-bg-subtle border-t border-border px-4 py-3 flex justify-between items-center"
           style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
         >
           <span className="text-[13px] text-white">Update available</span>
           <button
             onClick={() => void updateServiceWorker(true)}
-            className="text-[13px] font-semibold text-[#ff4520] active:opacity-70"
+            className="text-[13px] font-semibold text-accent active:opacity-70"
           >
             UPDATE NOW
           </button>
@@ -36,8 +36,8 @@ export default function PWAUpdatePrompt() {
       )}
 
       {showOffline && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] bg-[#1a1a1a] border border-[#2a2a2a] px-4 py-2">
-          <span className="text-[13px] text-[#888888]">App ready for offline use</span>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] bg-surface border border-border px-4 py-2">
+          <span className="text-[13px] text-text-secondary">App ready for offline use</span>
         </div>
       )}
     </>

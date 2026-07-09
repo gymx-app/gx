@@ -46,16 +46,16 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
     if (this.state.hasError) {
       const isChunk = this.isChunkError()
       return (
-        <div className="fixed inset-0 bg-[#0a0a0a] flex flex-col items-center justify-center px-6">
+        <div className="fixed inset-0 bg-bg flex flex-col items-center justify-center px-6">
           <h1 className="text-[22px] font-black text-white tracking-tight">Something broke</h1>
-          <p className="text-[13px] text-[#555555] mt-2 text-center">
+          <p className="text-[13px] text-disabled mt-2 text-center">
             {isChunk
               ? 'A new version is available. Tap to reload.'
               : (this.state.error?.message ?? 'An unexpected error occurred.')}
           </p>
           <button
             onClick={this.handleReset}
-            className="mt-6 w-full max-w-[280px] h-[52px] bg-[#ff4520] text-white font-semibold text-[15px] active:scale-[0.98] transition-transform"
+            className="mt-6 w-full max-w-[280px] h-[52px] bg-accent text-white font-semibold text-[15px] active:scale-[0.98] transition-transform"
           >
             {isChunk ? 'Reload' : 'Try Again'}
           </button>

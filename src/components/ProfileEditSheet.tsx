@@ -171,9 +171,7 @@ export default function ProfileEditSheet({
           >
             Cancel
           </button>
-          <h3 className="font-['Bebas_Neue'] text-[20px] tracking-[2px] text-[#f0ede8]">
-            EDIT PROFILE
-          </h3>
+          <h3 className="font-['Bebas_Neue'] text-[20px] tracking-[2px] text-text">EDIT PROFILE</h3>
           <button
             onClick={() => void handleSave()}
             disabled={!canSave || saving}
@@ -240,7 +238,7 @@ export default function ProfileEditSheet({
                   value={form.date_of_birth}
                   max={getMaxDOB()}
                   onChange={(e) => updateField('date_of_birth', e.target.value)}
-                  className="h-[52px] w-full px-[14px] text-[#f0ede8] text-[16px] font-['DM_Sans'] transition-all duration-150"
+                  className="h-[52px] w-full px-[14px] text-text text-[16px] font-['DM_Sans'] transition-all duration-150"
                   style={{
                     background: colors.surface2,
                     border: `1.5px solid ${colors.border}`,
@@ -295,7 +293,7 @@ export default function ProfileEditSheet({
                     opacity: 0.6,
                   }}
                 >
-                  <span className="text-[16px] font-['DM_Sans'] text-[#f0ede8] truncate">
+                  <span className="text-[16px] font-['DM_Sans'] text-text truncate">
                     {user?.email}
                   </span>
                   <Lock size={16} color={colors.muted} style={{ flexShrink: 0 }} />

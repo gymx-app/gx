@@ -50,9 +50,9 @@ interface PhaseCardProps {
 function getPillStyle(status: DayStatus, isSelected: boolean) {
   if (isSelected) {
     return {
-      container: { background: 'var(--surface2)', border: '2px solid #333333' },
-      dayColor: '#999999',
-      numColor: '#ffffff',
+      container: { background: 'var(--surface-2)', border: '2px solid var(--placeholder)' },
+      dayColor: 'var(--text-secondary)',
+      numColor: 'var(--white)',
     }
   }
 
@@ -65,7 +65,7 @@ function getPillStyle(status: DayStatus, isSelected: boolean) {
       }
     case 'today':
       return {
-        container: { background: 'var(--accent-tint)', border: '2px solid var(--accent)' },
+        container: { background: 'var(--accent-muted)', border: '2px solid var(--accent)' },
         dayColor: 'var(--accent)',
         numColor: 'var(--text)',
       }
@@ -147,7 +147,11 @@ const PhaseCard = memo(function PhaseCard({
       {/* ── Phase card ── */}
       <div
         className="mx-4 mt-3 px-4 py-3"
-        style={{ background: '#141414', border: '1px solid #202020', borderRadius: '16px' }}
+        style={{
+          background: colors.surface,
+          border: `1px solid ${colors.border}`,
+          borderRadius: '16px',
+        }}
       >
         {/* Line 1 */}
         <div className="flex justify-between items-center">
@@ -157,7 +161,7 @@ const PhaseCard = memo(function PhaseCard({
           </span>
           <button
             onClick={() => setSheetOpen(true)}
-            className="text-[13px] font-semibold text-[#ff4520] min-w-[44px] min-h-[44px] flex items-center justify-end"
+            className="text-[13px] font-semibold text-accent min-w-[44px] min-h-[44px] flex items-center justify-end"
           >
             {phase}/{totalPhases} ›
           </button>
@@ -165,18 +169,18 @@ const PhaseCard = memo(function PhaseCard({
 
         {/* Line 2 */}
         <div className="flex items-center gap-3 mt-2">
-          <div className="flex-1 h-[3px] bg-[#1a1a1a]">
+          <div className="flex-1 h-[3px] bg-surface">
             <div
-              className="h-full bg-[#ff4520] transition-all duration-300"
+              className="h-full bg-accent transition-all duration-300"
               style={{ width: `${qualifyPct}%` }}
             />
           </div>
           {qualified ? (
-            <span className="text-[11px] text-[#22c55e] font-semibold whitespace-nowrap">
+            <span className="text-[11px] text-success font-semibold whitespace-nowrap">
               ✓ WEEK QUALIFIES
             </span>
           ) : (
-            <span className="text-[11px] text-[#555555] whitespace-nowrap">
+            <span className="text-[11px] text-disabled whitespace-nowrap">
               {currentWeekActiveDays}/{minActiveDays} days
             </span>
           )}
@@ -184,7 +188,7 @@ const PhaseCard = memo(function PhaseCard({
       </div>
 
       {/* ── Week strip — sticky below TopBar ── */}
-      <div className="px-4 mt-3 sticky top-0 z-40 bg-[#0a0a0a] pb-2 pt-2 border-b border-[#222222]">
+      <div className="px-4 mt-3 sticky top-0 z-40 bg-bg pb-2 pt-2 border-b border-border-subtle">
         <div className="flex items-center gap-[8px] pb-[10px] px-1">
           <button
             onClick={onPrevWeek}
@@ -192,23 +196,27 @@ const PhaseCard = memo(function PhaseCard({
             aria-label="Previous week"
             className={`w-[40px] h-[40px] flex items-center justify-center rounded-[12px] shrink-0 transition-all duration-150 ${
               canGoBack
-                ? 'bg-[#1c1c1c] active:bg-[#242424] active:scale-[0.93]'
+                ? 'bg-surface-2 active:bg-surface-3 active:scale-[0.93]'
                 : 'pointer-events-none cursor-default'
             }`}
             style={{ border: `1.5px solid ${colors.border}`, minWidth: 44, minHeight: 44 }}
           >
-            <ChevronLeft size={18} strokeWidth={1.5} color={canGoBack ? '#f0ede8' : '#1a1a1a'} />
+            <ChevronLeft
+              size={18}
+              strokeWidth={1.5}
+              color={canGoBack ? colors.text : colors.surface}
+            />
           </button>
 
           <div className="flex-1 text-center">
-            <span className="font-['Bebas_Neue'] text-[18px] tracking-[1px] text-[#f0ede8]">
+            <span className="font-['Bebas_Neue'] text-[18px] tracking-[1px] text-text">
               Wk {totalWeek} · {weekDays[0]!.date.getDate()} {MONTHS[weekDays[0]!.date.getMonth()]}{' '}
               – {weekDays[6]!.date.getDate()} {MONTHS[weekDays[6]!.date.getMonth()]}
             </span>
             {showTodayPill && (
               <button
                 onClick={onGoToToday}
-                className="ml-2 text-[11px] font-semibold text-[#ff4520] active:opacity-70"
+                className="ml-2 text-[11px] font-semibold text-accent active:opacity-70"
               >
                 Today
               </button>
@@ -218,10 +226,10 @@ const PhaseCard = memo(function PhaseCard({
           <button
             onClick={onNextWeek}
             aria-label="Next week"
-            className="w-[40px] h-[40px] flex items-center justify-center rounded-[12px] shrink-0 transition-all duration-150 bg-[#1c1c1c] active:bg-[#242424] active:scale-[0.93]"
+            className="w-[40px] h-[40px] flex items-center justify-center rounded-[12px] shrink-0 transition-all duration-150 bg-surface-2 active:bg-surface-3 active:scale-[0.93]"
             style={{ border: `1.5px solid ${colors.border}`, minWidth: 44, minHeight: 44 }}
           >
-            <ChevronRight size={18} strokeWidth={1.5} color="#f0ede8" />
+            <ChevronRight size={18} strokeWidth={1.5} color={colors.text} />
           </button>
         </div>
 
@@ -313,7 +321,7 @@ const PhaseCard = memo(function PhaseCard({
                   ) : status === 'skipped' ? (
                     <div
                       className="w-[5px] h-[5px] rounded-full"
-                      style={{ background: 'var(--danger)' }}
+                      style={{ background: 'var(--error)' }}
                     />
                   ) : (
                     <div className="w-[5px] h-[5px]" />

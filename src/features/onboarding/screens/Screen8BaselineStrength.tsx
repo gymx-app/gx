@@ -77,7 +77,7 @@ export function Screen8BaselineStrength({ wizardState, setField, onContinue }: P
 
   return (
     <>
-      <h1 className="font-['Bebas_Neue'] text-[32px] tracking-[2px] text-[#f0ede8] leading-none">
+      <h1 className="font-['Bebas_Neue'] text-[32px] tracking-[2px] text-text leading-none">
         YOUR STARTING WEIGHTS
       </h1>
       <p
@@ -132,7 +132,7 @@ export function Screen8BaselineStrength({ wizardState, setField, onContinue }: P
                             reps[lift.value] ?? String(existing?.reps ?? '')
                           )
                         }}
-                        className="w-20 h-[40px] px-2 text-[13px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
+                        className="w-20 h-[40px] px-2 text-[13px] font-['DM_Sans'] text-text placeholder:text-placeholder"
                         style={INPUT_STYLE}
                       />
                       <span
@@ -156,7 +156,7 @@ export function Screen8BaselineStrength({ wizardState, setField, onContinue }: P
                             e.target.value
                           )
                         }}
-                        className="w-16 h-[40px] px-2 text-[13px] font-['DM_Sans'] text-[#f0ede8] placeholder:text-[#444444]"
+                        className="w-16 h-[40px] px-2 text-[13px] font-['DM_Sans'] text-text placeholder:text-placeholder"
                         style={INPUT_STYLE}
                       />
                     </div>

@@ -56,7 +56,7 @@ export function Screen5Commitment({ wizardState, setField, onContinue }: Props) 
 
   return (
     <>
-      <h1 className="font-['Bebas_Neue'] text-[32px] tracking-[2px] text-[#f0ede8] leading-none">
+      <h1 className="font-['Bebas_Neue'] text-[32px] tracking-[2px] text-text leading-none">
         WHAT ARE YOU TRAINING FOR?
       </h1>
       <p

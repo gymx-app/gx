@@ -33,7 +33,7 @@ function Toggle({ value, onChange, disabled = false }: ToggleProps) {
           value ? 'translate-x-[18px]' : 'translate-x-[3px]'
         }`}
         style={{
-          background: '#fff',
+          background: colors.white,
           boxShadow: '0 1px 3px rgba(0,0,0,0.35)',
         }}
       />
