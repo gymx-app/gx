@@ -44,11 +44,11 @@ interface SetLogSheetProps {
 }
 
 const RPE_COLORS: Record<number, string> = {
-  10: '#ff4520',
-  9: '#ff8c00',
-  8: '#fbbf24',
-  7: '#22c55e',
-  6: '#06b6d4',
+  10: colors.accent,
+  9: colors.orange,
+  8: colors.yellow,
+  7: colors.success,
+  6: colors.cyan,
 }
 
 const SetLogSheet = memo(function SetLogSheet({
@@ -179,18 +179,18 @@ const SetLogSheet = memo(function SetLogSheet({
         />
 
         <div className="flex justify-between items-baseline mb-5">
-          <h3 className="font-['Bebas_Neue'] text-[22px] tracking-[1.5px] text-[#f0ede8]">
+          <h3 className="font-['Bebas_Neue'] text-[22px] tracking-[1.5px] text-text">
             {exercise.n}
           </h3>
-          <span className="text-[12px] text-[#666666]">
+          <span className="text-[12px] text-muted">
             Set {setNumber} of {totalSets}
           </span>
         </div>
 
         {previousBest && (
-          <div className="mb-4 text-[11px] text-[#666666] text-center min-h-[16px]">
+          <div className="mb-4 text-[11px] text-muted text-center min-h-[16px]">
             Previous:{' '}
-            <span className="text-[#22c55e] font-semibold">
+            <span className="text-success font-semibold">
               {previousBest.weight_kg}kg × {previousBest.reps}
             </span>
           </div>
@@ -209,7 +209,7 @@ const SetLogSheet = memo(function SetLogSheet({
                 setWeight(e.target.value)
                 setUsedBaselineWeight(false)
               }}
-              className="w-full px-[14px] py-3 text-[18px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] text-center transition-all duration-150"
+              className="w-full px-[14px] py-3 text-[18px] font-['Bebas_Neue'] tracking-[1px] text-text text-center transition-all duration-150"
               style={{
                 background: colors.surface2,
                 border: `1.5px solid ${colors.border}`,
@@ -219,7 +219,7 @@ const SetLogSheet = memo(function SetLogSheet({
               aria-label="Weight in kilograms"
             />
             {usedBaselineWeight && (
-              <p className="text-xs text-zinc-500 mt-1">
+              <p className="text-xs text-muted mt-1">
                 Prescribed starting weight from your baseline
               </p>
             )}
@@ -231,7 +231,7 @@ const SetLogSheet = memo(function SetLogSheet({
               inputMode="numeric"
               value={reps}
               onChange={(e) => setReps(e.target.value)}
-              className="w-full px-[14px] py-3 text-[18px] font-['Bebas_Neue'] tracking-[1px] text-[#f0ede8] text-center transition-all duration-150"
+              className="w-full px-[14px] py-3 text-[18px] font-['Bebas_Neue'] tracking-[1px] text-text text-center transition-all duration-150"
               style={{
                 background: colors.surface2,
                 border: `1.5px solid ${colors.border}`,
@@ -292,7 +292,7 @@ const SetLogSheet = memo(function SetLogSheet({
             borderRadius: radius.buttonSm,
             border: `1.5px solid ${isMM ? colors.accent : colors.border}`,
             background: isMM ? 'rgba(255,69,32,0.1)' : 'transparent',
-            color: isMM ? colors.accent : '#666666',
+            color: isMM ? colors.accent : colors.muted,
           }}
         >
           {isMM ? 'MIND-MUSCLE SET ✓' : 'MIND-MUSCLE SET'}

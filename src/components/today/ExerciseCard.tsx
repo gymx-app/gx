@@ -14,12 +14,12 @@ const EQ_NAMES: Record<string, string> = {
 }
 
 const EQ_COLORS: Record<string, { bg: string; color: string }> = {
-  BB: { bg: 'rgba(251,191,36,0.12)', color: '#fbbf24' },
-  DB: { bg: 'rgba(6,182,212,0.12)', color: '#06b6d4' },
-  KB: { bg: 'rgba(168,85,247,0.12)', color: '#c084fc' },
-  BW: { bg: 'rgba(156,163,175,0.12)', color: '#9ca3af' },
-  CABLE: { bg: 'rgba(59,130,246,0.12)', color: '#60a5fa' },
-  MACH: { bg: 'rgba(100,116,139,0.12)', color: '#94a3b8' },
+  BB: { bg: colors.yellowMuted, color: colors.yellow },
+  DB: { bg: colors.cyanMuted, color: colors.cyan },
+  KB: { bg: colors.purpleMuted, color: colors.purple },
+  BW: { bg: colors.mutedBorder, color: colors.textSecondary },
+  CABLE: { bg: colors.blueMuted, color: colors.blue },
+  MACH: { bg: colors.mutedBorder, color: colors.textSecondary },
 }
 
 interface Exercise {
@@ -91,7 +91,7 @@ const ExerciseCard = memo(function ExerciseCard({
   const allDone = completedCount >= totalSets
 
   const cardStyle = {
-    background: allDone ? '#0f0f0f' : colors.surface,
+    background: allDone ? colors.bg : colors.surface,
     border: allDone ? `1px solid rgba(34, 197, 94, 0.15)` : `1px solid ${colors.border}`,
     borderRadius: radius.card,
   }
@@ -99,23 +99,23 @@ const ExerciseCard = memo(function ExerciseCard({
   return (
     <div className="overflow-hidden transition-all duration-150" style={cardStyle}>
       <button
-        className="w-full flex items-center gap-[10px] px-4 py-[11px] text-left active:bg-[#1c1c1c] transition-colors duration-150"
+        className="w-full flex items-center gap-[10px] px-4 py-[11px] text-left active:bg-surface-2 transition-colors duration-150"
         onClick={onToggleExpand}
         aria-expanded={isExpanded}
         aria-label={`${exercise.n} — ${completedCount} of ${totalSets} sets done`}
       >
-        <div className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center shrink-0 bg-[#1c1c1c]">
-          <Dumbbell size={16} strokeWidth={1.5} color="#666666" />
+        <div className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center shrink-0 bg-surface-2">
+          <Dumbbell size={16} strokeWidth={1.5} color={colors.muted} />
         </div>
 
         <div className="flex-1 min-w-0">
           <h3
-            className={`text-[14px] font-semibold truncate ${allDone ? 'text-[#666666] line-through' : 'text-[#f0ede8]'}`}
+            className={`text-[14px] font-semibold truncate ${allDone ? 'text-muted line-through' : 'text-text'}`}
           >
             {exercise.n}
           </h3>
           <div className="flex items-center gap-1 mt-[1px]">
-            <span className="text-[12px] text-[#666666]">
+            <span className="text-[12px] text-muted">
               {exercise.s} · {exercise.r} rest
             </span>
           </div>
@@ -123,7 +123,7 @@ const ExerciseCard = memo(function ExerciseCard({
             <div className="flex gap-[3px] mt-1 flex-wrap">
               {exercise.eq.map((eq) => {
                 const eqColor = EQ_COLORS[eq?.toUpperCase()] ??
-                  EQ_COLORS.BW ?? { bg: 'transparent', color: '#9ca3af' }
+                  EQ_COLORS.BW ?? { bg: 'transparent', color: colors.textSecondary }
                 return (
                   <span
                     key={eq}
@@ -143,13 +143,13 @@ const ExerciseCard = memo(function ExerciseCard({
           strokeWidth={1.5}
           className={`shrink-0 transition-transform duration-200
             ${isExpanded ? 'rotate-180' : ''}
-            ${allDone ? 'text-[#666666] opacity-40' : 'text-[#666666]'}`}
-          color={allDone ? '#666666' : '#555555'}
+            ${allDone ? 'text-muted opacity-40' : 'text-muted'}`}
+          color={allDone ? colors.muted : colors.disabled}
         />
       </button>
 
       {isExpanded && (
-        <div className="border-t border-[#2a2a2a]">
+        <div className="border-t border-border">
           {exercise.note && (
             <div className="px-4 pt-3 pb-2">
               <p className="text-[13px] leading-[1.6]" style={{ color: colors.textSecondary }}>
@@ -161,7 +161,7 @@ const ExerciseCard = memo(function ExerciseCard({
           {exercise.warn && (
             <div className="px-4 py-2">
               <p
-                className="text-[12px] text-[#ff8c00] leading-relaxed bg-[rgba(255,140,0,0.08)] border-l-[3px] border-l-[#ff8c00] px-[10px] py-[6px] rounded-r-[6px]"
+                className="text-[12px] text-orange leading-relaxed bg-[rgba(255,140,0,0.08)] border-l-[3px] border-l-orange px-[10px] py-[6px] rounded-r-[6px]"
                 role="alert"
               >
                 {exercise.warn}
@@ -170,11 +170,11 @@ const ExerciseCard = memo(function ExerciseCard({
           )}
 
           {previousBest && (
-            <div className="px-4 py-2 border-t border-[#2a2a2a] flex items-center gap-1.5">
-              <span className="text-[10px] text-[#666666] uppercase tracking-[1px] font-bold">
+            <div className="px-4 py-2 border-t border-border flex items-center gap-1.5">
+              <span className="text-[10px] text-muted uppercase tracking-[1px] font-bold">
                 Prev best
               </span>
-              <span className="text-[12px] text-[#666666] font-semibold">
+              <span className="text-[12px] text-muted font-semibold">
                 {previousBest.weight_kg}kg × {previousBest.reps}
               </span>
             </div>
@@ -192,8 +192,8 @@ const ExerciseCard = memo(function ExerciseCard({
                     key={setNum}
                     className={`text-center py-[9px] px-1 rounded-[10px] transition-all duration-150 active:scale-[0.93] ${
                       isDone
-                        ? 'bg-[rgba(34,197,94,0.15)] border border-[#22c55e]'
-                        : 'bg-[#242424] border border-[#2a2a2a]'
+                        ? 'bg-[rgba(34,197,94,0.15)] border border-success'
+                        : 'bg-surface-3 border border-border'
                     }`}
                     onClick={() =>
                       onTapSet(
@@ -214,20 +214,20 @@ const ExerciseCard = memo(function ExerciseCard({
                   >
                     <span
                       className={`font-['Bebas_Neue'] text-[15px] leading-none ${
-                        isDone ? 'text-[#22c55e]' : 'text-[#666666]'
+                        isDone ? 'text-success' : 'text-muted'
                       }`}
                     >
                       S{setNum}
                     </span>
                     <span
                       className={`block text-[10px] mt-[1px] ${
-                        isDone ? 'text-[#22c55e] opacity-70' : 'text-[#666666]'
+                        isDone ? 'text-success opacity-70' : 'text-muted'
                       }`}
                     >
                       {isDone ? `${log.weight_kg}×${log.reps}` : `${targetReps}`}
                     </span>
                     {isDone && log.rpe && (
-                      <span className="block text-[8px] text-[#06b6d4] font-bold tracking-[0.3px] mt-[1px] leading-none opacity-90">
+                      <span className="block text-[8px] text-cyan font-bold tracking-[0.3px] mt-[1px] leading-none opacity-90">
                         RPE {log.rpe}
                       </span>
                     )}

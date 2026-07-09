@@ -592,7 +592,7 @@ export default function Program() {
                                         ei > 0 ? `1px solid ${colors.borderSubtle}` : 'none',
                                       background:
                                         ex.id === justSwappedId
-                                          ? `${colors.accent}22`
+                                          ? `color-mix(in srgb, ${colors.accent} 13%, transparent)`
                                           : 'transparent',
                                       transition: 'background-color 1.4s ease-out',
                                     }}
@@ -698,7 +698,10 @@ export default function Program() {
             <div className="flex items-center gap-3 mb-4">
               <div
                 className="w-10 h-10 flex items-center justify-center flex-shrink-0"
-                style={{ background: `${colors.blue}18`, borderRadius: 12 }}
+                style={{
+                  background: `color-mix(in srgb, ${colors.blue} 9%, transparent)`,
+                  borderRadius: 12,
+                }}
               >
                 <RefreshCw size={18} color={colors.blue} />
               </div>
@@ -727,8 +730,8 @@ export default function Program() {
               <p
                 className="text-[12px] font-['DM_Sans'] mb-4 px-3 py-2"
                 style={{
-                  background: `${colors.error}18`,
-                  border: `1px solid ${colors.error}44`,
+                  background: `color-mix(in srgb, ${colors.error} 9%, transparent)`,
+                  border: `1px solid color-mix(in srgb, ${colors.error} 27%, transparent)`,
                   borderRadius: 8,
                   color: colors.error,
                 }}
@@ -760,7 +763,7 @@ export default function Program() {
                   background: colors.blue,
                   border: 'none',
                   borderRadius: radius.button,
-                  color: '#fff',
+                  color: colors.white,
                   cursor: actionLoading ? 'default' : 'pointer',
                   opacity: actionLoading ? 0.6 : 1,
                 }}
@@ -783,7 +786,10 @@ export default function Program() {
             <div className="flex items-center gap-3 mb-4">
               <div
                 className="w-10 h-10 flex items-center justify-center flex-shrink-0"
-                style={{ background: `${colors.orange}18`, borderRadius: 12 }}
+                style={{
+                  background: `color-mix(in srgb, ${colors.orange} 9%, transparent)`,
+                  borderRadius: 12,
+                }}
               >
                 <RefreshCw size={18} color={colors.orange} />
               </div>
@@ -812,8 +818,8 @@ export default function Program() {
               <p
                 className="text-[12px] font-['DM_Sans'] mb-4 px-3 py-2"
                 style={{
-                  background: `${colors.error}18`,
-                  border: `1px solid ${colors.error}44`,
+                  background: `color-mix(in srgb, ${colors.error} 9%, transparent)`,
+                  border: `1px solid color-mix(in srgb, ${colors.error} 27%, transparent)`,
                   borderRadius: 8,
                   color: colors.error,
                 }}
@@ -845,7 +851,7 @@ export default function Program() {
                   background: colors.orange,
                   border: 'none',
                   borderRadius: radius.button,
-                  color: '#fff',
+                  color: colors.white,
                   cursor: actionLoading ? 'default' : 'pointer',
                   opacity: actionLoading ? 0.6 : 1,
                 }}
@@ -868,7 +874,10 @@ export default function Program() {
             <div className="flex items-start gap-3 mb-4">
               <div
                 className="w-10 h-10 flex items-center justify-center flex-shrink-0 mt-0.5"
-                style={{ background: `${colors.error}18`, borderRadius: 12 }}
+                style={{
+                  background: `color-mix(in srgb, ${colors.error} 9%, transparent)`,
+                  borderRadius: 12,
+                }}
               >
                 <AlertTriangle size={18} color={colors.error} />
               </div>
@@ -897,8 +906,8 @@ export default function Program() {
               <p
                 className="text-[12px] font-['DM_Sans'] mb-4 px-3 py-2"
                 style={{
-                  background: `${colors.error}18`,
-                  border: `1px solid ${colors.error}44`,
+                  background: `color-mix(in srgb, ${colors.error} 9%, transparent)`,
+                  border: `1px solid color-mix(in srgb, ${colors.error} 27%, transparent)`,
                   borderRadius: 8,
                   color: colors.error,
                 }}
@@ -930,7 +939,7 @@ export default function Program() {
                   background: colors.error,
                   border: 'none',
                   borderRadius: radius.button,
-                  color: '#fff',
+                  color: colors.white,
                   cursor: actionLoading ? 'default' : 'pointer',
                   opacity: actionLoading ? 0.6 : 1,
                 }}

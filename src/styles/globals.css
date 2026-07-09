@@ -1,21 +1,135 @@
 @import 'tailwindcss';
 
+/*
+ * Single source of truth for the color scheme. Every other color
+ * reference in the app (Tailwind utilities via @theme below, and the
+ * `colors` object in styles/tokens.ts) resolves back to these vars.
+ * Do not hardcode hex values anywhere else — add a var here instead.
+ */
 :root {
-  --bg: #0a0a0a;
-  --surface: #141414;
-  --surface2: #1c1c1c;
-  --surface3: #242424;
-  --border: #2a2a2a;
-  --text: #f0ede8;
-  --muted: #666666;
-  --dim: #666666;
-  --accent: #ff4520;
-  --accent-tint: rgba(255, 69, 32, 0.08);
-  --success: #22c55e;
-  --danger: #ef4444;
-  --muted-border: rgba(255, 255, 255, 0.06);
+  /* ---------- Foundations (Nordic Midnight) ---------- */
+  --abyss: #0c0e0f; /* Below the night, deepest background */
+  --charcoal: #111314; /* Deep Nordic night */
+  --granite: #171a1c; /* Main surface */
+  --slate: #1d2124; /* Cards */
+  --basalt: #23282c; /* Elevated surfaces */
+  --rock-border: #2b3034;
+  --mist-border: rgba(255, 255, 255, 0.05);
+
+  --ice: #f5f5f3; /* Primary text */
+  --fog: #aeb5b6; /* Secondary text */
+  --stone: #7b8388; /* Muted text */
+  --ash: #60666b; /* Placeholder */
+  --graphite: #4c5155; /* Disabled */
+
+  --fjord: #92a7b5; /* Primary accent */
+  --fjord-soft: rgba(146, 167, 181, 0.12);
+
+  --moss: #5e8e73; /* Success */
+  --moss-soft: rgba(94, 142, 115, 0.14);
+  --amber: #c8a96a; /* Warning */
+  --amber-soft: rgba(200, 169, 106, 0.14);
+  --oxide: #b96a6a; /* Danger */
+  --oxide-soft: rgba(185, 106, 106, 0.14);
+  --oxide-border: #4a2e2e;
+
+  /* Ragnar Semantic / Badge Palette — muted Scandinavian tones */
+  --fjord-blue: #7e97a8; /* Recovery / Information */
+  --fjord-blue-muted: rgba(126, 151, 168, 0.14);
+  --nordic-lavender: #8d879d; /* AI / Premium / Intelligence */
+  --nordic-lavender-muted: rgba(141, 135, 157, 0.14);
+  --aged-brass: #bca36e; /* Achievement / PR */
+  --aged-brass-muted: rgba(188, 163, 110, 0.14);
+  --burnished-copper: #b8845e; /* Energy / Intensity */
+  --burnished-copper-muted: rgba(184, 132, 94, 0.14);
+  --arctic-teal: #7fa5a6; /* Mobility / Freshness */
+  --arctic-teal-muted: rgba(127, 165, 166, 0.14);
+
+  /* ---------- Base theme (semantic layer consumed by @theme + tokens.ts) ---------- */
+  --bg: var(--charcoal);
+  --bg-subtle: var(--abyss);
+
+  --surface: var(--granite);
+  --surface-2: var(--slate);
+  --surface-3: var(--basalt);
+
+  --border: var(--rock-border);
+  --border-subtle: var(--slate);
+  --border-focus: var(--accent);
+  --muted-border: var(--mist-border);
+
+  --text: var(--ice);
+  --text-secondary: var(--fog);
+  --muted: var(--stone);
+  --placeholder: var(--ash);
+  --disabled: var(--graphite);
+  --white: #ffffff;
+
+  --accent: var(--fjord);
+  --accent-muted: var(--fjord-soft);
+
+  --success: var(--moss);
+  --success-muted: var(--moss-soft);
+  --warning: var(--amber);
+  --warning-muted: var(--amber-soft);
+  --error: var(--oxide);
+  --error-muted: var(--oxide-soft);
+  --danger-border: var(--oxide-border);
+
+  --blue: var(--fjord-blue);
+  --blue-muted: var(--fjord-blue-muted);
+  --purple: var(--nordic-lavender);
+  --purple-muted: var(--nordic-lavender-muted);
+  --yellow: var(--aged-brass);
+  --yellow-muted: var(--aged-brass-muted);
+  --orange: var(--burnished-copper);
+  --orange-muted: var(--burnished-copper-muted);
+  --cyan: var(--arctic-teal);
+  --cyan-muted: var(--arctic-teal-muted);
 
   --nav-height: 60px;
+}
+
+/* Wire the vars above into Tailwind's utility generator, e.g. bg-bg, text-text, border-border */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-focus: var(--border-focus);
+  --color-muted-border: var(--muted-border);
+
+  --color-text: var(--text);
+  --color-text-secondary: var(--text-secondary);
+  --color-muted: var(--muted);
+  --color-placeholder: var(--placeholder);
+  --color-disabled: var(--disabled);
+
+  --color-accent: var(--accent);
+  --color-accent-muted: var(--accent-muted);
+
+  --color-success: var(--success);
+  --color-success-muted: var(--success-muted);
+  --color-warning: var(--warning);
+  --color-warning-muted: var(--warning-muted);
+  --color-error: var(--error);
+  --color-error-muted: var(--error-muted);
+  --color-danger-border: var(--danger-border);
+
+  --color-orange: var(--orange);
+  --color-orange-muted: var(--orange-muted);
+  --color-blue: var(--blue);
+  --color-blue-muted: var(--blue-muted);
+  --color-purple: var(--purple);
+  --color-purple-muted: var(--purple-muted);
+  --color-yellow: var(--yellow);
+  --color-yellow-muted: var(--yellow-muted);
+  --color-cyan: var(--cyan);
+  --color-cyan-muted: var(--cyan-muted);
 }
 
 * {

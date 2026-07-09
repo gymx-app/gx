@@ -31,7 +31,7 @@ function Checkbox({ checked, onToggle, size = 20 }: CheckboxProps) {
     borderRadius: radius.checkbox,
     ...(checked
       ? { background: colors.success, borderColor: colors.success }
-      : { border: `1.5px solid ${colors.dim}` }),
+      : { border: `1.5px solid ${colors.muted}` }),
   }
 
   const cls = `shrink-0 flex items-center justify-center transition-all duration-150 ${

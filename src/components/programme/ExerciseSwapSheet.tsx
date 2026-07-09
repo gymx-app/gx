@@ -47,7 +47,7 @@ function OptionSkeletonRow() {
     <div
       className="w-full flex items-center gap-3 px-4 py-3"
       style={{
-        // Skeleton bars render at colors.surface2 (#1c1c1c) — this container
+        // Skeleton bars render at colors.surface2 — this container
         // must NOT use that same color or the pulse animation has nothing to
         // contrast against and looks static/frozen instead of loading.
         background: colors.surface,
@@ -202,8 +202,8 @@ export function ExerciseSwapSheet({ target, onClose, onConfirmed }: ExerciseSwap
           <div
             className="flex items-start gap-2 mb-4 px-3 py-2.5"
             style={{
-              background: `${colors.blue}14`,
-              border: `1px solid ${colors.blue}40`,
+              background: `color-mix(in srgb, ${colors.blue} 8%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${colors.blue} 25%, transparent)`,
               borderRadius: 8,
             }}
           >
@@ -229,8 +229,8 @@ export function ExerciseSwapSheet({ target, onClose, onConfirmed }: ExerciseSwap
           <div
             className="flex items-start gap-2 mb-4 px-3 py-2.5"
             style={{
-              background: `${colors.error}18`,
-              border: `1px solid ${colors.error}44`,
+              background: `color-mix(in srgb, ${colors.error} 9%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${colors.error} 27%, transparent)`,
               borderRadius: 8,
             }}
           >

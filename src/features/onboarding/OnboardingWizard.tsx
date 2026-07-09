@@ -175,7 +175,7 @@ export default function OnboardingWizard() {
       {step > 1 && (
         <div className="px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)] pb-3 flex-shrink-0">
           <div className="flex items-center justify-between mb-3">
-            <span className="font-['Bebas_Neue'] text-[18px] tracking-[2px] text-[#f0ede8]">
+            <span className="font-['Bebas_Neue'] text-[18px] tracking-[2px] text-text">
               G<span style={{ color: colors.accent }}>x</span>
             </span>
             <span className="text-[12px] font-['DM_Sans']" style={{ color: colors.muted }}>
@@ -194,7 +194,7 @@ export default function OnboardingWizard() {
             </span>
           </button>
 
-          <div className="h-[2px] rounded-full overflow-hidden bg-zinc-800">
+          <div className="h-[2px] rounded-full overflow-hidden bg-surface-3">
             <div
               className="h-full bg-white transition-all duration-300"
               style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}

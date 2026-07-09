@@ -1,36 +1,50 @@
+/**
+ * Thin reference layer over the CSS custom properties in styles/globals.css,
+ * which is the single source of truth for the color scheme. Never add a
+ * literal hex here (or anywhere else) — add a var to globals.css instead.
+ */
 export const colors = {
-  bg: '#0a0a0a',
-  bgSubtle: '#0e0e0e',
+  bg: 'var(--bg)',
+  bgSubtle: 'var(--bg-subtle)',
 
-  surface: '#141414',
-  surface2: '#1c1c1c',
-  surface3: '#242424',
+  surface: 'var(--surface)',
+  surface2: 'var(--surface-2)',
+  surface3: 'var(--surface-3)',
 
-  border: '#2a2a2a',
-  borderSubtle: '#1c1c1c',
-  borderFocus: '#ff4520',
+  border: 'var(--border)',
+  borderSubtle: 'var(--border-subtle)',
+  borderFocus: 'var(--border-focus)',
+  mutedBorder: 'var(--muted-border)',
 
-  text: '#f0ede8',
-  textSecondary: '#aaaaaa',
-  muted: '#666666',
-  dim: '#666666',
-  placeholder: '#444444',
-  disabled: '#555555',
+  text: 'var(--text)',
+  textSecondary: 'var(--text-secondary)',
+  muted: 'var(--muted)',
+  placeholder: 'var(--placeholder)',
+  disabled: 'var(--disabled)',
+  white: 'var(--white)',
 
-  accent: '#ff4520',
-  accentMuted: 'rgba(255,69,32,0.12)',
+  accent: 'var(--accent)',
+  accentMuted: 'var(--accent-muted)',
 
-  success: '#22c55e',
-  successMuted: 'rgba(34,197,94,0.15)',
-  warning: '#f59e0b',
-  error: '#ef4444',
+  success: 'var(--success)',
+  successMuted: 'var(--success-muted)',
+  warning: 'var(--warning)',
+  warningMuted: 'var(--warning-muted)',
+  error: 'var(--error)',
+  errorMuted: 'var(--error-muted)',
+  dangerBorder: 'var(--danger-border)',
 
-  orange: '#ff8c00',
-  blue: '#3b82f6',
-  purple: '#a855f7',
-  yellow: '#fbbf24',
-  cyan: '#06b6d4',
-  gold: '#f59e0b',
+  orange: 'var(--orange)',
+  orangeMuted: 'var(--orange-muted)',
+  blue: 'var(--blue)',
+  blueMuted: 'var(--blue-muted)',
+  purple: 'var(--purple)',
+  purpleMuted: 'var(--purple-muted)',
+  yellow: 'var(--yellow)',
+  yellowMuted: 'var(--yellow-muted)',
+  cyan: 'var(--cyan)',
+  cyanMuted: 'var(--cyan-muted)',
+  gold: 'var(--warning)',
 } as const
 
 export type ColorToken = keyof typeof colors
@@ -75,15 +89,15 @@ export const radius = {
 export type RadiusToken = keyof typeof radius
 
 export const typography = {
-  pageTitle: "font-['Bebas_Neue'] text-[32px] tracking-[2px] text-[#f0ede8] leading-none",
-  sectionTitle: "font-['Bebas_Neue'] text-[24px] tracking-[2px] text-[#f0ede8] leading-none",
-  cardTitle: "font-['Bebas_Neue'] text-[20px] tracking-[1.5px] text-[#f0ede8]",
-  body: 'text-[14px] text-[#f0ede8] leading-relaxed',
-  bodyMuted: 'text-[13px] text-[#666666] leading-relaxed',
-  caption: 'text-[12px] text-[#666666]',
-  label: 'text-[10px] font-bold tracking-[2px] uppercase text-[#666666]',
-  micro: 'text-[9px] font-bold tracking-[0.5px] uppercase text-[#666666]',
-  stat: "font-['Bebas_Neue'] text-[26px] text-[#f0ede8] leading-none",
+  pageTitle: "font-['Bebas_Neue'] text-[32px] tracking-[2px] text-text leading-none",
+  sectionTitle: "font-['Bebas_Neue'] text-[24px] tracking-[2px] text-text leading-none",
+  cardTitle: "font-['Bebas_Neue'] text-[20px] tracking-[1.5px] text-text",
+  body: 'text-[14px] text-text leading-relaxed',
+  bodyMuted: 'text-[13px] text-muted leading-relaxed',
+  caption: 'text-[12px] text-muted',
+  label: 'text-[10px] font-bold tracking-[2px] uppercase text-muted',
+  micro: 'text-[9px] font-bold tracking-[0.5px] uppercase text-muted',
+  stat: "font-['Bebas_Neue'] text-[26px] text-text leading-none",
 } as const
 
 export type TypographyVariant = keyof typeof typography

@@ -164,9 +164,9 @@ export default function BaselineSessionCard({
 
   if (completed) {
     return (
-      <div className="bg-zinc-900 border border-orange-900 rounded-2xl p-4 mb-4">
-        <span className="font-['Bebas_Neue'] text-2xl text-orange-500">BASELINE COMPLETE</span>
-        <p className="font-['DM_Sans'] text-sm text-zinc-400 mt-2">
+      <div className="bg-surface-2 border border-warning rounded-2xl p-4 mb-4">
+        <span className="font-['Bebas_Neue'] text-2xl text-warning">BASELINE COMPLETE</span>
+        <p className="font-['DM_Sans'] text-sm text-muted mt-2">
           Your starting weights have been logged. From tomorrow, Odin will prescribe specific
           weights for every session.
         </p>
@@ -175,7 +175,7 @@ export default function BaselineSessionCard({
             const set3 = loggedSets[ex.exercise_name]?.[3]
             const calc = baselineSummary.find((s) => s.exercise_name === ex.exercise_name)
             return (
-              <p key={ei} className="text-sm text-zinc-300 py-1">
+              <p key={ei} className="text-sm text-text-secondary py-1">
                 {calc ? (
                   <>
                     {ex.exercise_name} — Est. 1RM: {calc.estimated_1rm_kg}kg → Day 1 weight:{' '}
@@ -193,7 +193,7 @@ export default function BaselineSessionCard({
         </div>
         <button
           onClick={onComplete}
-          className="w-full mt-4 py-3 min-h-[44px] font-['Bebas_Neue'] text-[15px] tracking-[2px] text-white bg-orange-600 rounded-xl active:opacity-80"
+          className="w-full mt-4 py-3 min-h-[44px] font-['Bebas_Neue'] text-[15px] tracking-[2px] text-white bg-warning rounded-xl active:opacity-80"
         >
           START MY PROGRAMME →
         </button>
@@ -203,25 +203,25 @@ export default function BaselineSessionCard({
 
   return (
     <>
-      <div className="bg-zinc-900 border border-orange-900 rounded-2xl p-4 mb-4">
+      <div className="bg-surface-2 border border-warning rounded-2xl p-4 mb-4">
         <div className="flex items-center justify-between">
-          <span className="font-['Bebas_Neue'] text-lg text-orange-500">DAY 0</span>
-          <span className="text-xs font-['DM_Sans'] text-zinc-400 uppercase tracking-widest">
+          <span className="font-['Bebas_Neue'] text-lg text-warning">DAY 0</span>
+          <span className="text-xs font-['DM_Sans'] text-muted uppercase tracking-widest">
             Strength Baseline
           </span>
         </div>
-        <p className="font-['DM_Sans'] text-xs text-zinc-400 mt-1 mb-4">
+        <p className="font-['DM_Sans'] text-xs text-muted mt-1 mb-4">
           Complete this session before starting Week 1. Log the weight you use in Set 3 for each
           exercise — Odin uses it to calculate your training weights from Day 2.
         </p>
 
         {baselineSession.warmup?.length > 0 && (
           <div className="mb-4">
-            <p className="text-xs text-zinc-500 tracking-widest mb-2">WARMUP</p>
+            <p className="text-xs text-muted tracking-widest mb-2">WARMUP</p>
             {baselineSession.warmup.map((w: AnyData, wi: number) => (
               <div
                 key={wi}
-                className="flex items-center justify-between text-sm text-zinc-300 py-0.5"
+                className="flex items-center justify-between text-sm text-text-secondary py-0.5"
               >
                 <span>{w.activity_name}</span>
                 <span>{w.duration_seconds}s</span>
@@ -231,11 +231,11 @@ export default function BaselineSessionCard({
         )}
 
         <div>
-          <p className="text-xs text-zinc-500 tracking-widest mb-2">EXERCISES</p>
+          <p className="text-xs text-muted tracking-widest mb-2">EXERCISES</p>
           {exercises.map((ex: AnyData, ei: number) => (
             <div
               key={ei}
-              className={ei < exercises.length - 1 ? 'border-b border-zinc-800 my-3 pb-3' : ''}
+              className={ei < exercises.length - 1 ? 'border-b border-border-subtle my-3 pb-3' : ''}
             >
               <p className="font-['DM_Sans'] text-sm font-medium text-white mb-1">
                 {ex.exercise_name}
@@ -256,25 +256,25 @@ export default function BaselineSessionCard({
                     style={{
                       background:
                         status === 'logged'
-                          ? 'rgba(34,197,94,0.08)'
+                          ? 'color-mix(in srgb, var(--success) 8%, transparent)'
                           : status === 'active'
-                            ? 'rgba(255,69,32,0.08)'
+                            ? 'color-mix(in srgb, var(--accent) 8%, transparent)'
                             : 'transparent',
                       border: `1px solid ${
                         status === 'logged'
-                          ? '#166534'
+                          ? 'var(--success)'
                           : status === 'active'
-                            ? '#7c2d12'
-                            : '#27272a'
+                            ? 'var(--danger-border)'
+                            : 'var(--border)'
                       }`,
                     }}
                   >
                     <div>
-                      <p className="text-xs text-zinc-400">
+                      <p className="text-xs text-muted">
                         Set {set.set_number} · {set.reps} reps @ RPE {set.rpe}
                       </p>
                       {set.instruction && (
-                        <p className="text-xs text-zinc-600 italic">{set.instruction}</p>
+                        <p className="text-xs text-disabled italic">{set.instruction}</p>
                       )}
                     </div>
                     <span
@@ -282,10 +282,10 @@ export default function BaselineSessionCard({
                       style={{
                         color:
                           status === 'logged'
-                            ? '#22c55e'
+                            ? 'var(--success)'
                             : status === 'active'
-                              ? '#ff4520'
-                              : '#52525b',
+                              ? 'var(--accent)'
+                              : 'var(--muted)',
                       }}
                     >
                       {status === 'logged'
@@ -301,14 +301,14 @@ export default function BaselineSessionCard({
           ))}
         </div>
 
-        <p className="text-xs text-zinc-600 italic mt-2">
+        <p className="text-xs text-disabled italic mt-2">
           weight_kg for all sets is determined on the day — log what you lift.
         </p>
 
         {ctaLabel && onCta && mode !== 'logging' && (
           <button
             onClick={onCta}
-            className="w-full mt-4 py-3 min-h-[44px] font-['Bebas_Neue'] text-[15px] tracking-[2px] text-white bg-orange-600 rounded-xl active:opacity-80"
+            className="w-full mt-4 py-3 min-h-[44px] font-['Bebas_Neue'] text-[15px] tracking-[2px] text-white bg-warning rounded-xl active:opacity-80"
           >
             {ctaLabel}
           </button>
