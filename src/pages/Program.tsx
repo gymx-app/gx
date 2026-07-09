@@ -31,7 +31,7 @@ import { useToast } from '../hooks/useToast'
 import { Loader2, ChevronDown, RefreshCw, AlertTriangle, ArrowLeftRight } from 'lucide-react'
 
 type TabState = 'loading' | 'no_programme' | 'has_programme'
-type ConfirmAction = 'refresh' | 'restart' | 'regen' | null
+type ConfirmAction = 'choose' | 'refresh' | 'restart' | 'regen' | null
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyData = any
@@ -445,13 +445,13 @@ export default function Program() {
             </h1>
             <button
               onClick={() => {
-                setConfirmAction('refresh')
+                setConfirmAction('choose')
                 setActionError(null)
               }}
               disabled={actionLoading}
               className="p-2 -mr-1 active:opacity-50"
               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-              title="Refresh programme structure"
+              title="Refresh or restart programme"
             >
               <RefreshCw size={17} color={colors.muted} />
             </button>
@@ -649,28 +649,6 @@ export default function Program() {
           })}
         </div>
 
-        {/* Restart Programme button — separate from the header's Refresh
-            icon (structure-only) since restarting also resets progress
-            back to Week 1, and separate from Generate New Programme
-            (which deletes everything) since history is kept. */}
-        <button
-          onClick={() => {
-            setConfirmAction('restart')
-            setActionError(null)
-          }}
-          disabled={actionLoading}
-          className="w-full py-3.5 text-[13px] font-['DM_Sans'] font-medium active:opacity-60"
-          style={{
-            background: 'none',
-            border: `1px solid ${colors.border}`,
-            borderRadius: radius.button,
-            color: colors.textSecondary,
-            cursor: actionLoading ? 'default' : 'pointer',
-          }}
-        >
-          Restart Programme
-        </button>
-
         {/* Generate New Programme button */}
         <button
           onClick={() => {
@@ -693,6 +671,81 @@ export default function Program() {
 
       {/* ── Confirm bottom sheet ── */}
       <BottomSheet isOpen={confirmAction !== null} onClose={closeSheet}>
+        {confirmAction === 'choose' && (
+          <div className="px-5 pb-8 pt-2">
+            <p
+              className="font-['Bebas_Neue'] text-[20px] tracking-[1px] leading-none mb-4"
+              style={{ color: colors.text }}
+            >
+              Programme Structure
+            </p>
+
+            <button
+              onClick={() => setConfirmAction('refresh')}
+              className="w-full flex items-center gap-3 mb-3 p-3 active:opacity-70"
+              style={{
+                background: colors.surface2,
+                border: `1px solid ${colors.border}`,
+                borderRadius: radius.card,
+                cursor: 'pointer',
+              }}
+            >
+              <div
+                className="w-10 h-10 flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: `color-mix(in srgb, ${colors.blue} 9%, transparent)`,
+                  borderRadius: 12,
+                }}
+              >
+                <RefreshCw size={18} color={colors.blue} />
+              </div>
+              <div className="text-left">
+                <p
+                  className="font-['Bebas_Neue'] text-[16px] tracking-[1px] leading-none"
+                  style={{ color: colors.text }}
+                >
+                  Refresh
+                </p>
+                <p className="text-[12px] font-['DM_Sans'] mt-0.5" style={{ color: colors.muted }}>
+                  Re-seeds structure, keeps your progress
+                </p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setConfirmAction('restart')}
+              className="w-full flex items-center gap-3 p-3 active:opacity-70"
+              style={{
+                background: colors.surface2,
+                border: `1px solid ${colors.border}`,
+                borderRadius: radius.card,
+                cursor: 'pointer',
+              }}
+            >
+              <div
+                className="w-10 h-10 flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: `color-mix(in srgb, ${colors.orange} 9%, transparent)`,
+                  borderRadius: 12,
+                }}
+              >
+                <RefreshCw size={18} color={colors.orange} />
+              </div>
+              <div className="text-left">
+                <p
+                  className="font-['Bebas_Neue'] text-[16px] tracking-[1px] leading-none"
+                  style={{ color: colors.text }}
+                >
+                  Restart
+                </p>
+                <p className="text-[12px] font-['DM_Sans'] mt-0.5" style={{ color: colors.muted }}>
+                  Resets your progress back to Week 1
+                </p>
+              </div>
+            </button>
+          </div>
+        )}
+
         {confirmAction === 'refresh' && (
           <div className="px-5 pb-8 pt-2">
             <div className="flex items-center gap-3 mb-4">
