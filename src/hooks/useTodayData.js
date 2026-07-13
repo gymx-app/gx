@@ -18,7 +18,7 @@ export { invalidateWeekCache }
 const cacheKey = {
   programmeDay: (phaseId, dow) => `${phaseId}_${dow}`,
   programmeExercises: (dayId) => dayId,
-  warmupItems: (programmeId) => programmeId,
+  warmupItems: (dayId) => dayId,
   cooldownItems: (dayId) => dayId,
   conditioningItems: (dayId) => dayId,
 }
@@ -148,13 +148,15 @@ export function useTodayData(dateStr, weekStartStr, weekEndStr, selectedDayLabel
                 () => programmeService.getProgrammeDayExercises(freshDayData.id)
               )
             : null,
-          cachedFetch(
-            'warmup-items',
-            cacheKey.warmupItems(prog.id),
-            `warmup_${prog.id}`,
-            PRIORITY.HIGH,
-            () => programmeService.getWarmupItems(prog.id)
-          ),
+          isWorkout && freshDayData.id
+            ? cachedFetch(
+                'warmup-items',
+                cacheKey.warmupItems(freshDayData.id),
+                `warmup_${freshDayData.id}`,
+                PRIORITY.HIGH,
+                () => programmeService.getWarmupItems(freshDayData.id)
+              )
+            : null,
           isWorkout && freshDayData.id
             ? cachedFetch(
                 'cooldown-items',

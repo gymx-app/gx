@@ -1187,31 +1187,43 @@ export type Database = {
       }
       warmup_items: {
         Row: {
+          component_type: string | null
+          day_id: string | null
           detail: string | null
           display_order: number
           icon: string | null
           id: string
+          intensity_label: string | null
           item_key: string
           label: string
           programme_id: string
+          related_exercise_id: string | null
         }
         Insert: {
+          component_type?: string | null
+          day_id?: string | null
           detail?: string | null
           display_order: number
           icon?: string | null
           id?: string
+          intensity_label?: string | null
           item_key: string
           label: string
           programme_id: string
+          related_exercise_id?: string | null
         }
         Update: {
+          component_type?: string | null
+          day_id?: string | null
           detail?: string | null
           display_order?: number
           icon?: string | null
           id?: string
+          intensity_label?: string | null
           item_key?: string
           label?: string
           programme_id?: string
+          related_exercise_id?: string | null
         }
         Relationships: [
           {
@@ -1219,6 +1231,13 @@ export type Database = {
             columns: ['programme_id']
             isOneToOne: false
             referencedRelation: 'programmes'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'warmup_items_day_id_fkey'
+            columns: ['day_id']
+            isOneToOne: false
+            referencedRelation: 'programme_days'
             referencedColumns: ['id']
           },
         ]

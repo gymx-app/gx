@@ -99,7 +99,6 @@ export async function hydrateProgramme(
     // this loop) so all days across the whole programme can be inserted in
     // a single round trip instead of one insert per phase.
     const dayRows: OdinData[] = []
-    let warmupRows: OdinData[] = []
 
     for (let phaseIdx = 0; phaseIdx < phases.length; phaseIdx++) {
       const phase = phases[phaseIdx]
@@ -149,21 +148,8 @@ export async function hydrateProgramme(
           _exercises: day.exercises ?? [],
           _cooldown: day.cooldown ?? [],
           _conditioning: conditioning,
+          _warmup: day.warmup ?? [],
         })
-      }
-
-      // Warmup items are keyed by programme only (not per-day), taken once
-      // from phase 1's first workout day template.
-      if (phaseIdx === 0) {
-        const firstWorkoutDay = templateWeek.days.find((d: OdinData) => (d.warmup?.length ?? 0) > 0)
-        const warmups: OdinData[] = firstWorkoutDay?.warmup ?? []
-        warmupRows = warmups.map((w: OdinData, idx: number) => ({
-          programme_id: programmeId,
-          item_key: w.warmup_id ?? `wu-${idx}`,
-          label: w.activity_name ?? 'Warmup',
-          detail: formatItemDetail(w.purpose, w.duration_seconds, w.repetitions),
-          display_order: w.display_order ?? idx + 1,
-        }))
       }
     }
 
@@ -171,7 +157,7 @@ export async function hydrateProgramme(
     // repeats across phases, so days are matched back up by (phase_id,
     // day_of_week) rather than day_of_week alone.
     const dbDayRows = dayRows.map(
-      ({ _exercises: _ex, _cooldown: _cd, _conditioning: _cond, ...rest }) => rest
+      ({ _exercises: _ex, _cooldown: _cd, _conditioning: _cond, _warmup: _wu, ...rest }) => rest
     )
     const { data: insertedDays, error: dayErr } =
       dbDayRows.length > 0
@@ -194,6 +180,7 @@ export async function hydrateProgramme(
     const allExRows: OdinData[] = []
     const allCdRows: OdinData[] = []
     const allCondRows: OdinData[] = []
+    const allWuRows: OdinData[] = []
 
     for (const dayRow of dayRows) {
       const dayId = dayIdMap.get(`${dayRow.phase_id}|${dayRow.day_of_week}`)
@@ -221,6 +208,21 @@ export async function hydrateProgramme(
           label: cd.activity_name ?? 'Cooldown',
           detail: formatItemDetail(cd.purpose, cd.duration_seconds, cd.repetitions),
           display_order: cd.display_order ?? idx + 1,
+        })
+      })
+
+      const warmups: OdinData[] = dayRow._warmup ?? []
+      warmups.forEach((w: OdinData, idx: number) => {
+        allWuRows.push({
+          programme_id: programmeId,
+          day_id: dayId,
+          item_key: w.warmup_id ?? `wu-${idx}`,
+          label: w.activity_name ?? 'Warmup',
+          detail: formatItemDetail(w.purpose, w.duration_seconds, w.repetitions),
+          display_order: w.display_order ?? idx + 1,
+          component_type: w.component_type ?? null,
+          related_exercise_id: w.related_exercise_id ?? null,
+          intensity_label: w.intensity ?? null,
         })
       })
 
@@ -258,8 +260,8 @@ export async function hydrateProgramme(
       const { error: condErr } = await supabase.from('conditioning_items').insert(allCondRows)
       if (condErr) return { success: false, error: `Conditioning: ${condErr.message}` }
     }
-    if (warmupRows.length > 0) {
-      const { error: wuErr } = await supabase.from('warmup_items').insert(warmupRows)
+    if (allWuRows.length > 0) {
+      const { error: wuErr } = await supabase.from('warmup_items').insert(allWuRows)
       if (wuErr) return { success: false, error: `Warmup: ${wuErr.message}` }
     }
 

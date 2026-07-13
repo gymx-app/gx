@@ -458,20 +458,27 @@ END $$;
 
 
 -- ═══════════════════════════════════════════════════════════
--- WARMUP ITEMS (programme-level, shared across all days)
+-- WARMUP ITEMS (per-day, see 20260713010000_scope_warmup_items_to_day)
 -- ═══════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS warmup_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   programme_id UUID NOT NULL
     REFERENCES programmes(id) ON DELETE CASCADE,
+  day_id UUID
+    REFERENCES programme_days(id) ON DELETE CASCADE,
   display_order INTEGER NOT NULL,
   item_key TEXT NOT NULL,
   label TEXT NOT NULL,
   detail TEXT,
   icon TEXT,
-  UNIQUE(programme_id, item_key)
+  component_type TEXT,
+  related_exercise_id TEXT,
+  intensity_label TEXT,
+  UNIQUE(day_id, item_key)
 );
+
+CREATE INDEX IF NOT EXISTS idx_warmup_items_day_id ON warmup_items (day_id);
 
 ALTER TABLE warmup_items ENABLE ROW LEVEL SECURITY;
 
@@ -479,8 +486,10 @@ DO $$ BEGIN
   CREATE POLICY "Users view own warmup items" ON warmup_items
     FOR ALL USING (
       EXISTS (
-        SELECT 1 FROM programmes p
-        WHERE p.id = warmup_items.programme_id
+        SELECT 1 FROM programme_days pd
+        JOIN programme_phases ph ON ph.id = pd.phase_id
+        JOIN programmes p ON p.id = ph.programme_id
+        WHERE pd.id = warmup_items.day_id
         AND p.user_id = auth.uid()
       )
     );

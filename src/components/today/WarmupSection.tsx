@@ -11,6 +11,8 @@ interface WarmupItem {
   label: string
   detail?: string
   ic?: string
+  isRampUp: boolean
+  intensityLabel: string
 }
 
 interface WarmupLog {
@@ -23,6 +25,8 @@ interface DbWarmupItem {
   label: string
   detail?: string
   icon?: string
+  component_type?: string | null
+  intensity_label?: string | null
 }
 
 interface WarmupSectionProps {
@@ -52,6 +56,8 @@ const WarmupSection = memo(function WarmupSection({
       label: item.label,
       detail: item.detail ?? '',
       ic: item.icon ?? '',
+      isRampUp: item.component_type === 'ramp_up_set',
+      intensityLabel: item.intensity_label ?? '',
     }))
   }, [dbWarmupItems])
 
@@ -154,6 +160,11 @@ const WarmupSection = memo(function WarmupSection({
               >
                 <Checkbox checked={done} />
                 <div className="flex-1 min-w-0">
+                  {item.isRampUp && (
+                    <p className="text-[9px] font-bold tracking-wide text-yellow-600 uppercase mb-0.5">
+                      Warm-up ramp{item.intensityLabel ? ` · ${item.intensityLabel}` : ''}
+                    </p>
+                  )}
                   <p
                     className={`text-[13px] leading-tight ${done ? 'text-muted line-through opacity-40' : 'text-text-secondary'}`}
                   >

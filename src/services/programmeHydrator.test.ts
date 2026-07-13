@@ -109,4 +109,79 @@ describe('hydrateProgramme', () => {
     expect(phase1Ex?.day_id).toBe('day-1')
     expect(phase2Ex?.day_id).toBe('day-2')
   })
+
+  // warmup_items used to be programme-wide (one sampled day's warmup shown
+  // for every day) and dropped component_type/related_exercise_id/intensity.
+  // Guards against both regressing: each day keeps its own warmup rows, and
+  // ramp-up sets keep the fields needed to render distinctly from a working set.
+  it('writes distinct, fully-tagged warmup rows per day', async () => {
+    const odinData = {
+      programme: {
+        phases: [
+          {
+            name: 'Phase 1',
+            weeks: [
+              {
+                days: [
+                  {
+                    day_of_week: 'monday',
+                    day_type: 'strength',
+                    exercises: [{ exercise_name: 'Phase1 Monday Exercise', sets: [] }],
+                    warmup: [
+                      {
+                        warmup_id: 'mon-ramp-1',
+                        display_order: 1,
+                        component_type: 'ramp_up_set',
+                        activity_name: 'Barbell Bench Press Ramp-up',
+                        related_exercise_id: 'barbell_bench_press',
+                        repetitions: 5,
+                        intensity: 'Light',
+                        purpose: 'Prepare specifically for Barbell Bench Press.',
+                      },
+                    ],
+                  },
+                  {
+                    day_of_week: 'tuesday',
+                    day_type: 'strength',
+                    exercises: [{ exercise_name: 'Phase1 Monday Exercise', sets: [] }],
+                    warmup: [
+                      {
+                        warmup_id: 'tue-ramp-1',
+                        display_order: 1,
+                        component_type: 'ramp_up_set',
+                        activity_name: 'Dumbbell Goblet Squat Ramp-up',
+                        related_exercise_id: 'dumbbell_goblet_squat',
+                        repetitions: 5,
+                        intensity: 'Light',
+                        purpose: 'Prepare specifically for Dumbbell Goblet Squat.',
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    }
+
+    const result = await hydrateProgramme('programme-1', odinData, 'user-1')
+    expect(result).toEqual({ success: true })
+
+    const wuRows = inserted['warmup_items'] as Array<{
+      day_id: string
+      label: string
+      component_type: string | null
+      related_exercise_id: string | null
+      intensity_label: string | null
+    }>
+    expect(wuRows).toHaveLength(2)
+
+    const monRow = wuRows.find((r) => r.related_exercise_id === 'barbell_bench_press')
+    const tueRow = wuRows.find((r) => r.related_exercise_id === 'dumbbell_goblet_squat')
+    expect(monRow?.day_id).not.toBe(tueRow?.day_id)
+    expect(monRow?.component_type).toBe('ramp_up_set')
+    expect(monRow?.intensity_label).toBe('Light')
+    expect(monRow?.label).toBe('Barbell Bench Press Ramp-up')
+  })
 })

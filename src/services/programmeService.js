@@ -189,16 +189,16 @@ export async function updateProgrammeExerciseId(prescriptionId, exerciseId) {
 }
 
 /**
- * Get warmup items for a programme.
- * @param {string} programmeId
+ * Get warmup items for a programme day.
+ * @param {string} dayId
  * @returns {Promise<{ data: Array|null, error: string|null }>}
  */
-export async function getWarmupItems(programmeId) {
+export async function getWarmupItems(dayId) {
   try {
     const { data, error } = await supabase
       .from('warmup_items')
       .select('*')
-      .eq('programme_id', programmeId)
+      .eq('day_id', dayId)
       .order('display_order', { ascending: true })
     if (error) throw error
     return { data: data || [], error: null }
