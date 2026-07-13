@@ -11,7 +11,6 @@ if [ ! -d "$SRC" ]; then
   exit 0
 fi
 
-cp "$SRC/favicon.svg"                  public/favicon.svg
 cp "$SRC/favicon.ico"                  public/favicon.ico
 cp "$SRC/favicon-96x96.png"            public/favicon-96x96.png
 cp "$SRC/apple-touch-icon.png"         public/apple-touch-icon.png
