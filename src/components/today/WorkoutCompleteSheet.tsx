@@ -1,5 +1,5 @@
-import { memo } from 'react'
-import { Button, StatBlock, Text } from '../ui'
+import { memo, useState } from 'react'
+import { Button, StatBlock, Text, SectionLabel } from '../ui'
 import { colors, radius } from '../../styles/tokens'
 
 interface CompletedSet {
@@ -16,6 +16,16 @@ interface WorkoutCompleteSheetProps {
   completedSets: Record<string, CompletedSet>
   exerciseCount: number
   onDismiss: () => void
+  onRate?: (sessionRpe: number) => void
+}
+
+const SESSION_RPE_COLORS: Record<number, string> = {
+  10: colors.accent,
+  9: colors.orange,
+  8: colors.yellow,
+  7: colors.success,
+  6: colors.cyan,
+  5: colors.muted,
 }
 
 const WorkoutCompleteSheet = memo(function WorkoutCompleteSheet({
@@ -23,7 +33,10 @@ const WorkoutCompleteSheet = memo(function WorkoutCompleteSheet({
   completedSets,
   exerciseCount,
   onDismiss,
+  onRate,
 }: WorkoutCompleteSheetProps) {
+  const [sessionRpe, setSessionRpe] = useState<number | null>(null)
+
   let totalSetsLogged = 0
   let totalVolume = 0
   for (const [, set] of Object.entries(completedSets)) {
@@ -31,6 +44,11 @@ const WorkoutCompleteSheet = memo(function WorkoutCompleteSheet({
       totalSetsLogged++
       totalVolume += set.weight * set.reps
     }
+  }
+
+  function handleDone() {
+    if (sessionRpe != null) onRate?.(sessionRpe)
+    onDismiss()
   }
 
   return (
@@ -74,7 +92,45 @@ const WorkoutCompleteSheet = memo(function WorkoutCompleteSheet({
         </div>
 
         <div className="mt-6">
-          <Button variant="primary" label="DONE" onPress={onDismiss} />
+          <SectionLabel label="How would you rate today's workout?" className="mb-2" />
+          <p className="text-[11px] text-muted mb-2">
+            5 = as hard as expected, 10 = toughest possible
+          </p>
+          <div
+            className="grid grid-cols-6 gap-[6px]"
+            role="radiogroup"
+            aria-label="Session difficulty rating"
+          >
+            {[5, 6, 7, 8, 9, 10].map((val) => {
+              const rpeColor = SESSION_RPE_COLORS[val]
+              const isActive = sessionRpe === val
+              return (
+                <button
+                  key={val}
+                  onClick={() => setSessionRpe(sessionRpe === val ? null : val)}
+                  role="radio"
+                  aria-checked={isActive}
+                  className="flex flex-col items-center py-[10px] transition-all duration-150 active:scale-[0.93]"
+                  style={{
+                    borderRadius: radius.button,
+                    border: `1.5px solid ${isActive ? rpeColor : colors.border}`,
+                    background: isActive ? `${rpeColor}20` : colors.surface2,
+                  }}
+                >
+                  <span
+                    className="font-['Bebas_Neue'] text-[18px] tracking-[0.5px] leading-none"
+                    style={{ color: rpeColor }}
+                  >
+                    {val}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="mt-5">
+          <Button variant="primary" label="DONE" onPress={handleDone} />
         </div>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useLoading } from '../hooks/useLoading'
 import { computePhaseAndWeek, getDayKey, getWeekDays, getMinWeekOffset } from '../utils/programme'
 import { useTodayData } from '../hooks/useTodayData'
 import { getSyncState, subscribe as subscribeSyncState } from '../services/syncState'
+import { rateSession } from '../services/workoutService'
 import { Text, Button, Badge, SectionLabel } from '../components/ui'
 import TopBar from '../components/layout/TopBar'
 
@@ -905,6 +906,9 @@ export default function Today() {
           onDismiss={() => {
             dismissedCompleteRef.current = true
             setScreenState('orientation')
+          }}
+          onRate={(sessionRpe) => {
+            if (sessionId && user?.id) void rateSession(user.id, sessionId, sessionRpe)
           }}
         />
       )}

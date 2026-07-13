@@ -83,6 +83,67 @@ export async function upsertWorkoutSession(userId, sessionData) {
 }
 
 /**
+ * Save the post-workout session-RPE (5-10) and mark the session complete.
+ * @param {string} userId
+ * @param {string} sessionId
+ * @param {number} sessionRpe - 5 (as expected) to 10 (toughest possible)
+ * @returns {Promise<{ data: object|null, error: string|null }>}
+ */
+export async function rateSession(userId, sessionId, sessionRpe) {
+  try {
+    const { data, error } = await supabase
+      .from('workout_sessions')
+      .update({ session_rpe: sessionRpe, completed_at: new Date().toISOString() })
+      .eq('id', sessionId)
+      .eq('user_id', userId)
+      .select()
+      .single()
+    if (error) throw error
+    return { data, error: null }
+  } catch (err) {
+    logger.error('rateSession:', err)
+    return { data: null, error: 'Failed to save rating' }
+  }
+}
+
+/**
+ * Get the most recent rated sessions for trend detection (undertraining/overreaching).
+ * @param {string} userId
+ * @param {number} limit
+ * @returns {Promise<{ data: Array|null, error: string|null }>}
+ */
+export async function getRecentSessionRpes(userId, limit = 4) {
+  try {
+    const { data, error } = await supabase
+      .from('workout_sessions')
+      .select('id, date, session_rpe')
+      .eq('user_id', userId)
+      .not('session_rpe', 'is', null)
+      .order('date', { ascending: false })
+      .limit(limit)
+    if (error) throw error
+    return { data: data || [], error: null }
+  } catch (err) {
+    logger.error('getRecentSessionRpes:', err)
+    return { data: null, error: 'Failed to load session history' }
+  }
+}
+
+/**
+ * Flag a load-monitoring concern from recent session-RPE history.
+ * ponytail: naive fixed thresholds, tune once real rating data exists.
+ * @param {Array<{session_rpe: number}>} recentRpes - most-recent-first
+ * @returns {'overreaching'|'undertraining'|null}
+ */
+export function assessLoadTrend(recentRpes) {
+  if (!recentRpes || recentRpes.length < 3) return null
+  const last3 = recentRpes.slice(0, 3)
+  if (last3.filter((s) => s.session_rpe >= 9).length >= 2) return 'overreaching'
+  if (last3.every((s) => s.session_rpe === 5)) return 'undertraining'
+  return null
+}
+
+/**
  * Get the most recently tested baseline working weight for an exercise.
  * @param {string} userId
  * @param {string} exerciseId
