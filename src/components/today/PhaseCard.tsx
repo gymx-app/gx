@@ -1,17 +1,9 @@
-import { useState, useMemo, memo } from 'react'
+import { useMemo, memo } from 'react'
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { colors } from '../../styles/tokens'
-import PhaseBottomSheet from './PhaseBottomSheet'
 import { getDayStatus, type DayStatus } from '../../utils/dayStatus'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-interface Phase {
-  phase_number: number
-  name?: string
-  description?: string
-  weeks_count?: number
-}
 
 interface WeekDay {
   dayLabel: string
@@ -19,25 +11,13 @@ interface WeekDay {
   dateStr: string
 }
 
-interface Programme {
-  name?: string
-  goal?: string
-}
-
 interface PhaseCardProps {
-  phase: number
-  weekInPhase: number
   totalWeek: number
-  phaseWeeks: number[]
-  minActiveDays: number
-  currentWeekActiveDays: number
   weekOffset: number
   onPrevWeek: () => void
   onNextWeek: () => void
   canGoBack: boolean
   canGoForward: boolean
-  programme: Programme | null
-  phases: Phase[]
   weekDays: WeekDay[]
   selectedDateStr: string
   completedDateStrs: Set<string>
@@ -97,19 +77,12 @@ function getPillStyle(status: DayStatus, isSelected: boolean) {
 }
 
 const PhaseCard = memo(function PhaseCard({
-  phase,
-  weekInPhase,
   totalWeek,
-  phaseWeeks,
-  minActiveDays,
-  currentWeekActiveDays,
   weekOffset,
   onPrevWeek,
   onNextWeek,
   canGoBack,
   canGoForward: _canGoForward,
-  programme,
-  phases,
   weekDays,
   selectedDateStr,
   completedDateStrs,
@@ -118,17 +91,6 @@ const PhaseCard = memo(function PhaseCard({
   onGoToToday,
   programmeStartDate,
 }: PhaseCardProps) {
-  const [sheetOpen, setSheetOpen] = useState(false)
-
-  const currentPhase = phases?.find((p) => p.phase_number === phase)
-  const totalWeeksInPhase = currentPhase?.weeks_count ?? phaseWeeks?.[phase - 1] ?? 4
-  const isOngoing = totalWeeksInPhase === 999
-  const totalPhases = phases?.length ?? phaseWeeks?.length ?? 5
-  const phaseName = currentPhase?.name ?? `Phase ${phase}`
-
-  const qualifyPct = Math.min(100, (currentWeekActiveDays / minActiveDays) * 100)
-  const qualified = currentWeekActiveDays >= minActiveDays
-
   const todayDateStr = useMemo(() => {
     const d = new Date()
     return (
@@ -144,49 +106,6 @@ const PhaseCard = memo(function PhaseCard({
 
   return (
     <>
-      {/* ── Phase card ── */}
-      <div
-        className="mx-4 mt-3 px-4 py-3"
-        style={{
-          background: colors.surface,
-          border: `1px solid ${colors.border}`,
-          borderRadius: '16px',
-        }}
-      >
-        {/* Line 1 */}
-        <div className="flex justify-between items-center">
-          <span className="text-[13px] font-semibold tracking-[-0.01em] text-white">
-            {phaseName.toUpperCase()} · WK {weekInPhase}
-            {isOngoing ? '' : ` OF ${totalWeeksInPhase}`}
-          </span>
-          <button
-            onClick={() => setSheetOpen(true)}
-            className="text-[13px] font-semibold text-accent min-w-[44px] min-h-[44px] flex items-center justify-end"
-          >
-            {phase}/{totalPhases} ›
-          </button>
-        </div>
-
-        {/* Line 2 */}
-        <div className="flex items-center gap-3 mt-2">
-          <div className="flex-1 h-[3px] bg-surface">
-            <div
-              className="h-full bg-accent transition-all duration-300"
-              style={{ width: `${qualifyPct}%` }}
-            />
-          </div>
-          {qualified ? (
-            <span className="text-[11px] text-success font-semibold whitespace-nowrap">
-              ✓ WEEK QUALIFIES
-            </span>
-          ) : (
-            <span className="text-[11px] text-disabled whitespace-nowrap">
-              {currentWeekActiveDays}/{minActiveDays} days
-            </span>
-          )}
-        </div>
-      </div>
-
       {/* ── Week strip — sticky below TopBar ── */}
       <div className="px-4 mt-3 sticky top-0 z-40 bg-bg pb-2 pt-2 border-b border-border-subtle">
         <div className="flex items-center gap-[8px] pb-[10px] px-1">
@@ -332,17 +251,6 @@ const PhaseCard = memo(function PhaseCard({
           })}
         </div>
       </div>
-
-      {/* ── Phase bottom sheet ── */}
-      <PhaseBottomSheet
-        isOpen={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        programme={programme}
-        phases={phases}
-        currentPhase={phase}
-        weekInPhase={weekInPhase}
-        phaseWeeks={phaseWeeks}
-      />
     </>
   )
 })

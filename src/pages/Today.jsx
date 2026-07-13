@@ -153,7 +153,6 @@ export default function Today() {
     exerciseMap,
     previousBests,
     programme,
-    phases,
     dayData,
     programmeExercises,
     warmupItems,
@@ -316,16 +315,6 @@ export default function Today() {
 
   // ── Rest day indices (0=Mon … 6=Sun) ──
   const restDayIndices = useMemo(() => new Set([6]), [])
-
-  // ── Current week active days (for qualifying) ──
-  const currentWeekActiveDays = useMemo(() => {
-    let count = 0
-    for (const s of sessions) {
-      if (s.day_of_week === 'SUN') continue
-      if (weekDays.some((wd) => wd.dateStr === s.date)) count++
-    }
-    return count
-  }, [sessions, weekDays])
 
   // ── Week navigation bounds ──
   const programmeStartDate = config?.start_date ?? null
@@ -632,21 +621,14 @@ export default function Today() {
                 : undefined,
           }}
         >
-          {/* Phase card + day pills */}
+          {/* Week strip / day pills */}
           <PhaseCard
-            phase={phase}
-            weekInPhase={phaseInfo.weekInPhase}
             totalWeek={totalWeek}
-            phaseWeeks={config?.phase_weeks ?? [4, 4, 5, 4, 999]}
-            minActiveDays={config?.min_active_days ?? 4}
-            currentWeekActiveDays={currentWeekActiveDays}
             weekOffset={weekOffset}
             onPrevWeek={handlePrevWeek}
             onNextWeek={handleNextWeek}
             canGoBack={canGoBack}
             canGoForward={canGoForward}
-            programme={programme}
-            phases={phases}
             weekDays={weekDays}
             selectedDateStr={dateStr}
             completedDateStrs={completedDateStrs}
