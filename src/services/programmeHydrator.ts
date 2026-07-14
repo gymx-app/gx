@@ -275,26 +275,64 @@ export async function hydrateProgramme(
 export interface OdinPrescriptionLookup {
   exercise_id: string
   substitution_options: { approved_exercise_ids: string[] } | null
+  current_target_reps: number
+  progression_bounds: { rep_min: number; rep_max: number } | null
+  sets: { set_number: number; target_reps: number; rpe_ceiling: number }[]
 }
 
-// programme_exercises never stored Odin's own exercise_id or
-// substitution_options — hydration only kept exercise_name (see
-// resolveExercises above). Both still live in the raw programme_data JSON
-// every active programme already has loaded, so this reconstructs which
-// JSON node a given (phase, day, exercise) DB row came from — using the
-// exact same day_of_week assignment (mapDayLabel + de-dup) hydration used,
-// so it lands on the same day even when the raw label was missing/duplicate.
+// programme_exercises never stored Odin's own exercise_id, substitution_options,
+// or progression fields (target_reps/rpe_ceiling/progression_bounds) — hydration
+// only kept exercise_name and a formatted sets_reps string (see resolveExercises
+// above). All of it still lives in the raw programme_data JSON every active
+// programme already has loaded, so this reconstructs which JSON node a given
+// (phase, day, exercise) DB row came from — using the exact same day_of_week
+// assignment (mapDayLabel + de-dup) hydration used, so it lands on the same
+// day even when the raw label was missing/duplicate.
 export function findOdinPrescription(
   odinData: OdinData,
   phaseIndex: number,
   dayOfWeek: string,
   displayOrder: number
 ): OdinPrescriptionLookup | null {
+  const matchedDay = resolveOdinDayNode(odinData, phaseIndex, dayOfWeek)
+  const exercise = matchedDay?.exercises?.[displayOrder - 1]
+  if (!exercise?.exercise_id) return null
+
+  const sets: OdinData[] = exercise.sets ?? []
+
+  return {
+    exercise_id: exercise.exercise_id,
+    substitution_options: exercise.substitution_options ?? null,
+    current_target_reps: sets[0]?.target_reps ?? 0,
+    progression_bounds: exercise.progression_bounds ?? null,
+    sets: sets.map((s: OdinData) => ({
+      set_number: s.set_number,
+      target_reps: s.target_reps,
+      rpe_ceiling: s.rpe_ceiling,
+    })),
+  }
+}
+
+// The raw Odin phase object at a given index — used to resolve narrative
+// phase_id/name for a DB phase row, which only keeps phase_number (see
+// hydrateProgramme step 3 above; the Odin phase_id itself is never persisted).
+export function resolveOdinPhaseNode(odinData: OdinData, phaseIndex: number): OdinData {
+  return odinData?.programme?.phases?.[phaseIndex] ?? null
+}
+
+// Same day_of_week reconstruction hydrateProgramme uses to assign programme_days
+// rows, exposed so callers can look up the raw Odin day node (day_id, day_type,
+// pattern_label, conditioning, etc.) that a given DB day row came from — none of
+// that is persisted to programme_days itself, only what the accordion needs.
+export function resolveOdinDayNode(
+  odinData: OdinData,
+  phaseIndex: number,
+  dayOfWeek: string
+): OdinData {
   const phase = odinData?.programme?.phases?.[phaseIndex]
   const days: OdinData[] = phase?.weeks?.[0]?.days ?? []
 
   const usedDays = new Set<string>()
-  let matchedDay: OdinData = null
 
   for (let di = 0; di < days.length; di++) {
     const day = days[di]
@@ -305,17 +343,8 @@ export function findOdinPrescription(
     }
     usedDays.add(dow)
 
-    if (dow === dayOfWeek) {
-      matchedDay = day
-      break
-    }
+    if (dow === dayOfWeek) return day
   }
 
-  const exercise = matchedDay?.exercises?.[displayOrder - 1]
-  if (!exercise?.exercise_id) return null
-
-  return {
-    exercise_id: exercise.exercise_id,
-    substitution_options: exercise.substitution_options ?? null,
-  }
+  return null
 }

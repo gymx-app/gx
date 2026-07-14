@@ -189,6 +189,117 @@ export async function updateProgrammeExerciseId(prescriptionId, exerciseId) {
 }
 
 /**
+ * Apply a next-prescription result to a programme_exercises row: rewrites
+ * the reps portion of sets_reps (e.g. "3×8" -> "3×9") and, when Odin says
+ * to increase load, sets a warn badge telling the athlete to bump weight
+ * and reset reps to the bottom of the range next time. Reuses the existing
+ * sets_reps/warn fields instead of adding progression-state columns — the
+ * row already recurs weekly within a phase, so this is picked up automatically.
+ * @param {string} prescriptionId - programme_exercises.id
+ * @param {string} currentSetsReps - existing sets_reps string, e.g. "3×8"
+ * @param {{ next_target_reps: number, increase_load: boolean }} result
+ * @returns {Promise<{ data: object|null, error: string|null }>}
+ */
+export async function applyNextPrescription(prescriptionId, currentSetsReps, result) {
+  try {
+    const setCount = parseInt(currentSetsReps?.split('×')[0], 10) || 1
+    const update = {
+      sets_reps: `${setCount}×${result.next_target_reps}`,
+      warn: result.increase_load ? 'Increase load this session' : null,
+    }
+    const { data, error } = await supabase
+      .from('programme_exercises')
+      .update(update)
+      .eq('id', prescriptionId)
+      .select()
+      .single()
+    if (error) throw error
+    return { data, error: null }
+  } catch (err) {
+    logger.error('applyNextPrescription:', err)
+    return { data: null, error: 'Failed to save progression' }
+  }
+}
+
+/**
+ * Get the last N completed sessions with their logged sets, oldest first,
+ * for the readiness-check endpoint (which needs 2+ recent sessions).
+ * @param {string} userId
+ * @param {number} limit
+ * @returns {Promise<{ data: Array|null, error: string|null }>}
+ */
+export async function getRecentCompletedSessionsWithLogs(userId, limit = 3) {
+  try {
+    const { data: sessions, error: sErr } = await supabase
+      .from('workout_sessions')
+      .select('id, date, phase, day_of_week')
+      .eq('user_id', userId)
+      .not('completed_at', 'is', null)
+      .order('date', { ascending: false })
+      .limit(limit)
+    if (sErr) throw sErr
+    if (!sessions || sessions.length === 0) return { data: [], error: null }
+
+    const { data: logs, error: lErr } = await supabase
+      .from('exercise_logs')
+      .select('session_id, exercise_index, set_number, reps, rpe, completed, is_mm_set')
+      .in(
+        'session_id',
+        sessions.map((s) => s.id)
+      )
+    if (lErr) throw lErr
+
+    const logsBySession = {}
+    for (const log of logs ?? []) {
+      logsBySession[log.session_id] ??= []
+      logsBySession[log.session_id].push(log)
+    }
+
+    return {
+      data: sessions
+        .slice()
+        .reverse()
+        .map((s) => ({ ...s, logs: logsBySession[s.id] ?? [] })),
+      error: null,
+    }
+  } catch (err) {
+    logger.error('getRecentCompletedSessionsWithLogs:', err)
+    return { data: null, error: 'Failed to load session history' }
+  }
+}
+
+/**
+ * Persist a readiness-check result onto the programme so the upcoming week
+ * can pick up the deload adjustment instead of waiting for the pre-scheduled
+ * phase-transition deload.
+ * @param {string} programmeId
+ * @param {{ triggered_reasons: string[], deload_adjustments: object } | null} result - null clears it
+ * @returns {Promise<{ data: object|null, error: string|null }>}
+ */
+export async function setPendingDeload(programmeId, result) {
+  try {
+    const pending_deload = result
+      ? {
+          reasons: result.triggered_reasons,
+          adjustments: result.deload_adjustments,
+          checked_at: new Date().toISOString(),
+        }
+      : null
+    const { data, error } = await supabase
+      .from('programmes')
+      .update({ pending_deload })
+      .eq('id', programmeId)
+      .select()
+      .single()
+    if (error) throw error
+    return { data, error: null }
+  } catch (err) {
+    logger.error('setPendingDeload:', err)
+    return { data: null, error: 'Failed to save readiness check' }
+  }
+}
+
+/**
  * Get warmup items for a programme day.
  * @param {string} dayId
  * @returns {Promise<{ data: Array|null, error: string|null }>}

@@ -5,6 +5,20 @@ import { computePhaseAndWeek, getDayKey, getWeekDays, getMinWeekOffset } from '.
 import { useTodayData } from '../hooks/useTodayData'
 import { getSyncState, subscribe as subscribeSyncState } from '../services/syncState'
 import { rateSession } from '../services/workoutService'
+import {
+  applyNextPrescription,
+  getRecentCompletedSessionsWithLogs,
+  setPendingDeload,
+} from '../services/programmeService'
+import { findOdinPrescription } from '../services/programmeHydrator'
+import {
+  buildCompletedSets,
+  isDeloadActive,
+  applyVolumeFactor,
+  applyConditioningDeload,
+} from '../utils/progression'
+import { useOdinProgression } from '../hooks/useOdinProgression'
+import { useAthleteOdinPayload } from '../hooks/useAthleteOdinPayload'
 import { Text, Button, Badge, SectionLabel } from '../components/ui'
 import TopBar from '../components/layout/TopBar'
 
@@ -130,6 +144,12 @@ export default function Today() {
   const [localCompletedSets, setLocalCompletedSets] = useState({})
   const dismissedCompleteRef = useRef(false)
 
+  // ── agent-odin: progression + readiness ──
+  const { payload: athletePayload } = useAthleteOdinPayload(Boolean(user))
+  const { getNextPrescription, checkReadiness } = useOdinProgression()
+  const progressedExercisesRef = useRef(new Set())
+  const [deloadBanner, setDeloadBanner] = useState(null)
+
   // ── Swipe navigation ──
   const touchRef = useRef({ startX: 0, startY: 0, startTime: 0, tracking: false, locked: false })
   const [swipeX, setSwipeX] = useState(0)
@@ -143,6 +163,18 @@ export default function Today() {
     [weekDays, selectedDayLabel]
   )
   const dateStr = selectedDay.dateStr
+
+  // ── Today date for comparisons ──
+  const todayDateStr = useMemo(() => {
+    const d = new Date()
+    return (
+      d.getFullYear() +
+      '-' +
+      String(d.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(d.getDate()).padStart(2, '0')
+    )
+  }, [])
 
   // ── Data hook ──
   const {
@@ -223,12 +255,18 @@ export default function Today() {
     }
   }, [dayData])
 
+  // ── agent-odin: is a readiness-check-triggered deload active for this day? ──
+  const deloadActive = isDeloadActive(programme?.pending_deload, todayDateStr)
+  const deloadAdjustments = programme?.pending_deload?.adjustments
+
   // ── Map DB programme exercises → ExerciseCard format ──
   const displayExercises = useMemo(() => {
     if (programmeExercises && programmeExercises.length > 0) {
       return programmeExercises.map((pe) => ({
         n: pe.exercises?.name ?? 'Unknown',
-        s: pe.sets_reps ?? '3×12',
+        s: deloadActive
+          ? applyVolumeFactor(pe.sets_reps ?? '3×12', deloadAdjustments?.volume_factor)
+          : (pe.sets_reps ?? '3×12'),
         r: pe.rest ?? '60s',
         note: pe.notes ?? null,
         warn: pe.warn ?? null,
@@ -249,7 +287,7 @@ export default function Today() {
     }
 
     return []
-  }, [programmeExercises, dayData, loading])
+  }, [programmeExercises, dayData, loading, deloadActive, deloadAdjustments])
 
   const displayCooldownItems = useMemo(() => {
     if (cooldownItems && cooldownItems.length > 0) {
@@ -277,6 +315,12 @@ export default function Today() {
         ci.conditioning_type === 'active_recovery' || ci.conditioning_type === 'movement_target'
     )
   }, [conditioningItems, hasConditioningItems])
+
+  const displayConditioningItems = useMemo(() => {
+    if (!hasConditioningItems) return conditioningItems
+    if (!deloadActive || !deloadAdjustments) return conditioningItems
+    return applyConditioningDeload(conditioningItems, deloadAdjustments)
+  }, [conditioningItems, hasConditioningItems, deloadActive, deloadAdjustments])
 
   // Determine day type. workout_type === 'workout' covers V2 'resistance' and
   // 'combined' days (combined also renders a conditioning finisher below).
@@ -378,17 +422,79 @@ export default function Today() {
   }, [logs, displayExercises, dayType, screenState, dateStr])
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // ── Today date for comparisons ──
-  const todayDateStr = useMemo(() => {
-    const d = new Date()
-    return (
-      d.getFullYear() +
-      '-' +
-      String(d.getMonth() + 1).padStart(2, '0') +
-      '-' +
-      String(d.getDate()).padStart(2, '0')
+  // ── agent-odin: clear a stale pending_deload once its 7-day window has
+  // passed, so a slow-to-return athlete doesn't get an old deload re-applied
+  // to a week it was never meant for. ──
+  useEffect(() => {
+    if (!programme?.pending_deload || !programme?.id) return
+    if (isDeloadActive(programme.pending_deload, todayDateStr)) return
+    void setPendingDeload(programme.id, null).then(() => syncRefetch())
+  }, [programme, todayDateStr, syncRefetch])
+
+  // ── agent-odin: per-exercise progression, fired once each exercise is
+  // fully logged for the day. Guarded by progressedExercisesRef so a
+  // re-render (e.g. from the applyNextPrescription refetch below) doesn't
+  // re-fire the same call. ──
+  useEffect(() => {
+    if (
+      dayType !== 'workout' ||
+      !athletePayload ||
+      !programme?.programme_data ||
+      !dayData?.day_of_week
     )
-  }, [])
+      return
+
+    displayExercises.forEach((ex, idx) => {
+      const targetSets = parseInt(ex.s.split('×')[0])
+      const exerciseLogs = logs.filter((l) => l.exercise_name === ex.n)
+      const loggedCount = exerciseLogs.filter((l) => l.completed && !l.is_mm_set).length
+      if (loggedCount < targetSets) return
+
+      const key = `${dateStr}-${ex.n}`
+      if (progressedExercisesRef.current.has(key)) return
+
+      const pe = programmeExercises?.[idx]
+      if (!pe) return
+
+      const lookup = findOdinPrescription(
+        programme.programme_data,
+        phase - 1,
+        dayData.day_of_week,
+        pe.display_order
+      )
+      if (!lookup?.progression_bounds) return
+
+      const completedSets = buildCompletedSets(exerciseLogs, lookup.sets)
+      if (completedSets.length === 0) return
+
+      progressedExercisesRef.current.add(key)
+      void getNextPrescription({
+        exercise_id: lookup.exercise_id,
+        current_target_reps: lookup.current_target_reps,
+        progression_bounds: lookup.progression_bounds,
+        completed_sets: completedSets,
+        athlete: athletePayload,
+      }).then((result) => {
+        if (result.success) {
+          void applyNextPrescription(pe.id, pe.sets_reps, result.data).then(() => syncRefetch())
+        } else {
+          progressedExercisesRef.current.delete(key)
+        }
+      })
+    })
+  }, [
+    dayType,
+    athletePayload,
+    programme,
+    dayData,
+    displayExercises,
+    programmeExercises,
+    logs,
+    dateStr,
+    phase,
+    getNextPrescription,
+    syncRefetch,
+  ])
 
   const isFutureDate = dateStr > todayDateStr
 
@@ -582,6 +688,54 @@ export default function Today() {
     [activeSheet, syncRefetch]
   )
 
+  // ── agent-odin: readiness-check after a session is rated. Reconstructs
+  // completed_sets for the last few completed sessions from exercise_logs +
+  // the raw programme_data prescription each session was logged against
+  // (using that session's own stored phase/day_of_week, not the current
+  // one, so a mid-phase-transition check still matches correctly). ──
+  const handleSessionRated = useCallback(
+    async (sessionRpe) => {
+      if (!sessionId || !user?.id) return
+      await rateSession(user.id, sessionId, sessionRpe)
+
+      if (!athletePayload || !programme?.programme_data) return
+
+      const { data: recentSessions } = await getRecentCompletedSessionsWithLogs(user.id, 3)
+      if (!recentSessions || recentSessions.length < 2) return
+
+      const recent_sessions = recentSessions
+        .map((s) => {
+          const lookupCache = new Map()
+          const completed_sets = []
+          for (const log of s.logs) {
+            const cacheKey = log.exercise_index
+            let lookup = lookupCache.get(cacheKey)
+            if (lookup === undefined) {
+              lookup = findOdinPrescription(
+                programme.programme_data,
+                s.phase - 1,
+                s.day_of_week,
+                log.exercise_index + 1
+              )
+              lookupCache.set(cacheKey, lookup)
+            }
+            if (!lookup) continue
+            completed_sets.push(...buildCompletedSets([log], lookup.sets))
+          }
+          return { completed_sets }
+        })
+        .filter((s) => s.completed_sets.length > 0)
+      if (recent_sessions.length < 2) return
+
+      const result = await checkReadiness({ recent_sessions, athlete: athletePayload })
+      if (result.success && result.data.deload_recommended) {
+        setDeloadBanner(result.data)
+        if (programme?.id) void setPendingDeload(programme.id, result.data)
+      }
+    },
+    [sessionId, user, athletePayload, programme, checkReadiness]
+  )
+
   function handleRestTimerDismiss() {
     setRestTimer(null)
     if (screenState === 'active') setScreenState('orientation')
@@ -701,7 +855,7 @@ export default function Today() {
                 {dayType === 'conditioning' && (
                   <ConditioningDay
                     dayData={dayData}
-                    conditioningItems={conditioningItems}
+                    conditioningItems={displayConditioningItems}
                     date={dateStr}
                     userId={user.id}
                     isFuture={isFutureDate}
@@ -712,7 +866,7 @@ export default function Today() {
                 {dayType === 'recovery' && (
                   <RecoveryDay
                     dayData={dayData}
-                    conditioningItems={conditioningItems}
+                    conditioningItems={displayConditioningItems}
                     date={dateStr}
                     userId={user.id}
                     isFuture={isFutureDate}
@@ -822,7 +976,7 @@ export default function Today() {
                     {/* Combined day — conditioning finisher */}
                     {hasConditioningItems && (
                       <CollapsibleConditioningBlock
-                        conditioningItems={conditioningItems}
+                        conditioningItems={displayConditioningItems}
                         date={dateStr}
                         userId={user.id}
                         isFuture={isFutureDate}
@@ -907,10 +1061,23 @@ export default function Today() {
             dismissedCompleteRef.current = true
             setScreenState('orientation')
           }}
-          onRate={(sessionRpe) => {
-            if (sessionId && user?.id) void rateSession(user.id, sessionId, sessionRpe)
-          }}
+          onRate={(sessionRpe) => void handleSessionRated(sessionRpe)}
         />
+      )}
+
+      {deloadBanner && (
+        <div className="fixed inset-x-4 bottom-24 z-50 rounded-xl bg-warning/10 border border-warning p-4">
+          <Text variant="cardTitle">Recovery week recommended</Text>
+          <Text variant="caption" className="mt-1">
+            {deloadBanner.triggered_reasons[0] ?? 'Recent sessions suggest backing off.'}
+          </Text>
+          <Button
+            variant="secondary"
+            label="Got it"
+            className="mt-3"
+            onPress={() => setDeloadBanner(null)}
+          />
+        </div>
       )}
     </>
   )

@@ -51,7 +51,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-type CallResult<T> =
+export type CallResult<T> =
   | { success: true; data: T }
   | { success: false; error: string; code: string | null }
 
