@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, ChevronRight, Upload, X } from 'lucide-react'
+import { ArrowRight, ChevronRight, Clock, Upload, X } from 'lucide-react'
 import TopBar from '../components/layout/TopBar'
 import PrRow from '../components/progress/PrRow'
 import { CURATED_PRS } from '../components/progress/prData'
@@ -757,19 +757,38 @@ function MeasureTab() {
   )
 }
 
+// ponytail: screen is UI-only (mock data), hide behind this overlay until wired to real data
+function ComingSoonOverlay() {
+  return (
+    <div
+      className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-10 text-center"
+      style={{ background: colors.bg }}
+    >
+      <Clock size={28} color={colors.muted} />
+      <Text variant="cardTitle">Coming Soon</Text>
+      <Text variant="bodyMuted">
+        Progress tracking is on the way — check back in a future update.
+      </Text>
+    </div>
+  )
+}
+
 export default function Progress() {
   const [tab, setTab] = useState<TabName>('Training')
 
   return (
     <>
       <TopBar title="PROGRESS" />
-      <div className="flex-1 overflow-y-auto px-4 pb-8">
-        <div className="pt-4">
-          <SegmentedControl active={tab} onChange={setTab} />
+      <div className="relative flex-1 overflow-hidden">
+        <div className="h-full overflow-y-auto px-4 pb-8" inert>
+          <div className="pt-4">
+            <SegmentedControl active={tab} onChange={setTab} />
+          </div>
+          {tab === 'Training' && <TrainingTab />}
+          {tab === 'Body Scan' && <BodyScanTab />}
+          {tab === 'Measure' && <MeasureTab />}
         </div>
-        {tab === 'Training' && <TrainingTab />}
-        {tab === 'Body Scan' && <BodyScanTab />}
-        {tab === 'Measure' && <MeasureTab />}
+        <ComingSoonOverlay />
       </div>
     </>
   )
