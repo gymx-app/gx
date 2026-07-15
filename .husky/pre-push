@@ -1,0 +1,4 @@
+echo "Running pre-push quality gate..."
+npx vitest run || exit 1
+npx vitest run --coverage || exit 1
+echo "Pre-push passed."

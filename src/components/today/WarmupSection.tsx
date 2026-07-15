@@ -1,0 +1,185 @@
+import { useState, useMemo, memo } from 'react'
+import { useAuth } from '../../auth/AuthContext'
+import { upsertWarmupLog } from '../../services/checklistService'
+import { SectionLabel, ProgressBar, Checkbox } from '../ui'
+import { radius } from '../../styles/tokens'
+import useOptimisticUpdate from '../../hooks/useOptimisticUpdate'
+import * as idbCache from '../../services/idbCache'
+
+interface WarmupItem {
+  k: string
+  label: string
+  detail?: string
+  ic?: string
+  isRampUp: boolean
+  intensityLabel: string
+}
+
+interface WarmupLog {
+  item_key: string
+  completed: boolean
+}
+
+interface DbWarmupItem {
+  item_key: string
+  label: string
+  detail?: string
+  icon?: string
+  component_type?: string | null
+  intensity_label?: string | null
+}
+
+interface WarmupSectionProps {
+  dateStr: string
+  phase: string
+  warmupLogs: WarmupLog[]
+  warmupItems: DbWarmupItem[]
+  onUpdate: () => void
+  readOnly?: boolean
+}
+
+const WarmupSection = memo(function WarmupSection({
+  dateStr,
+  phase,
+  warmupLogs,
+  warmupItems: dbWarmupItems,
+  onUpdate,
+  readOnly = false,
+}: WarmupSectionProps) {
+  const { user } = useAuth()
+  const { execute } = useOptimisticUpdate()
+
+  const items: WarmupItem[] = useMemo(() => {
+    if (!dbWarmupItems || dbWarmupItems.length === 0) return []
+    return dbWarmupItems.map((item) => ({
+      k: item.item_key,
+      label: item.label,
+      detail: item.detail ?? '',
+      ic: item.icon ?? '',
+      isRampUp: item.component_type === 'ramp_up_set',
+      intensityLabel: item.intensity_label ?? '',
+    }))
+  }, [dbWarmupItems])
+
+  const [localOverrides, setLocalOverrides] = useState<Record<string, boolean>>({})
+
+  const completedKeys = useMemo(() => {
+    const set = new Set(warmupLogs.filter((l) => l.completed).map((l) => l.item_key))
+    for (const [k, v] of Object.entries(localOverrides)) {
+      if (v) set.add(k)
+      else set.delete(k)
+    }
+    return set
+  }, [warmupLogs, localOverrides])
+
+  const completedCount = completedKeys.size
+  const allDone = completedCount === items.length
+  const [collapsed, setCollapsed] = useState(allDone)
+
+  function toggleItem(item: WarmupItem) {
+    const isCompleted = completedKeys.has(item.k)
+    const newValue = !isCompleted
+
+    void execute({
+      optimisticUpdate: () => {
+        setLocalOverrides((prev) => ({ ...prev, [item.k]: newValue }))
+        if (navigator.vibrate) navigator.vibrate(30)
+      },
+      idbWrite: async () => {
+        await idbCache.invalidate('workout-data', `${user!.id}_${dateStr}`)
+      },
+      supabaseWrite: async () => {
+        const { error } = await upsertWarmupLog(user!.id, {
+          date: dateStr,
+          phase,
+          item_key: item.k,
+          item_label: item.label,
+          completed: newValue,
+        })
+        if (error) throw new Error(error)
+        onUpdate()
+      },
+      rollback: () => {
+        setLocalOverrides((prev) => ({ ...prev, [item.k]: isCompleted }))
+      },
+      syncKey: `warmup_${dateStr}_${item.k}`,
+    })
+  }
+
+  return (
+    <div className="mt-3">
+      <SectionLabel
+        label="Warmup Protocol"
+        rightContent={
+          <div className="flex items-center gap-2">
+            {allDone ? (
+              <span className="text-[11px] font-semibold text-success">Done</span>
+            ) : (
+              <span className="text-[11px] text-muted">
+                {completedCount}/{items.length}
+              </span>
+            )}
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              aria-label={collapsed ? 'Expand warmup' : 'Collapse warmup'}
+            >
+              <span
+                className={`text-[10px] text-muted transition-transform duration-200 inline-block ${
+                  collapsed ? '' : 'rotate-180'
+                }`}
+              >
+                ▾
+              </span>
+            </button>
+          </div>
+        }
+        className="mb-2"
+      />
+
+      <ProgressBar progress={(completedCount / items.length) * 100} color="yellow" animated />
+
+      {!collapsed && (
+        <div
+          className="overflow-hidden mt-3"
+          style={{
+            background: 'rgba(251,191,36,0.05)',
+            border: '1px solid rgba(251,191,36,0.18)',
+            borderRadius: radius.button,
+          }}
+        >
+          {items.map((item, idx) => {
+            const done = completedKeys.has(item.k)
+            return (
+              <button
+                key={item.k}
+                className={`w-full flex items-center gap-[8px] px-[14px] py-[3px] text-left cursor-pointer transition-colors duration-150 ${
+                  idx > 0 ? 'border-t border-[rgba(251,191,36,0.08)]' : ''
+                }`}
+                onClick={() => !readOnly && toggleItem(item)}
+                aria-label={`${item.label} — ${done ? 'completed' : 'not completed'}`}
+              >
+                <Checkbox checked={done} />
+                <div className="flex-1 min-w-0">
+                  {item.isRampUp && (
+                    <p className="text-[9px] font-bold tracking-wide text-yellow-600 uppercase mb-0.5">
+                      Warm-up ramp{item.intensityLabel ? ` · ${item.intensityLabel}` : ''}
+                    </p>
+                  )}
+                  <p
+                    className={`text-[13px] leading-tight ${done ? 'text-muted line-through opacity-40' : 'text-text-secondary'}`}
+                  >
+                    {item.label}
+                  </p>
+                  {item.detail && <p className="text-[11px] text-muted mt-0.5">{item.detail}</p>}
+                </div>
+                <span className="text-[16px] shrink-0">{item.ic}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+})
+
+export default WarmupSection

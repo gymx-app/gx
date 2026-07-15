@@ -3,6 +3,7 @@ name: Deploy Dev
 on:
   push:
     branches: [dev]
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -10,8 +11,11 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-dev
   cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-and-deploy:
@@ -34,10 +38,11 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.DEV_SUPABASE_ANON_KEY }}
+          VITE_ENV: dev
 
       - uses: actions/configure-pages@v5
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
 

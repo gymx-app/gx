@@ -1,0 +1,4 @@
+echo "Running pre-commit quality gate..."
+npx lint-staged || exit 1
+npx tsc --noEmit || exit 1
+echo "Pre-commit passed."

@@ -1,0 +1,307 @@
+import { useState, useEffect, useRef, memo } from 'react'
+import { useAuth } from '../../auth/AuthContext'
+import {
+  upsertExerciseLog,
+  upsertWorkoutSession,
+  getBaselineWeight,
+} from '../../services/workoutService'
+import { logger } from '../../lib/logger'
+import { Button, SectionLabel } from '../ui'
+import { colors, radius } from '../../styles/tokens'
+import useOptimisticUpdate from '../../hooks/useOptimisticUpdate'
+import * as idbCache from '../../services/idbCache'
+
+interface Exercise {
+  n: string
+  s: string
+  r: string
+}
+
+interface ExistingLog {
+  weight_kg?: number
+  reps?: number
+  rpe?: number
+}
+
+interface PreviousBest {
+  weight_kg: number
+  reps: number
+}
+
+interface SetLogSheetProps {
+  exercise: Exercise
+  setNumber: number
+  totalSets: number
+  previousBest: PreviousBest | null
+  existingLog: ExistingLog | null
+  sessionId: string | null
+  dateStr: string
+  phase: number
+  exerciseIndex: number
+  exerciseMap: Record<string, string>
+  onClose: () => void
+  onLogged: (sessionId: string, weight: number, reps: number) => void
+}
+
+const RPE_COLORS: Record<number, string> = {
+  10: colors.accent,
+  9: colors.orange,
+  8: colors.yellow,
+  7: colors.success,
+  6: colors.cyan,
+}
+
+const SetLogSheet = memo(function SetLogSheet({
+  exercise,
+  setNumber,
+  totalSets,
+  previousBest,
+  existingLog,
+  sessionId,
+  dateStr,
+  phase,
+  exerciseIndex,
+  exerciseMap,
+  onClose,
+  onLogged,
+}: SetLogSheetProps) {
+  const { user } = useAuth()
+  const { execute } = useOptimisticUpdate()
+  const weightRef = useRef<HTMLInputElement>(null)
+
+  const [weight, setWeight] = useState(
+    existingLog?.weight_kg?.toString() ?? previousBest?.weight_kg?.toString() ?? ''
+  )
+  const [reps, setReps] = useState(existingLog?.reps?.toString() ?? '')
+  const [rpe, setRpe] = useState<number | null>(existingLog?.rpe ?? null)
+  const [isMM, setIsMM] = useState(false)
+  const [usedBaselineWeight, setUsedBaselineWeight] = useState(false)
+
+  useEffect(() => {
+    setTimeout(() => weightRef.current?.focus(), 100)
+  }, [])
+
+  useEffect(() => {
+    if (existingLog || previousBest) return
+    const exerciseId = exerciseMap[exercise.n]
+    if (!exerciseId || !user?.id) return
+
+    let cancelled = false
+    void getBaselineWeight(user.id, exerciseId).then((baselineWeight) => {
+      if (cancelled || baselineWeight == null) return
+      setWeight(baselineWeight.toString())
+      setUsedBaselineWeight(true)
+    })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per sheet open for this exercise
+  }, [])
+
+  function handleLog() {
+    if (!weight || !reps) return
+
+    const weightVal = parseFloat(weight)
+    const repsVal = parseInt(reps)
+    const exerciseId = exerciseMap[exercise.n]
+
+    const sid = sessionId ?? crypto.randomUUID()
+
+    void execute({
+      optimisticUpdate: () => {
+        if (navigator.vibrate) navigator.vibrate(50)
+        onLogged(sid, weightVal, repsVal)
+      },
+      idbWrite: async () => {
+        await idbCache.invalidate('workout-data', `${user!.id}_${dateStr}`)
+      },
+      supabaseWrite: async () => {
+        let finalSid = sessionId
+        if (!finalSid) {
+          const dayOfWeek = new Date(dateStr + 'T00:00:00')
+            .toLocaleDateString('en', { weekday: 'short' })
+            .toUpperCase()
+            .slice(0, 3)
+
+          const { data: sess, error: sessErr } = await upsertWorkoutSession(user!.id, {
+            date: dateStr,
+            phase,
+            day_of_week: dayOfWeek,
+            workout_title: exercise.n,
+          })
+          if (sessErr || !sess) throw new Error(sessErr ?? 'Session creation failed')
+          finalSid = (sess as { id: string }).id
+        }
+
+        if (!exerciseId) throw new Error(`No exercise_id for "${exercise.n}"`)
+
+        const { error: logErr } = await upsertExerciseLog(user!.id, {
+          session_id: finalSid,
+          exercise_id: exerciseId,
+          exercise_name: exercise.n,
+          date: dateStr,
+          phase,
+          exercise_index: exerciseIndex,
+          set_number: setNumber,
+          is_mm_set: isMM,
+          weight_kg: weightVal,
+          reps: repsVal,
+          rpe: rpe ?? null,
+          completed: true,
+        })
+        if (logErr) throw new Error(logErr)
+      },
+      rollback: () => {
+        logger.warn('Set log failed — data queued for retry')
+      },
+      syncKey: `exercise_log_${dateStr}_${exerciseId}_${setNumber}`,
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end justify-center">
+      <div className="absolute inset-0 bg-black/85" onClick={onClose} aria-hidden="true" />
+
+      <div
+        className="relative w-full max-w-[480px] px-5 pt-5 animate-slide-up"
+        style={{
+          background: colors.surface,
+          borderRadius: radius.sheet,
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 40px)',
+        }}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Log set ${setNumber} for ${exercise.n}`}
+      >
+        <div
+          className="w-10 h-1 rounded-[2px] mx-auto mb-4"
+          style={{ background: colors.border }}
+        />
+
+        <div className="flex justify-between items-baseline mb-5">
+          <h3 className="font-['Bebas_Neue'] text-[22px] tracking-[1.5px] text-text">
+            {exercise.n}
+          </h3>
+          <span className="text-[12px] text-muted">
+            Set {setNumber} of {totalSets}
+          </span>
+        </div>
+
+        {previousBest && (
+          <div className="mb-4 text-[11px] text-muted text-center min-h-[16px]">
+            Previous:{' '}
+            <span className="text-success font-semibold">
+              {previousBest.weight_kg}kg × {previousBest.reps}
+            </span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <SectionLabel label="Weight (kg)" className="mb-[6px]" />
+            <input
+              ref={weightRef}
+              type="number"
+              inputMode="decimal"
+              step="0.5"
+              value={weight}
+              onChange={(e) => {
+                setWeight(e.target.value)
+                setUsedBaselineWeight(false)
+              }}
+              className="w-full px-[14px] py-3 text-[18px] font-['Bebas_Neue'] tracking-[1px] text-text text-center transition-all duration-150"
+              style={{
+                background: colors.surface2,
+                border: `1.5px solid ${colors.border}`,
+                borderRadius: radius.input,
+              }}
+              placeholder="0"
+              aria-label="Weight in kilograms"
+            />
+            {usedBaselineWeight && (
+              <p className="text-xs text-muted mt-1">
+                Prescribed starting weight from your baseline
+              </p>
+            )}
+          </div>
+          <div>
+            <SectionLabel label="Reps" className="mb-[6px]" />
+            <input
+              type="number"
+              inputMode="numeric"
+              value={reps}
+              onChange={(e) => setReps(e.target.value)}
+              className="w-full px-[14px] py-3 text-[18px] font-['Bebas_Neue'] tracking-[1px] text-text text-center transition-all duration-150"
+              style={{
+                background: colors.surface2,
+                border: `1.5px solid ${colors.border}`,
+                borderRadius: radius.input,
+              }}
+              placeholder="0"
+              aria-label="Number of reps"
+            />
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <SectionLabel label="RPE" className="mb-2" />
+          <div
+            className="grid grid-cols-5 gap-[7px]"
+            role="radiogroup"
+            aria-label="Rate of perceived exertion"
+          >
+            {[6, 7, 8, 9, 10].map((val) => {
+              const rpeColor = RPE_COLORS[val]
+              const isActive = rpe === val
+              return (
+                <button
+                  key={val}
+                  onClick={() => setRpe(rpe === val ? null : val)}
+                  role="radio"
+                  aria-checked={isActive}
+                  className="flex flex-col items-center gap-1 py-[14px] px-1 transition-all duration-150 active:scale-[0.93]"
+                  style={{
+                    borderRadius: radius.button,
+                    border: `1.5px solid ${isActive ? rpeColor : colors.border}`,
+                    background: isActive ? `${rpeColor}20` : colors.surface2,
+                  }}
+                >
+                  <span
+                    className="font-['Bebas_Neue'] text-[22px] tracking-[0.5px] leading-none"
+                    style={{ color: rpeColor }}
+                  >
+                    {val}
+                  </span>
+                  <span
+                    className="text-[9px] font-bold tracking-[0.5px] leading-none"
+                    style={{ color: rpeColor }}
+                  >
+                    RPE
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <button
+          onClick={() => setIsMM(!isMM)}
+          aria-pressed={isMM}
+          className="w-full py-2 text-[12px] font-semibold tracking-wider mb-5 transition-colors"
+          style={{
+            borderRadius: radius.buttonSm,
+            border: `1.5px solid ${isMM ? colors.accent : colors.border}`,
+            background: isMM ? 'rgba(255,69,32,0.1)' : 'transparent',
+            color: isMM ? colors.accent : colors.muted,
+          }}
+        >
+          {isMM ? 'MIND-MUSCLE SET ✓' : 'MIND-MUSCLE SET'}
+        </button>
+
+        <Button variant="primary" label="LOG SET" onPress={handleLog} disabled={!weight || !reps} />
+      </div>
+    </div>
+  )
+})
+
+export default SetLogSheet

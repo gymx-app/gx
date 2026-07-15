@@ -2,12 +2,35 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>gx</title>
+    <script>
+      (function(l) {
+        if (l.search[1] === '/' ) {
+          var decoded = l.search.slice(1).split('&').map(function(s) {
+            return s.replace(/~and~/g, '&')
+          });
+          window.history.replaceState(null, null,
+            l.pathname.slice(0, -1) + decoded[0] + (decoded[1] ? '?' + decoded[1] : '') + l.hash
+          );
+        }
+      }(window.location))
+    </script>
+    <link rel="icon" type="image/png" sizes="96x96" href="/gx/favicon-96x96.png" />
+    <link rel="icon" href="/gx/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/gx/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GX">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="format-detection" content="telephone=no">
+    <title>GX</title>
   </head>
-  <body>
+  <body style="margin:0;background:#0a0a0a;overflow:hidden">
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
