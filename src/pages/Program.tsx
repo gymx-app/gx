@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import TopBar from '../components/layout/TopBar'
 import { colors, radius } from '../styles/tokens'
@@ -9,11 +9,17 @@ import {
   getProgrammePhases,
   getProgrammeDays,
   getProgrammeDayExercises,
+  getConditioningItems,
   getProgrammeConfig,
   upsertProgrammeConfig,
 } from '../services/programmeService'
 import { rehydrateProgramme, deleteAllUserData } from '../services/programmeManager'
 import { findOdinPrescription } from '../services/programmeHydrator'
+import {
+  findPhaseNarrative,
+  findDayPatternNarrative,
+  findConditioningNarrative,
+} from '../services/narrativeMatching'
 import { applyExerciseSwap } from '../services/exerciseSwap'
 import { updateExerciseInDay } from '../utils/programmeState'
 import { getWeekNumber, toDateStr } from '../utils/programme'
@@ -21,17 +27,50 @@ import GenerateProgrammeView, {
   type GenerateResult,
 } from '../features/programme/GenerateProgrammeView'
 import ProgrammePreview from '../features/programme/ProgrammePreview'
+import WhyTab from '../features/programme/WhyTab'
+import EvidenceTab from '../features/programme/EvidenceTab'
 import { ProfileCard } from '../components/programme/ProfileCard'
 import type { UserProfile, UserHealth } from '../components/programme/ProfileCard'
 import ProgrammeSkeleton from '../components/programme/ProgrammeSkeleton'
+import ConditioningSummaryCard from '../components/programme/ConditioningSummaryCard'
+import CitationChip from '../components/programme/CitationChip'
 import { ExerciseSwapSheet, type SwapTarget } from '../components/programme/ExerciseSwapSheet'
 import BottomSheet from '../components/ui/BottomSheet'
 import Skeleton from '../components/ui/Skeleton'
 import { useToast } from '../hooks/useToast'
-import { Loader2, ChevronDown, RefreshCw, AlertTriangle, ArrowLeftRight } from 'lucide-react'
+import {
+  Loader2,
+  ChevronDown,
+  RefreshCw,
+  AlertTriangle,
+  ArrowLeftRight,
+  CircleHelp,
+  ShieldCheck,
+  ChevronRight,
+} from 'lucide-react'
 
 type TabState = 'loading' | 'no_programme' | 'has_programme'
+type ProgrammeTab = 'programme' | 'why' | 'evidence'
 type ConfirmAction = 'choose' | 'refresh' | 'restart' | 'regen' | null
+
+interface WhySheetState {
+  title: string
+  narrative: string
+  citationCodes: string[]
+}
+
+function validationScoreColor(score: number): string {
+  if (score >= 80) return colors.success
+  if (score >= 60) return colors.warning
+  return colors.error
+}
+
+function validationScoreLabel(score: number): string {
+  if (score >= 90) return 'Fully validated — no issues found'
+  if (score >= 80) return 'Validated — minor notes'
+  if (score >= 60) return 'Validated with flags — see details'
+  return 'Needs review — see details'
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyData = any
@@ -90,6 +129,11 @@ export default function Program() {
   const [openPhaseIdx, setOpenPhaseIdx] = useState<number | null>(null)
   const [phaseDays, setPhaseDays] = useState<Record<string, AnyData[]>>({})
   const [dayExercises, setDayExercises] = useState<Record<string, AnyData[]>>({})
+  const [dayConditioning, setDayConditioning] = useState<Record<string, AnyData[]>>({})
+  const [activeTab, setActiveTab] = useState<ProgrammeTab>('programme')
+  const [whySheet, setWhySheet] = useState<WhySheetState | null>(null)
+  const [highlightCode, setHighlightCode] = useState<string | null>(null)
+  const citationRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -226,13 +270,21 @@ export default function Program() {
         // getProgrammeDays only selects day columns — it never joins exercises,
         // so each day needs a separate fetch to populate the accordion's leaf level.
         const workoutDays = days.filter((d: AnyData) => d.workout_type !== 'rest')
-        const results = await Promise.all(
-          workoutDays.map((d: AnyData) => getProgrammeDayExercises(d.id))
-        )
+        const [exResults, condResults] = await Promise.all([
+          Promise.all(workoutDays.map((d: AnyData) => getProgrammeDayExercises(d.id))),
+          Promise.all(workoutDays.map((d: AnyData) => getConditioningItems(d.id))),
+        ])
         setDayExercises((prev) => {
           const next = { ...prev }
           workoutDays.forEach((d: AnyData, i: number) => {
-            next[d.id] = results[i]?.data ?? []
+            next[d.id] = exResults[i]?.data ?? []
+          })
+          return next
+        })
+        setDayConditioning((prev) => {
+          const next = { ...prev }
+          workoutDays.forEach((d: AnyData, i: number) => {
+            next[d.id] = condResults[i]?.data ?? []
           })
           return next
         })
@@ -297,6 +349,35 @@ export default function Program() {
     const timer = setTimeout(() => setJustSwappedId(null), 1600)
     return () => clearTimeout(timer)
   }, [justSwappedId])
+
+  // Odin's full response — narratives/citations/validation — is stored as-is
+  // in programmes.programme_data (see useSaveProgramme), no separate columns.
+  const programmeData: AnyData = activeProgramme?.programme_data ?? null
+  const narrativesUnavailable = programmeData?.narratives_unavailable === true
+  const narratives: AnyData = narrativesUnavailable ? null : (programmeData?.narratives ?? null)
+  const citations: AnyData[] = programmeData?.citations ?? []
+  const validationScore: number | null = programmeData?.validation?.overall_score ?? null
+  const validationFindings: AnyData[] = programmeData?.validation?.findings ?? []
+
+  const goToCitation = useCallback((code: string) => {
+    setWhySheet(null)
+    setActiveTab('evidence')
+    setHighlightCode(code)
+  }, [])
+
+  // Citation cards only mount once the Evidence tab is active, so the scroll
+  // has to wait a frame after the tab switch before the ref exists.
+  useEffect(() => {
+    if (activeTab !== 'evidence' || !highlightCode) return
+    const raf = requestAnimationFrame(() => {
+      citationRefs.current[highlightCode]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+    const timer = setTimeout(() => setHighlightCode(null), 2000)
+    return () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(timer)
+    }
+  }, [activeTab, highlightCode])
 
   const bustCaches = useCallback(async () => {
     if (!user) return
@@ -418,12 +499,19 @@ export default function Program() {
   // ── Has programme ──
   const totalWeeks = phases.reduce((s: number, p: AnyData) => s + (p.weeks_count ?? 0), 0)
 
+  const tabs: { key: ProgrammeTab; label: string }[] = [
+    { key: 'programme', label: 'Programme' },
+    { key: 'why', label: 'Why' },
+    { key: 'evidence', label: 'Evidence' },
+  ]
+
   return (
     <>
       <TopBar title="PROGRAMME" />
-      <div className="flex-1 overflow-y-auto pb-8 px-4 pt-4 space-y-4">
-        {/* Profile card */}
-        {profile && health && (
+
+      {/* Profile card: always visible above the tabs, same data for all three */}
+      {profile && health && (
+        <div className="flex-shrink-0 px-4 pt-4">
           <ProfileCard
             profile={profile}
             health={health}
@@ -432,242 +520,442 @@ export default function Program() {
             injuries={health.injuries ?? []}
             hasInbodyScan={hasInbodyScan}
           />
-        )}
-
-        {/* Programme header: name left, refresh icon right */}
-        <div>
-          <div className="flex items-center justify-between">
-            <h1
-              className="font-['Bebas_Neue'] text-[26px] tracking-[2px] leading-none"
-              style={{ color: colors.text }}
-            >
-              {activeProgramme?.name ?? 'My Programme'}
-            </h1>
-            <button
-              onClick={() => {
-                setConfirmAction('choose')
-                setActionError(null)
-              }}
-              disabled={actionLoading}
-              className="p-2 -mr-1 active:opacity-50"
-              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-              title="Refresh or restart programme"
-            >
-              <RefreshCw size={17} color={colors.muted} />
-            </button>
-          </div>
         </div>
+      )}
 
-        {/* Phase accordion */}
-        <div className="space-y-2">
-          {phases.map((phase: AnyData, pi: number) => {
-            const accent = phaseColor(phase)
-            const isOpen = openPhaseIdx === pi
-            const days: AnyData[] = phaseDays[phase.id] ?? []
+      {/* Tab shell: fetched once above, switching tabs just changes what's rendered */}
+      <div className="flex-shrink-0 flex gap-2 px-4 pt-3">
+        {tabs.map((t) => {
+          const isActive = activeTab === t.key
+          return (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className="flex-1 py-2 text-[12px] font-['DM_Sans'] font-bold uppercase tracking-[0.5px]"
+              style={{
+                borderRadius: radius.chip,
+                background: isActive ? colors.accent : colors.surface2,
+                color: isActive ? colors.white : colors.muted,
+                border: `1px solid ${isActive ? colors.accent : colors.border}`,
+                cursor: 'pointer',
+              }}
+            >
+              {t.label}
+            </button>
+          )
+        })}
+      </div>
 
-            return (
+      {activeTab === 'why' && (
+        <WhyTab
+          narratives={narratives}
+          narrativesUnavailable={narrativesUnavailable}
+          citations={citations}
+          phases={phases}
+          onCitationTap={goToCitation}
+        />
+      )}
+
+      {activeTab === 'evidence' && (
+        <EvidenceTab
+          validationScore={validationScore}
+          findings={validationFindings}
+          citations={citations}
+          narratives={narratives}
+          phases={phases}
+          highlightCode={highlightCode}
+          citationRefs={citationRefs}
+        />
+      )}
+
+      {activeTab === 'programme' && (
+        <div className="flex-1 overflow-y-auto pb-8 px-4 pt-4 space-y-4">
+          {/* Programme header: name left, refresh icon right */}
+          <div>
+            <div className="flex items-center justify-between">
+              <h1
+                className="font-['Bebas_Neue'] text-[26px] tracking-[2px] leading-none"
+                style={{ color: colors.text }}
+              >
+                {activeProgramme?.name ?? 'My Programme'}
+              </h1>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    setConfirmAction('choose')
+                    setActionError(null)
+                  }}
+                  disabled={actionLoading}
+                  className="p-2 -mr-1 active:opacity-50"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                  title="Refresh or restart programme"
+                >
+                  <RefreshCw size={17} color={colors.muted} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Confidence score: plain-language line, not just a number, so it's
+            clear what it means without opening Evidence first */}
+          {validationScore != null && (
+            <button
+              onClick={() => setActiveTab('evidence')}
+              className="w-full flex items-center gap-3 p-3 active:opacity-70"
+              style={{
+                background: colors.surface,
+                border: `1px solid ${colors.border}`,
+                borderRadius: radius.card,
+                cursor: 'pointer',
+              }}
+            >
               <div
-                key={pi}
+                className="w-9 h-9 flex-shrink-0 flex items-center justify-center"
                 style={{
-                  background: colors.surface,
-                  border: `1px solid ${isOpen ? accent : colors.border}`,
-                  borderRadius: radius.card,
-                  overflow: 'hidden',
-                  transition: 'border-color 0.2s',
+                  background: `${validationScoreColor(validationScore)}1a`,
+                  borderRadius: '50%',
                 }}
               >
-                <button
-                  onClick={() => void togglePhase(pi, phase)}
-                  className="w-full flex items-center gap-3 p-4 active:opacity-70"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                <ShieldCheck size={17} color={validationScoreColor(validationScore)} />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p
+                  className="text-[13px] font-['DM_Sans'] font-bold"
+                  style={{ color: colors.text }}
                 >
-                  <div
-                    className="flex-shrink-0 w-9 h-9 flex items-center justify-center"
-                    style={{ background: `${accent}22`, borderRadius: '50%' }}
-                  >
-                    <span className="font-['Bebas_Neue'] text-[15px]" style={{ color: accent }}>
-                      {pi + 1}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0 text-left">
-                    <p
-                      className="font-['Bebas_Neue'] text-[16px] tracking-[1px] leading-none"
-                      style={{ color: colors.text }}
-                    >
-                      {phase.name ?? `Phase ${pi + 1}`}
-                    </p>
-                    {phase.goal && (
-                      <p
-                        className="text-[12px] font-['DM_Sans'] mt-0.5 truncate"
-                        style={{ color: colors.muted }}
-                      >
-                        {phase.goal}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {phase.weeks_count != null && (
-                      <span
-                        className="text-[11px] font-['DM_Sans'] font-medium px-2 py-0.5"
-                        style={{
-                          background: colors.surface3,
-                          color: colors.textSecondary,
-                          borderRadius: radius.chip,
-                        }}
-                      >
-                        {phase.weeks_count}w
-                      </span>
-                    )}
-                    <ChevronDown
-                      size={16}
-                      color={colors.muted}
-                      style={{
-                        transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
-                        transition: 'transform 0.2s',
-                      }}
-                    />
-                  </div>
-                </button>
+                  Confidence Score: {validationScore}/100
+                </p>
+                <p
+                  className="text-[11px] font-['DM_Sans'] mt-0.5 truncate"
+                  style={{ color: colors.muted }}
+                >
+                  {validationScoreLabel(validationScore)}
+                </p>
+              </div>
+              <ChevronRight size={16} color={colors.muted} className="flex-shrink-0" />
+            </button>
+          )}
 
-                {isOpen && (
-                  <div style={{ borderTop: `1px solid ${colors.border}` }}>
-                    {days.length === 0 ? (
-                      <div>
-                        {[0, 1, 2].map((i) => (
-                          <div
-                            key={i}
-                            className="flex items-center gap-3 px-4 py-3"
-                            style={{
-                              borderBottom: i < 2 ? `1px solid ${colors.borderSubtle}` : 'none',
-                            }}
-                          >
-                            <Skeleton width={32} height={16} />
-                            <Skeleton width={140} height={13} className="flex-1" />
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      days.map((day: AnyData, di: number) => {
-                        const isRest = day.workout_type === 'rest'
-                        const dotColor = DAY_TYPE_COLOR[day.workout_type as string] ?? colors.muted
-                        const exercises: AnyData[] = dayExercises[day.id] ?? []
-                        return (
-                          <div
-                            key={di}
-                            style={{
-                              borderBottom:
-                                di < days.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
-                            }}
-                          >
-                            <div className="flex items-center gap-3 px-4 py-3">
+          {/* Phase accordion */}
+          <div className="space-y-2">
+            {phases.map((phase: AnyData, pi: number) => {
+              const accent = phaseColor(phase)
+              const isOpen = openPhaseIdx === pi
+              const days: AnyData[] = phaseDays[phase.id] ?? []
+
+              return (
+                <div
+                  key={pi}
+                  style={{
+                    background: colors.surface,
+                    border: `1px solid ${isOpen ? accent : colors.border}`,
+                    borderRadius: radius.card,
+                    overflow: 'hidden',
+                    transition: 'border-color 0.2s',
+                  }}
+                >
+                  <button
+                    onClick={() => void togglePhase(pi, phase)}
+                    className="w-full flex items-center gap-3 p-4 active:opacity-70"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    <div
+                      className="flex-shrink-0 w-9 h-9 flex items-center justify-center"
+                      style={{ background: `${accent}22`, borderRadius: '50%' }}
+                    >
+                      <span className="font-['Bebas_Neue'] text-[15px]" style={{ color: accent }}>
+                        {pi + 1}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="flex items-center gap-1.5">
+                        <p
+                          className="font-['Bebas_Neue'] text-[16px] tracking-[1px] leading-none"
+                          style={{ color: colors.text }}
+                        >
+                          {phase.name ?? `Phase ${pi + 1}`}
+                        </p>
+                        {!narrativesUnavailable &&
+                          (() => {
+                            const n = findPhaseNarrative(narratives, programmeData, pi)
+                            if (!n?.narrative?.text) return null
+                            return (
                               <span
-                                className="flex-shrink-0 text-[10px] font-['DM_Sans'] font-bold tracking-[1px] w-8 text-center py-0.5"
-                                style={{
-                                  background: isRest ? colors.surface3 : `${accent}22`,
-                                  color: isRest ? colors.muted : accent,
-                                  borderRadius: 4,
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setWhySheet({
+                                    title: phase.name ?? `Phase ${pi + 1}`,
+                                    narrative: n.narrative.text,
+                                    citationCodes: n.narrative.citation_codes ?? [],
+                                  })
                                 }}
+                                className="flex-shrink-0"
                               >
-                                {day.day_of_week?.slice(0, 3) ?? `D${di + 1}`}
+                                <CircleHelp size={14} color={colors.muted} />
                               </span>
-                              <p
-                                className="flex-1 text-[13px] font-['DM_Sans']"
-                                style={{ color: isRest ? colors.muted : colors.text }}
-                              >
-                                {day.title ?? (isRest ? 'Rest' : `Day ${di + 1}`)}
-                              </p>
-                              <div
-                                className="flex-shrink-0 w-2 h-2 rounded-full"
-                                style={{ background: dotColor }}
-                              />
+                            )
+                          })()}
+                      </div>
+                      {phase.goal && (
+                        <p
+                          className="text-[12px] font-['DM_Sans'] mt-0.5 truncate"
+                          style={{ color: colors.muted }}
+                        >
+                          {phase.goal}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {phase.weeks_count != null && (
+                        <span
+                          className="text-[11px] font-['DM_Sans'] font-medium px-2 py-0.5"
+                          style={{
+                            background: colors.surface3,
+                            color: colors.textSecondary,
+                            borderRadius: radius.chip,
+                          }}
+                        >
+                          {phase.weeks_count}w
+                        </span>
+                      )}
+                      <ChevronDown
+                        size={16}
+                        color={colors.muted}
+                        style={{
+                          transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+                          transition: 'transform 0.2s',
+                        }}
+                      />
+                    </div>
+                  </button>
+
+                  {isOpen && (
+                    <div style={{ borderTop: `1px solid ${colors.border}` }}>
+                      {days.length === 0 ? (
+                        <div>
+                          {[0, 1, 2].map((i) => (
+                            <div
+                              key={i}
+                              className="flex items-center gap-3 px-4 py-3"
+                              style={{
+                                borderBottom: i < 2 ? `1px solid ${colors.borderSubtle}` : 'none',
+                              }}
+                            >
+                              <Skeleton width={32} height={16} />
+                              <Skeleton width={140} height={13} className="flex-1" />
                             </div>
-                            {!isRest && exercises.length > 0 && (
-                              <div style={{ background: colors.surface2 }}>
-                                {exercises.map((ex: AnyData, ei: number) => (
-                                  <div
-                                    key={ex.id}
-                                    className="w-full flex items-center gap-3 pl-8 pr-4 py-3"
-                                    style={{
-                                      borderTop:
-                                        ei > 0 ? `1px solid ${colors.borderSubtle}` : 'none',
-                                      background:
-                                        ex.id === justSwappedId
-                                          ? `color-mix(in srgb, ${colors.accent} 13%, transparent)`
-                                          : 'transparent',
-                                      transition: 'background-color 1.4s ease-out',
+                          ))}
+                        </div>
+                      ) : (
+                        days.map((day: AnyData, di: number) => {
+                          const isRest = day.workout_type === 'rest'
+                          const dotColor =
+                            DAY_TYPE_COLOR[day.workout_type as string] ?? colors.muted
+                          const exercises: AnyData[] = dayExercises[day.id] ?? []
+                          const conditioning: AnyData[] = dayConditioning[day.id] ?? []
+                          const dayNarrativeRaw =
+                            !isRest && !narrativesUnavailable
+                              ? findDayPatternNarrative(
+                                  narratives,
+                                  programmeData,
+                                  pi,
+                                  day.day_of_week
+                                )
+                              : null
+                          const finisherNarrativeRaw =
+                            !isRest && !narrativesUnavailable
+                              ? findConditioningNarrative(
+                                  narratives,
+                                  programmeData,
+                                  pi,
+                                  day.day_of_week
+                                )
+                              : null
+                          const dayNarrative = dayNarrativeRaw?.narrative?.text
+                            ? dayNarrativeRaw
+                            : null
+                          const finisherNarrative = finisherNarrativeRaw?.narrative?.text
+                            ? finisherNarrativeRaw
+                            : null
+                          return (
+                            <div
+                              key={di}
+                              style={{
+                                borderBottom:
+                                  di < days.length - 1
+                                    ? `1px solid ${colors.borderSubtle}`
+                                    : 'none',
+                              }}
+                            >
+                              <div className="flex items-center gap-3 px-4 py-3">
+                                <span
+                                  className="flex-shrink-0 text-[10px] font-['DM_Sans'] font-bold tracking-[1px] w-8 text-center py-0.5"
+                                  style={{
+                                    background: isRest ? colors.surface3 : `${accent}22`,
+                                    color: isRest ? colors.muted : accent,
+                                    borderRadius: 4,
+                                  }}
+                                >
+                                  {day.day_of_week?.slice(0, 3) ?? `D${di + 1}`}
+                                </span>
+                                <p
+                                  className="flex-1 text-[13px] font-['DM_Sans']"
+                                  style={{ color: isRest ? colors.muted : colors.text }}
+                                >
+                                  {day.title ?? (isRest ? 'Rest' : `Day ${di + 1}`)}
+                                </p>
+                                {(dayNarrative ?? finisherNarrative) && (
+                                  <span
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      const n = dayNarrative ?? finisherNarrative
+                                      setWhySheet({
+                                        title: day.title ?? 'This day',
+                                        narrative: n.narrative.text,
+                                        citationCodes: n.narrative.citation_codes ?? [],
+                                      })
                                     }}
+                                    className="flex-shrink-0"
                                   >
-                                    <p
-                                      className="flex-1 text-[12px] font-['DM_Sans']"
-                                      style={{ color: colors.textSecondary }}
-                                    >
-                                      {ex.exercises?.name ?? 'Exercise'}
-                                    </p>
-                                    {ex.sets_reps && (
-                                      <span
-                                        className="flex-shrink-0 text-[11px] font-['DM_Sans']"
-                                        style={{ color: colors.muted }}
-                                      >
-                                        {ex.sets_reps}
-                                      </span>
-                                    )}
-                                    <button
-                                      onClick={() => openSwap(pi, day, ex)}
-                                      className="flex-shrink-0 -mr-2 flex items-center justify-center gap-1 active:opacity-60"
+                                    <CircleHelp size={14} color={colors.muted} />
+                                  </span>
+                                )}
+                                <div
+                                  className="flex-shrink-0 w-2 h-2 rounded-full"
+                                  style={{ background: dotColor }}
+                                />
+                              </div>
+                              {!isRest && exercises.length === 0 && conditioning.length > 0 && (
+                                <div style={{ background: colors.surface2 }}>
+                                  {conditioning.map((item: AnyData) => (
+                                    <ConditioningSummaryCard key={item.id} item={item} />
+                                  ))}
+                                </div>
+                              )}
+                              {!isRest && exercises.length > 0 && (
+                                <div style={{ background: colors.surface2 }}>
+                                  {exercises.map((ex: AnyData, ei: number) => (
+                                    <div
+                                      key={ex.id}
+                                      className="w-full flex items-center gap-3 pl-8 pr-4 py-3"
                                       style={{
-                                        minWidth: 44,
-                                        minHeight: 44,
-                                        padding: '0 10px',
-                                        background: colors.surface3,
-                                        border: 'none',
-                                        borderRadius: radius.chip,
-                                        cursor: 'pointer',
+                                        borderTop:
+                                          ei > 0 ? `1px solid ${colors.borderSubtle}` : 'none',
+                                        background:
+                                          ex.id === justSwappedId
+                                            ? `color-mix(in srgb, ${colors.accent} 13%, transparent)`
+                                            : 'transparent',
+                                        transition: 'background-color 1.4s ease-out',
                                       }}
-                                      title="Swap exercise"
-                                      aria-label={`Swap ${ex.exercises?.name ?? 'exercise'}`}
                                     >
-                                      <ArrowLeftRight size={13} color={colors.textSecondary} />
-                                      <span
-                                        className="text-[10px] font-['DM_Sans'] font-bold uppercase tracking-[0.5px]"
+                                      <p
+                                        className="flex-1 text-[12px] font-['DM_Sans']"
                                         style={{ color: colors.textSecondary }}
                                       >
-                                        Swap
-                                      </span>
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+                                        {ex.exercises?.name ?? 'Exercise'}
+                                      </p>
+                                      {ex.sets_reps && (
+                                        <span
+                                          className="flex-shrink-0 text-[11px] font-['DM_Sans']"
+                                          style={{ color: colors.muted }}
+                                        >
+                                          {ex.sets_reps}
+                                        </span>
+                                      )}
+                                      <button
+                                        onClick={() => openSwap(pi, day, ex)}
+                                        className="flex-shrink-0 -mr-2 flex items-center justify-center gap-1 active:opacity-60"
+                                        style={{
+                                          minWidth: 44,
+                                          minHeight: 44,
+                                          padding: '0 10px',
+                                          background: colors.surface3,
+                                          border: 'none',
+                                          borderRadius: radius.chip,
+                                          cursor: 'pointer',
+                                        }}
+                                        title="Swap exercise"
+                                        aria-label={`Swap ${ex.exercises?.name ?? 'exercise'}`}
+                                      >
+                                        <ArrowLeftRight size={13} color={colors.textSecondary} />
+                                        <span
+                                          className="text-[10px] font-['DM_Sans'] font-bold uppercase tracking-[0.5px]"
+                                          style={{ color: colors.textSecondary }}
+                                        >
+                                          Swap
+                                        </span>
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
 
-        {/* Generate New Programme button */}
-        <button
-          onClick={() => {
-            setConfirmAction('regen')
-            setActionError(null)
-          }}
-          disabled={actionLoading}
-          className="w-full py-3.5 text-[13px] font-['DM_Sans'] font-medium active:opacity-60"
-          style={{
-            background: 'none',
-            border: `1px solid ${colors.border}`,
-            borderRadius: radius.button,
-            color: colors.textSecondary,
-            cursor: actionLoading ? 'default' : 'pointer',
-          }}
-        >
-          Generate New Programme
-        </button>
-      </div>
+          {/* Generate New Programme button */}
+          <button
+            onClick={() => {
+              setConfirmAction('regen')
+              setActionError(null)
+            }}
+            disabled={actionLoading}
+            className="w-full py-3.5 text-[13px] font-['DM_Sans'] font-medium active:opacity-60"
+            style={{
+              background: 'none',
+              border: `1px solid ${colors.border}`,
+              borderRadius: radius.button,
+              color: colors.textSecondary,
+              cursor: actionLoading ? 'default' : 'pointer',
+            }}
+          >
+            Generate New Programme
+          </button>
+        </div>
+      )}
+
+      {/* ── Why bottom sheet ── */}
+      <BottomSheet isOpen={whySheet !== null} onClose={() => setWhySheet(null)}>
+        {whySheet && (
+          <div className="px-5 pb-8 pt-2">
+            <p
+              className="font-['Bebas_Neue'] text-[18px] tracking-[1px] leading-none mb-3"
+              style={{ color: colors.text }}
+            >
+              {whySheet.title}
+            </p>
+            <p
+              className="text-[13px] font-['DM_Sans'] leading-relaxed"
+              style={{ color: colors.textSecondary }}
+            >
+              {whySheet.narrative}
+            </p>
+            {whySheet.citationCodes.length > 0 && (
+              <div className="flex flex-wrap mt-3">
+                {whySheet.citationCodes.map((code) => {
+                  const c = citations.find((cit: AnyData) => cit.code === code)
+                  if (!c) return null
+                  return (
+                    <CitationChip
+                      key={code}
+                      author={c.author}
+                      year={c.year}
+                      onTap={() => goToCitation(code)}
+                    />
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </BottomSheet>
 
       {/* ── Confirm bottom sheet ── */}
       <BottomSheet isOpen={confirmAction !== null} onClose={closeSheet}>
