@@ -45,6 +45,19 @@ function getRestV2(sets: OdinData[]): string {
   return formatRest(sets[0]?.rest_seconds ?? null)
 }
 
+// Odin groups 2+ exercises into a superset/giant_set via a shared
+// superset_group_id, meaning near-zero rest between them — the flattened
+// sets_reps/rest strings above have no way to show that, so surface it in
+// notes instead (sets_reps gets rewritten wholesale by applyNextPrescription
+// on every progression update, which would silently drop anything appended there).
+function formatSupersetNote(ex: OdinData, dayExercises: OdinData[]): string | null {
+  if (!ex.superset_group_id) return null
+  const partner = dayExercises.find(
+    (other) => other !== ex && other.superset_group_id === ex.superset_group_id
+  )
+  return partner ? `Superset w/ ${partner.exercise_name}` : null
+}
+
 export async function hydrateProgramme(
   programmeId: string,
   odinData: OdinData,
@@ -196,7 +209,10 @@ export async function hydrateProgramme(
           display_order: idx + 1,
           sets_reps: formatSetsRepsV2(ex.sets),
           rest: getRestV2(ex.sets),
-          notes: ex.coaching_cues?.[0] ?? null,
+          notes:
+            [ex.coaching_cues?.[0], formatSupersetNote(ex, exercises)]
+              .filter(Boolean)
+              .join(' · ') || null,
         })
       }
 
@@ -283,11 +299,12 @@ export interface OdinPrescriptionLookup {
 // programme_exercises never stored Odin's own exercise_id, substitution_options,
 // or progression fields (target_reps/rpe_ceiling/progression_bounds) — hydration
 // only kept exercise_name and a formatted sets_reps string (see resolveExercises
-// above). All of it still lives in the raw programme_data JSON every active
-// programme already has loaded, so this reconstructs which JSON node a given
-// (phase, day, exercise) DB row came from — using the exact same day_of_week
-// assignment (mapDayLabel + de-dup) hydration used, so it lands on the same
-// day even when the raw label was missing/duplicate.
+// above). Those extra fields still live in the raw programme_data JSON, so this
+// reconstructs which JSON node a given (phase, day, exercise) DB row came from —
+// using the exact same day_of_week assignment (mapDayLabel + de-dup) hydration
+// used, so it lands on the same day even when the raw label was missing/duplicate.
+// (Today.jsx and Program.tsx do read the denormalized programme_exercises rows
+// directly for display — sets_reps/rest/notes aren't dead, only these extra fields are.)
 export function findOdinPrescription(
   odinData: OdinData,
   phaseIndex: number,
