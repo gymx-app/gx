@@ -29,11 +29,10 @@ const WORKOUT_TIMES: { value: NonNullable<WorkoutTime>; label: string }[] = [
 interface Props {
   wizardState: WizardState
   setField: (key: string, value: unknown) => void
-  goToStep: (n: number) => void
   onContinue: () => void
 }
 
-export function Screen7Logistics({ wizardState, setField, goToStep, onContinue }: Props) {
+export function Screen7Logistics({ wizardState, setField, onContinue }: Props) {
   const valid =
     !!wizardState.equipment &&
     wizardState.available_days_per_week > 0 &&
@@ -41,15 +40,6 @@ export function Screen7Logistics({ wizardState, setField, goToStep, onContinue }
 
   const handleEquipmentSelect = (value: NonNullable<Equipment>) => {
     setField('equipment', value)
-    if (value === 'bodyweight_only') setField('baseline_path', 'skipped')
-  }
-
-  const handleContinue = () => {
-    if (wizardState.equipment === 'bodyweight_only') {
-      goToStep(9)
-    } else {
-      onContinue()
-    }
   }
 
   return (
@@ -135,7 +125,7 @@ export function Screen7Logistics({ wizardState, setField, goToStep, onContinue }
         <FieldHelper text="Morning sessions need a longer warmup — Odin adjusts the warmup protocol automatically." />
       </div>
 
-      <WizardCta label="CONTINUE →" disabled={!valid} onTap={handleContinue} />
+      <WizardCta label="CONTINUE →" disabled={!valid} onTap={onContinue} />
     </>
   )
 }

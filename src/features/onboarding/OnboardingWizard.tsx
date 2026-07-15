@@ -16,13 +16,12 @@ import { Screen4Capability } from './screens/Screen4Capability'
 import { Screen5Commitment } from './screens/Screen5Commitment'
 import { Screen6GoalPrecision } from './screens/Screen6GoalPrecision'
 import { Screen7Logistics } from './screens/Screen7Logistics'
-import { Screen8BaselineStrength } from './screens/Screen8BaselineStrength'
 import { Screen9Constraints } from './screens/Screen9Constraints'
 import { Screen10ProgrammeProfile } from './screens/Screen10ProgrammeProfile'
 import { OdinLoader } from '../../components/OdinLoader'
 
 const GENERATE_TIMEOUT_MS = 90000
-const TOTAL_STEPS = 10
+const TOTAL_STEPS = 9
 
 export default function OnboardingWizard() {
   const { user } = useAuth()
@@ -149,13 +148,8 @@ export default function OnboardingWizard() {
   }, [navigate])
 
   const handleBack = useCallback(() => {
-    const step = wizardState.current_step
-    if (step === 9 && wizardState.equipment === 'bodyweight_only') {
-      goToStep(7)
-    } else {
-      goToStep(step - 1)
-    }
-  }, [wizardState.current_step, wizardState.equipment, goToStep])
+    goToStep(wizardState.current_step - 1)
+  }, [wizardState.current_step, goToStep])
 
   if (!user || loadingInitial) {
     return (
@@ -254,18 +248,10 @@ export default function OnboardingWizard() {
             <Screen7Logistics
               wizardState={wizardState}
               setField={setField}
-              goToStep={goToStep}
               onContinue={advanceStep}
             />
           )}
           {step === 8 && (
-            <Screen8BaselineStrength
-              wizardState={wizardState}
-              setField={setField}
-              onContinue={advanceStep}
-            />
-          )}
-          {step === 9 && (
             <Screen9Constraints
               wizardState={wizardState}
               setField={setField}
@@ -274,7 +260,7 @@ export default function OnboardingWizard() {
               onPregnancySaved={handlePregnancySaved}
             />
           )}
-          {step === 10 && (
+          {step === 9 && (
             <Screen10ProgrammeProfile
               wizardState={wizardState}
               setField={setField}

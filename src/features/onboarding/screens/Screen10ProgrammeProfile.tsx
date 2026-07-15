@@ -38,12 +38,6 @@ const GOAL_LABELS: Record<string, string> = {
   general_fitness: 'General Fitness',
 }
 
-const BASELINE_LABELS: Record<string, string> = {
-  self_reported: 'Self-reported',
-  day_one_test: 'Day 1 test',
-  skipped: 'RPE only',
-}
-
 interface FailureFieldStep {
   match: RegExp
   step: number
@@ -52,8 +46,7 @@ interface FailureFieldStep {
 const VALIDATION_FIELD_STEPS: FailureFieldStep[] = [
   { match: /goal|primary.?lift/i, step: 6 },
   { match: /equipment|days|duration/i, step: 7 },
-  { match: /baseline/i, step: 8 },
-  { match: /medical|injur/i, step: 9 },
+  { match: /medical|injur/i, step: 8 },
 ]
 
 interface Props {
@@ -193,14 +186,6 @@ export function Screen10ProgrammeProfile({ wizardState, setField, goToStep, onGe
           )}
         </div>
 
-        {wizardState.baseline_path && wizardState.baseline_path !== 'skipped' && (
-          <p className="text-[12px] font-['DM_Sans'] mb-2" style={{ color: colors.textSecondary }}>
-            Baseline: {BASELINE_LABELS[wizardState.baseline_path]}
-            {wizardState.baseline_path === 'self_reported' &&
-              ` · ${wizardState.known_lifts.length} lifts entered`}
-          </p>
-        )}
-
         {wizardState.medical_conditions.length > 0 &&
           !wizardState.medical_conditions.every((c) => c === 'None') && (
             <div className="flex flex-wrap gap-1.5 mb-2">
@@ -243,7 +228,7 @@ export function Screen10ProgrammeProfile({ wizardState, setField, goToStep, onGe
           { label: 'Edit body data', step: 3 },
           { label: 'Edit goal', step: 5 },
           { label: 'Edit schedule', step: 7 },
-          { label: 'Edit constraints', step: 9 },
+          { label: 'Edit constraints', step: 8 },
         ].map((l) => (
           <button
             key={l.step}

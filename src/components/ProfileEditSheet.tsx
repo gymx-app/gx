@@ -5,34 +5,37 @@ import { useToast } from '../hooks/useToast'
 import { Input, Skeleton, SectionLabel } from './ui'
 import { colors, radius } from '../styles/tokens'
 import { Lock } from 'lucide-react'
+import { SearchableSelect } from '../features/onboarding/screens/shared'
+import { COUNTRIES } from '../features/onboarding/screens/sharedUtils'
 
-type Gender = 'male' | 'female' | 'prefer_not_to_say' | ''
+type Gender = 'male' | 'female' | 'other' | ''
 
 interface ProfileForm {
-  first_name: string
-  last_name: string
+  full_name: string
   date_of_birth: string
   gender: Gender
+  nationality: string
   phone_number: string
 }
 
 interface ProfileEditSheetProps {
   open: boolean
   onClose: () => void
-  onProfileUpdate: (profile: { first_name: string; last_name: string }) => void
+  onProfileUpdate: (profile: { full_name: string }) => void
 }
 
+// Same three options as onboarding's Screen2Identity — keep the two in sync.
 const GENDER_OPTIONS: { value: Gender; label: string }[] = [
   { value: 'male', label: 'Male' },
   { value: 'female', label: 'Female' },
-  { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+  { value: 'other', label: 'Other' },
 ]
 
 const EMPTY_FORM: ProfileForm = {
-  first_name: '',
-  last_name: '',
+  full_name: '',
   date_of_birth: '',
   gender: '',
+  nationality: '',
   phone_number: '',
 }
 
@@ -65,15 +68,15 @@ export default function ProfileEditSheet({
       setLoading(true)
       const { data } = await supabase
         .from('user_profiles')
-        .select('first_name, last_name, date_of_birth, gender, phone_number')
+        .select('full_name, date_of_birth, gender, nationality, phone_number')
         .eq('user_id', user.id)
         .single()
       const d = data
       setForm({
-        first_name: d?.first_name ?? '',
-        last_name: d?.last_name ?? '',
+        full_name: d?.full_name ?? '',
         date_of_birth: d?.date_of_birth ?? '',
         gender: (d?.gender as Gender) ?? '',
+        nationality: d?.nationality ?? '',
         phone_number: d?.phone_number ?? '',
       })
       setLoading(false)
@@ -92,8 +95,7 @@ export default function ProfileEditSheet({
 
   const validate = useCallback((): boolean => {
     const errs: Partial<Record<keyof ProfileForm, string>> = {}
-    if (!form.first_name.trim()) errs.first_name = 'First name is required'
-    if (!form.last_name.trim()) errs.last_name = 'Last name is required'
+    if (!form.full_name.trim()) errs.full_name = 'Name is required'
     if (form.date_of_birth) {
       const dob = new Date(form.date_of_birth)
       const minAge = new Date()
@@ -116,10 +118,10 @@ export default function ProfileEditSheet({
     const { error } = await supabase.from('user_profiles').upsert(
       {
         user_id: user!.id,
-        first_name: form.first_name.trim(),
-        last_name: form.last_name.trim(),
+        full_name: form.full_name.trim(),
         date_of_birth: form.date_of_birth || null,
         gender: form.gender || null,
+        nationality: form.nationality || null,
         phone_number: form.phone_number.trim() || null,
         updated_at: new Date().toISOString(),
       },
@@ -133,13 +135,13 @@ export default function ProfileEditSheet({
       return
     }
 
-    onProfileUpdate({ first_name: form.first_name.trim(), last_name: form.last_name.trim() })
+    onProfileUpdate({ full_name: form.full_name.trim() })
     onClose()
   }, [form, user, validate, toast, onProfileUpdate, onClose])
 
   if (!open) return null
 
-  const canSave = form.first_name.trim().length > 0 && form.last_name.trim().length > 0
+  const canSave = form.full_name.trim().length > 0
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center">
@@ -200,32 +202,17 @@ export default function ProfileEditSheet({
             </div>
           ) : (
             <>
-              {/* First Name */}
+              {/* Full Name */}
               <div className="mt-4">
                 <Input
-                  label="FIRST NAME"
-                  value={form.first_name}
-                  onChange={(e) => updateField('first_name', e.target.value)}
-                  placeholder="Enter first name"
+                  label="FULL NAME"
+                  value={form.full_name}
+                  onChange={(e) => updateField('full_name', e.target.value)}
+                  placeholder="Enter your full name"
                 />
-                {errors.first_name && (
+                {errors.full_name && (
                   <p className="text-[11px] mt-1 pl-1" style={{ color: colors.error }}>
-                    {errors.first_name}
-                  </p>
-                )}
-              </div>
-
-              {/* Last Name */}
-              <div className="mt-4">
-                <Input
-                  label="LAST NAME"
-                  value={form.last_name}
-                  onChange={(e) => updateField('last_name', e.target.value)}
-                  placeholder="Enter last name"
-                />
-                {errors.last_name && (
-                  <p className="text-[11px] mt-1 pl-1" style={{ color: colors.error }}>
-                    {errors.last_name}
+                    {errors.full_name}
                   </p>
                 )}
               </div>
@@ -279,6 +266,16 @@ export default function ProfileEditSheet({
                     )
                   })}
                 </div>
+              </div>
+
+              {/* Nationality */}
+              <div className="mt-4">
+                <SectionLabel label="NATIONALITY" className="mb-2" />
+                <SearchableSelect
+                  value={form.nationality}
+                  onChange={(v) => updateField('nationality', v)}
+                  options={COUNTRIES}
+                />
               </div>
 
               {/* Email — read-only */}

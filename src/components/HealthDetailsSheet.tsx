@@ -1,13 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../hooks/useToast'
 import { Skeleton, SectionLabel } from './ui'
 import { colors, radius } from '../styles/tokens'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
-import type { Database } from '../types/supabase'
-
-type InjuryBodyPart = Database['public']['Enums']['injury_body_part']
+import { X } from 'lucide-react'
 
 // ── Unit conversions (always store metric) ──
 
@@ -18,35 +15,33 @@ const cmToFtIn = (cm: number) => ({
 const ftInToCm = (ft: number, inches: number) => Math.round(ft * 30.48 + inches * 2.54)
 const kgToLbs = (kg: number) => Math.round(kg * 2.2046)
 const lbsToKg = (lbs: number) => Math.round((lbs / 2.2046) * 10) / 10
+
 // ── Types ──
 
-interface Injury {
-  id?: string | undefined
-  body_part: InjuryBodyPart
-  status: 'current' | 'recovering' | 'history'
-  notes: string | null
+type InjuryModification = 'modify' | 'avoid'
+
+interface InjuryEntry {
+  area: string
+  modification: InjuryModification | null
 }
 
 interface HealthForm {
   height_cm: string
   current_weight_kg: string
-  activity_level: string
-  training_experience: string
+  body_fat_pct: string
   fitness_level: string
+  lifestyle: string[]
+  occupation: string
+  training_experience: string
   primary_activity: string
-  occupation_type: string
-  medical_conditions: string
+  medical_conditions: string[]
 }
 
 type HeightUnit = 'cm' | 'ftin'
 type WeightUnit = 'kg' | 'lbs'
-const ACTIVITY_LEVELS = [
-  { value: 'sedentary', label: 'Sedentary', desc: 'Desk job, little movement outside gym' },
-  { value: 'lightly_active', label: 'Lightly Active', desc: 'Some walking, light daily activity' },
-  { value: 'active', label: 'Active', desc: 'Physical job or daily exercise outside gym' },
-  { value: 'very_active', label: 'Very Active', desc: 'Manual labour or twice-daily training' },
-]
 
+// Field lists below mirror the onboarding wizard exactly (Screen4Capability,
+// Screen9Constraints) so a value picked in either place shows up in the other.
 const TRAINING_EXPERIENCE = [
   { value: 'never', label: 'Never trained' },
   { value: 'less_than_6_months', label: 'Less than 6 months' },
@@ -60,30 +55,61 @@ const FITNESS_LEVELS = [
   { value: 'advanced', label: 'Advanced', desc: 'Years of structured training' },
 ]
 
-const OCCUPATION_TYPES = [
-  { value: 'desk_job', label: 'Desk job', desc: 'Mostly seated, low physical demand' },
-  { value: 'light_physical', label: 'Light physical', desc: 'On feet, moderate movement' },
-  { value: 'heavy_physical', label: 'Heavy physical', desc: 'Manual labour, high physical demand' },
+const LIFESTYLE_OPTIONS = [
+  'Sedentary (desk job, minimal movement)',
+  'Lightly Active (walk occasionally)',
+  'Moderately Active (on feet most of day)',
+  'Very Active (physical work or sport regularly)',
+  'Shift Worker (irregular hours)',
+  'Frequently Travelling',
+  'High Stress / Low Sleep',
 ]
 
-const BODY_PARTS = [
-  'knees',
-  'wrists',
-  'lower_back',
-  'upper_back',
-  'shoulders',
-  'hips',
-  'ankles',
-  'neck',
-  'elbows',
-  'hamstrings',
-  'quads',
-  'calves',
+const OCCUPATION_OPTIONS = [
+  'Student',
+  'Desk Job / Office Worker',
+  'Field / On-site Worker',
+  'Healthcare Professional',
+  'Athlete / Coach',
+  'Homemaker',
+  'Business Owner / Entrepreneur',
+  'Creative / Freelancer',
+  'Retired',
+  'Other',
 ]
 
-const STATUS_OPTIONS: { value: Injury['status']; label: string; desc: string }[] = [
-  { value: 'current', label: 'Avoid', desc: 'No load on this area' },
-  { value: 'recovering', label: 'Modify', desc: 'Can train with modifications' },
+const MEDICAL_ALL = [
+  'Hypertension',
+  'Type 2 Diabetes',
+  'Thyroid Disorder',
+  'Asthma',
+  'Chronic Lower Back Pain',
+  'Chronic Knee Pain',
+  'Heart Condition (doctor cleared)',
+  'Arthritis',
+  'None',
+]
+const MEDICAL_FEMALE_OTHER = [
+  'PCOD / PCOS',
+  'Endometriosis',
+  'Osteoporosis',
+  'Pregnancy / Postpartum',
+]
+const MEDICAL_MALE_OTHER = ['Low Testosterone (diagnosed)', 'Hernia']
+
+const INJURY_SUGGESTIONS = [
+  'Shoulder',
+  'Knee',
+  'Lower Back',
+  'Hip',
+  'Ankle',
+  'Wrist',
+  'Elbow',
+  'Neck',
+  'Upper Back',
+  'Hamstring',
+  'Quad',
+  'Calf',
 ]
 
 // ── Unit Toggle ──
@@ -124,144 +150,23 @@ function UnitToggle<T extends string>({
   )
 }
 
-// ── Injury Editor ──
+// ── Tag pill (multi-select chip) ──
 
-function InjuryEditor({
-  injury,
-  onSave,
-  onCancel,
-}: {
-  injury?: Injury
-  onSave: (i: Injury) => void
-  onCancel: () => void
-}) {
-  const [bodyPart, setBodyPart] = useState<InjuryBodyPart | ''>(injury?.body_part ?? '')
-  const [status, setStatus] = useState<Injury['status']>(injury?.status ?? 'current')
-  const [notes, setNotes] = useState(injury?.notes ?? '')
-
+function TagPill({ label, active, onTap }: { label: string; active: boolean; onTap: () => void }) {
   return (
-    <div
-      className="p-3 mt-2 mb-2"
+    <button
+      onClick={onTap}
+      className="px-3 py-1.5 text-[12px] font-['DM_Sans'] font-medium transition-all duration-150 active:scale-[0.96]"
       style={{
-        background: colors.surface2,
-        borderRadius: 12,
-        border: `1px solid ${colors.border}`,
+        borderRadius: 999,
+        border: `1.5px solid ${active ? colors.accent : colors.border}`,
+        background: active ? colors.accentMuted : colors.surface2,
+        color: active ? colors.accent : colors.muted,
+        cursor: 'pointer',
       }}
     >
-      <SectionLabel label="BODY PART" className="mb-2" />
-      <select
-        value={bodyPart}
-        onChange={(e) => setBodyPart(e.target.value as InjuryBodyPart | '')}
-        className="w-full h-[44px] px-3 text-[14px] font-['DM_Sans'] text-text mb-3"
-        style={{
-          background: colors.surface,
-          border: `1.5px solid ${colors.border}`,
-          borderRadius: radius.input,
-          colorScheme: 'dark',
-        }}
-      >
-        <option value="">Select area</option>
-        {BODY_PARTS.map((p) => (
-          <option key={p} value={p}>
-            {p.replace(/_/g, ' ')}
-          </option>
-        ))}
-      </select>
-
-      <SectionLabel label="SEVERITY" className="mb-2" />
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        {STATUS_OPTIONS.map((opt) => {
-          const active = status === opt.value
-          return (
-            <button
-              key={opt.value}
-              onClick={() => setStatus(opt.value)}
-              className="py-2 text-[12px] font-['DM_Sans'] font-medium transition-all duration-150 active:scale-[0.96]"
-              style={{
-                borderRadius: radius.button,
-                border: `1.5px solid ${active ? (opt.value === 'current' ? colors.error : colors.warning) : colors.border}`,
-                background: active
-                  ? opt.value === 'current'
-                    ? 'rgba(239,68,68,0.12)'
-                    : 'rgba(245,158,11,0.12)'
-                  : colors.surface,
-                color: active
-                  ? opt.value === 'current'
-                    ? colors.error
-                    : colors.warning
-                  : colors.muted,
-                cursor: 'pointer',
-              }}
-            >
-              {opt.label}
-            </button>
-          )
-        })}
-      </div>
-
-      <SectionLabel label="NOTES (OPTIONAL)" className="mb-2" />
-      <input
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-        placeholder="e.g. pain on deep flexion"
-        className="w-full h-[44px] px-3 text-[14px] font-['DM_Sans'] text-text placeholder:text-placeholder mb-3"
-        style={{
-          background: colors.surface,
-          border: `1.5px solid ${colors.border}`,
-          borderRadius: radius.input,
-        }}
-      />
-
-      <div className="flex gap-2">
-        <button
-          onClick={onCancel}
-          className="flex-1 py-2 text-[13px] font-['DM_Sans'] font-medium active:opacity-70"
-          style={{
-            background: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: 10,
-            color: colors.muted,
-            cursor: 'pointer',
-          }}
-        >
-          Cancel
-        </button>
-        <button
-          onClick={() => {
-            if (!bodyPart) return
-            onSave({ id: injury?.id, body_part: bodyPart, status, notes: notes.trim() })
-          }}
-          disabled={!bodyPart}
-          className="flex-1 py-2 text-[13px] font-['DM_Sans'] font-medium active:opacity-70"
-          style={{
-            background: bodyPart ? colors.accent : colors.surface3,
-            border: 'none',
-            borderRadius: 10,
-            color: bodyPart ? colors.white : colors.muted,
-            cursor: bodyPart ? 'pointer' : 'default',
-          }}
-        >
-          {injury?.id ? 'Update' : 'Add'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ── Severity Badge ──
-
-function SeverityBadge({ status }: { status: Injury['status'] }) {
-  const isAvoid = status === 'current'
-  return (
-    <span
-      className="text-[10px] font-bold tracking-[0.5px] uppercase px-2 py-[2px] rounded-[4px]"
-      style={{
-        background: isAvoid ? colors.error : colors.warning,
-        color: isAvoid ? colors.white : colors.surface,
-      }}
-    >
-      {isAvoid ? 'AVOID' : 'MODIFY'}
-    </span>
+      {label}
+    </button>
   )
 }
 
@@ -279,14 +184,17 @@ export default function HealthDetailsSheet({ open, onClose }: HealthDetailsSheet
   const [form, setForm] = useState<HealthForm>({
     height_cm: '',
     current_weight_kg: '',
-    activity_level: '',
-    training_experience: '',
+    body_fat_pct: '',
     fitness_level: '',
+    lifestyle: [],
+    occupation: '',
+    training_experience: '',
     primary_activity: '',
-    occupation_type: '',
-    medical_conditions: '',
+    medical_conditions: [],
   })
-  const [injuries, setInjuries] = useState<Injury[]>([])
+  const [gender, setGender] = useState<string | null>(null)
+  const [injuries, setInjuries] = useState<InjuryEntry[]>([])
+  const [injuryInput, setInjuryInput] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -296,55 +204,58 @@ export default function HealthDetailsSheet({ open, onClose }: HealthDetailsSheet
   const [heightIn, setHeightIn] = useState('')
   const [displayWeight, setDisplayWeight] = useState('')
 
-  const [editingInjury, setEditingInjury] = useState<Injury | null>(null)
-  const [addingInjury, setAddingInjury] = useState(false)
+  const medicalOptions = useMemo(() => {
+    const list = [...MEDICAL_ALL]
+    if (gender === 'female' || gender === 'other') list.push(...MEDICAL_FEMALE_OTHER)
+    if (gender === 'male' || gender === 'other') list.push(...MEDICAL_MALE_OTHER)
+    return list
+  }, [gender])
 
   /* eslint-disable react-hooks/set-state-in-effect -- reset form state when sheet opens */
   useEffect(() => {
     if (!open || !user) return
     let cancelled = false
-    setEditingInjury(null)
-    setAddingInjury(false)
+    setInjuryInput('')
 
     const load = async () => {
       setLoading(true)
-      const [profileRes, injuriesRes] = await Promise.all([
+      const [healthRes, profileRes] = await Promise.all([
         supabase
-          .from('user_profiles')
+          .from('user_health')
           .select(
-            'height_cm, current_weight_kg, activity_level, training_experience, fitness_level, primary_activity, occupation_type, medical_conditions'
+            'height_cm, current_weight_kg, body_fat_pct, fitness_level, lifestyle, occupation, medical_conditions, injuries_v2'
           )
           .eq('user_id', user.id)
-          .single(),
+          .maybeSingle(),
         supabase
-          .from('user_injuries')
-          .select('id, body_part, status, notes')
+          .from('user_profiles')
+          .select('gender, training_experience, primary_activity')
           .eq('user_id', user.id)
-          .order('created_at', { ascending: true }),
+          .maybeSingle(),
       ])
       if (cancelled) return
 
-      const d = profileRes.data as Record<string, unknown> | null
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string -- numeric values from DB
-      const h = d?.height_cm != null ? String(d.height_cm) : ''
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string -- numeric values from DB
-      const w = d?.current_weight_kg != null ? String(d.current_weight_kg) : ''
+      const h = healthRes.data
+      const p = profileRes.data
+      const heightStr = h?.height_cm != null ? String(h.height_cm) : ''
+      const weightStr = h?.current_weight_kg != null ? String(h.current_weight_kg) : ''
 
       setForm({
-        height_cm: h,
-        current_weight_kg: w,
-        activity_level: (d?.activity_level as string) ?? '',
-        training_experience: (d?.training_experience as string) ?? '',
-        fitness_level: (d?.fitness_level as string) ?? '',
-        primary_activity: (d?.primary_activity as string) ?? '',
-        occupation_type: (d?.occupation_type as string) ?? '',
-        medical_conditions: (d?.medical_conditions as string) ?? '',
+        height_cm: heightStr,
+        current_weight_kg: weightStr,
+        body_fat_pct: h?.body_fat_pct != null ? String(h.body_fat_pct) : '',
+        fitness_level: h?.fitness_level ?? '',
+        lifestyle: h?.lifestyle ?? [],
+        occupation: h?.occupation ?? '',
+        training_experience: p?.training_experience ?? '',
+        primary_activity: p?.primary_activity ?? '',
+        medical_conditions: h?.medical_conditions ?? [],
       })
-      setDisplayWeight(w)
+      setDisplayWeight(weightStr)
+      setGender(p?.gender ?? null)
 
-      if (h) {
-        const cm = parseFloat(h)
-        const { ft, in: inches } = cmToFtIn(cm)
+      if (heightStr) {
+        const { ft, in: inches } = cmToFtIn(parseFloat(heightStr))
         setHeightFt(String(ft))
         setHeightIn(String(inches))
       } else {
@@ -352,7 +263,11 @@ export default function HealthDetailsSheet({ open, onClose }: HealthDetailsSheet
         setHeightIn('')
       }
 
-      setInjuries((injuriesRes.data as Injury[]) ?? [])
+      const injuriesV2 = Array.isArray(h?.injuries_v2)
+        ? (h.injuries_v2 as unknown as { area: string; modification: InjuryModification | null }[])
+        : []
+      setInjuries(injuriesV2.map((i) => ({ area: i.area, modification: i.modification ?? null })))
+
       setHeightUnit('cm')
       setWeightUnit('kg')
       setLoading(false)
@@ -423,90 +338,100 @@ export default function HealthDetailsSheet({ open, onClose }: HealthDetailsSheet
     setForm((prev) => ({ ...prev, height_cm: cm > 0 ? String(cm) : '' }))
   }, [])
 
-  const handleSaveInjury = useCallback(
-    async (injury: Injury) => {
-      if (!user) return
-      if (injury.id) {
-        const { error } = await supabase
-          .from('user_injuries')
-          .update({
-            body_part: injury.body_part,
-            status: injury.status,
-            notes: injury.notes,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', injury.id)
-        if (error) {
-          toast.show({ message: 'Failed to update injury', type: 'error' })
-          return
-        }
-        setInjuries((prev) => prev.map((i) => (i.id === injury.id ? { ...i, ...injury } : i)))
-      } else {
-        const { data, error } = await supabase
-          .from('user_injuries')
-          .insert({
-            user_id: user.id,
-            body_part: injury.body_part,
-            status: injury.status,
-            notes: injury.notes,
-          })
-          .select('id, body_part, status, notes')
-          .single()
-        if (error) {
-          toast.show({ message: 'Failed to add injury', type: 'error' })
-          return
-        }
-        setInjuries((prev) => [...prev, data])
-      }
-      setEditingInjury(null)
-      setAddingInjury(false)
-    },
-    [user, toast]
-  )
+  const toggleLifestyle = (opt: string) => {
+    setForm((prev) => ({
+      ...prev,
+      lifestyle: prev.lifestyle.includes(opt)
+        ? prev.lifestyle.filter((v) => v !== opt)
+        : [...prev.lifestyle, opt],
+    }))
+  }
 
-  const handleDeleteInjury = useCallback(
-    async (id: string) => {
-      if (!user) return
-      const { error } = await supabase
-        .from('user_injuries')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id)
-      if (error) {
-        toast.show({ message: 'Failed to delete injury', type: 'error' })
-        return
+  const toggleMedical = (opt: string) => {
+    if (opt === 'None') {
+      setForm((prev) => ({
+        ...prev,
+        medical_conditions: prev.medical_conditions.includes('None') ? [] : ['None'],
+      }))
+      return
+    }
+    setForm((prev) => {
+      const withoutNone = prev.medical_conditions.filter((v) => v !== 'None')
+      return {
+        ...prev,
+        medical_conditions: withoutNone.includes(opt)
+          ? withoutNone.filter((v) => v !== opt)
+          : [...withoutNone, opt],
       }
-      setInjuries((prev) => prev.filter((i) => i.id !== id))
-    },
-    [user, toast]
+    })
+  }
+
+  const addInjury = (area: string) => {
+    const trimmed = area.trim()
+    if (!trimmed) return
+    if (injuries.some((i) => i.area.toLowerCase() === trimmed.toLowerCase())) return
+    setInjuries((prev) => [...prev, { area: trimmed, modification: null }])
+    setInjuryInput('')
+  }
+
+  const removeInjury = (area: string) => {
+    setInjuries((prev) => prev.filter((i) => i.area !== area))
+  }
+
+  const setInjuryModification = (area: string, modification: InjuryModification) => {
+    setInjuries((prev) => prev.map((i) => (i.area === area ? { ...i, modification } : i)))
+  }
+
+  const remainingSuggestions = INJURY_SUGGESTIONS.filter(
+    (s) => !injuries.some((i) => i.area.toLowerCase() === s.toLowerCase())
   )
 
   const handleSave = useCallback(async () => {
     if (!user) return
     setSaving(true)
 
-    const { error } = await supabase
-      .from('user_profiles')
-      .update({
+    const { error: healthError } = await supabase.from('user_health').upsert(
+      {
+        user_id: user.id,
         height_cm: form.height_cm ? parseFloat(form.height_cm) : null,
         current_weight_kg: form.current_weight_kg ? parseFloat(form.current_weight_kg) : null,
-        activity_level: form.activity_level || null,
-        training_experience: form.training_experience || null,
+        body_fat_pct: form.body_fat_pct ? parseFloat(form.body_fat_pct) : null,
         fitness_level: form.fitness_level || null,
+        lifestyle: form.lifestyle,
+        occupation: form.occupation || null,
+        medical_conditions: form.medical_conditions,
+        injuries: injuries.map((i) => i.area),
+        injuries_v2: injuries.map((i) => ({
+          area: i.area,
+          modification: i.modification,
+          notes: '',
+        })),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' }
+    )
+    if (healthError) {
+      setSaving(false)
+      toast.show({ message: 'Failed to save health details', type: 'error' })
+      return
+    }
+
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .update({
+        training_experience: form.training_experience || null,
         primary_activity: form.primary_activity.trim() || null,
-        occupation_type: form.occupation_type || null,
-        medical_conditions: form.medical_conditions.trim() || null,
         updated_at: new Date().toISOString(),
       })
       .eq('user_id', user.id)
 
     setSaving(false)
-    if (error) {
+    if (profileError) {
       toast.show({ message: 'Failed to save health details', type: 'error' })
       return
     }
     onClose()
-  }, [form, user, toast, onClose])
+  }, [form, injuries, user, toast, onClose])
 
   if (!open) return null
 
@@ -663,6 +588,26 @@ export default function HealthDetailsSheet({ open, onClose }: HealthDetailsSheet
                 </p>
               </div>
 
+              {/* Body Fat % */}
+              <div className="mb-4">
+                <SectionLabel label="BODY FAT % (OPTIONAL)" className="mb-2" />
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min={3}
+                  max={60}
+                  value={form.body_fat_pct}
+                  onChange={(e) => setForm((prev) => ({ ...prev, body_fat_pct: e.target.value }))}
+                  placeholder="—"
+                  className="w-full h-[48px] px-[14px] text-[15px] font-['DM_Sans'] text-text placeholder:text-placeholder"
+                  style={inputStyle}
+                  aria-label="Body fat percentage"
+                />
+                <p className="text-[11px] mt-1 pl-1" style={{ color: colors.muted }}>
+                  From a previous InBody or DEXA scan. Leave blank if unknown.
+                </p>
+              </div>
+
               {/* ── Training Background ── */}
               <p
                 className="font-['DM_Sans'] font-bold uppercase tracking-[2px] mt-6 mb-2"
@@ -765,77 +710,37 @@ export default function HealthDetailsSheet({ open, onClose }: HealthDetailsSheet
               </p>
 
               <div className="mb-4">
-                <SectionLabel label="ACTIVITY LEVEL" className="mb-2" />
-                <div className="flex flex-col gap-2">
-                  {ACTIVITY_LEVELS.map((opt) => {
-                    const active = form.activity_level === opt.value
-                    return (
-                      <button
-                        key={opt.value}
-                        onClick={() =>
-                          setForm((prev) => ({ ...prev, activity_level: active ? '' : opt.value }))
-                        }
-                        className="w-full text-left px-4 py-3 transition-all duration-150 active:scale-[0.98]"
-                        style={{
-                          borderRadius: radius.button,
-                          border: `1.5px solid ${active ? colors.accent : colors.border}`,
-                          background: active ? colors.accentMuted : colors.surface2,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <span
-                          className="text-[13px] font-['DM_Sans'] font-medium block"
-                          style={{ color: active ? colors.accent : colors.text }}
-                        >
-                          {opt.label}
-                        </span>
-                        <span
-                          className="text-[11px] font-['DM_Sans'] block mt-[2px]"
-                          style={{ color: colors.muted }}
-                        >
-                          {opt.desc}
-                        </span>
-                      </button>
-                    )
-                  })}
+                <SectionLabel label="YOUR DAILY ACTIVITY" className="mb-2" />
+                <p className="text-[11px] font-['DM_Sans'] mb-2" style={{ color: colors.muted }}>
+                  Outside the gym, how active are you? Select all that apply.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {LIFESTYLE_OPTIONS.map((opt) => (
+                    <TagPill
+                      key={opt}
+                      label={opt}
+                      active={form.lifestyle.includes(opt)}
+                      onTap={() => toggleLifestyle(opt)}
+                    />
+                  ))}
                 </div>
               </div>
 
               <div className="mb-4">
-                <SectionLabel label="OCCUPATION TYPE" className="mb-2" />
-                <div className="flex flex-col gap-2">
-                  {OCCUPATION_TYPES.map((opt) => {
-                    const active = form.occupation_type === opt.value
-                    return (
-                      <button
-                        key={opt.value}
-                        onClick={() =>
-                          setForm((prev) => ({ ...prev, occupation_type: active ? '' : opt.value }))
-                        }
-                        className="w-full text-left px-4 py-3 transition-all duration-150 active:scale-[0.98]"
-                        style={{
-                          borderRadius: radius.button,
-                          border: `1.5px solid ${active ? colors.accent : colors.border}`,
-                          background: active ? colors.accentMuted : colors.surface2,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <span
-                          className="text-[13px] font-['DM_Sans'] font-medium block"
-                          style={{ color: active ? colors.accent : colors.text }}
-                        >
-                          {opt.label}
-                        </span>
-                        <span
-                          className="text-[11px] font-['DM_Sans'] block mt-[2px]"
-                          style={{ color: colors.muted }}
-                        >
-                          {opt.desc}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
+                <SectionLabel label="OCCUPATION (OPTIONAL)" className="mb-2" />
+                <select
+                  value={form.occupation}
+                  onChange={(e) => setForm((prev) => ({ ...prev, occupation: e.target.value }))}
+                  className="h-[52px] w-full px-[14px] text-text text-[15px] font-['DM_Sans']"
+                  style={{ ...inputStyle, colorScheme: 'dark' }}
+                >
+                  <option value="">Select (optional)</option>
+                  {OCCUPATION_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* ── Medical ── */}
@@ -848,22 +753,19 @@ export default function HealthDetailsSheet({ open, onClose }: HealthDetailsSheet
 
               <div className="mb-4">
                 <SectionLabel label="MEDICAL CONDITIONS" className="mb-2" />
-                <textarea
-                  value={form.medical_conditions}
-                  onChange={(e) => {
-                    if (e.target.value.length <= 500)
-                      setForm((prev) => ({ ...prev, medical_conditions: e.target.value }))
-                  }}
-                  placeholder="Any conditions your trainer should know about e.g. hypertension, diabetes, heart condition, asthma"
-                  maxLength={500}
-                  rows={3}
-                  className="w-full px-[14px] py-3 text-[16px] font-['DM_Sans'] text-text placeholder:text-placeholder resize-none"
-                  style={inputStyle}
-                  aria-label="Medical conditions"
-                />
-                <p className="text-[11px] mt-1 pl-1 text-right" style={{ color: colors.muted }}>
-                  {form.medical_conditions.length} / 500
+                <p className="text-[11px] font-['DM_Sans'] mb-2" style={{ color: colors.muted }}>
+                  Odin adjusts intensity and avoids contraindicated movements for each condition.
                 </p>
+                <div className="flex flex-wrap gap-2">
+                  {medicalOptions.map((opt) => (
+                    <TagPill
+                      key={opt}
+                      label={opt}
+                      active={form.medical_conditions.includes(opt)}
+                      onTap={() => toggleMedical(opt)}
+                    />
+                  ))}
+                </div>
               </div>
 
               {/* ── Injuries ── */}
@@ -874,94 +776,119 @@ export default function HealthDetailsSheet({ open, onClose }: HealthDetailsSheet
                 INJURIES & PAIN
               </p>
 
-              {injuries.length === 0 && !addingInjury && (
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={injuryInput}
+                  onChange={(e) => setInjuryInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      addInjury(injuryInput)
+                    }
+                  }}
+                  placeholder="Type an area + press Enter"
+                  className="flex-1 h-[48px] px-[14px] text-[14px] font-['DM_Sans'] text-text placeholder:text-placeholder"
+                  style={inputStyle}
+                />
+                <button
+                  onClick={() => addInjury(injuryInput)}
+                  disabled={!injuryInput.trim()}
+                  className="h-[48px] px-4 text-[13px] font-['DM_Sans'] font-semibold"
+                  style={{
+                    borderRadius: radius.input,
+                    background: injuryInput.trim() ? colors.accent : colors.surface3,
+                    color: injuryInput.trim() ? colors.white : colors.muted,
+                    border: 'none',
+                    cursor: injuryInput.trim() ? 'pointer' : 'default',
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+
+              {remainingSuggestions.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {remainingSuggestions.map((s) => (
+                    <TagPill key={s} label={s} active={false} onTap={() => addInjury(s)} />
+                  ))}
+                </div>
+              )}
+
+              {injuries.length === 0 && (
                 <p className="text-[13px] font-['DM_Sans'] mb-2" style={{ color: colors.muted }}>
                   No injuries logged
                 </p>
               )}
 
-              {injuries.map((injury) =>
-                editingInjury?.id === injury.id ? (
-                  <InjuryEditor
-                    key={injury.id}
-                    injury={injury}
-                    onSave={(i) => void handleSaveInjury(i)}
-                    onCancel={() => setEditingInjury(null)}
-                  />
-                ) : (
-                  <div
-                    key={injury.id}
-                    className="flex items-center gap-3 py-3 px-3 mb-1"
-                    style={{
-                      background: colors.surface2,
-                      borderRadius: 10,
-                      border: `1px solid ${colors.border}`,
-                    }}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="text-[14px] font-['DM_Sans'] capitalize"
-                          style={{ color: colors.text }}
-                        >
-                          {injury.body_part.replace(/_/g, ' ')}
-                        </span>
-                        <SeverityBadge status={injury.status} />
-                      </div>
-                      {injury.notes && (
-                        <p className="text-[11px] mt-1 truncate" style={{ color: colors.muted }}>
-                          {injury.notes}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => setEditingInjury(injury)}
-                      className="p-2 active:opacity-60"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                      aria-label="Edit injury"
-                    >
-                      <Pencil size={14} color={colors.muted} />
-                    </button>
-                    <button
-                      onClick={() => injury.id && void handleDeleteInjury(injury.id)}
-                      className="p-2 active:opacity-60"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                      aria-label="Delete injury"
-                    >
-                      <Trash2 size={14} color={colors.error} />
-                    </button>
-                  </div>
-                )
-              )}
-
-              {addingInjury && (
-                <InjuryEditor
-                  onSave={(i) => void handleSaveInjury(i)}
-                  onCancel={() => setAddingInjury(false)}
-                />
-              )}
-
-              {!addingInjury && injuries.length < 10 && (
-                <button
-                  onClick={() => setAddingInjury(true)}
-                  className="flex items-center gap-2 mt-2 py-2 px-3 active:opacity-60"
+              {injuries.map((injury) => (
+                <div
+                  key={injury.area}
+                  className="mb-2.5 p-3"
                   style={{
-                    background: 'none',
-                    border: `1px dashed ${colors.border}`,
-                    borderRadius: 10,
-                    cursor: 'pointer',
-                    width: '100%',
+                    background: colors.surface2,
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: radius.button,
                   }}
                 >
-                  <Plus size={16} color={colors.accent} />
-                  <span
-                    className="text-[13px] font-['DM_Sans'] font-medium"
-                    style={{ color: colors.accent }}
-                  >
-                    Add Injury
-                  </span>
-                </button>
-              )}
+                  <div className="flex items-center justify-between mb-2">
+                    <span
+                      className="text-[13px] font-['DM_Sans'] font-semibold"
+                      style={{ color: colors.text }}
+                    >
+                      {injury.area}
+                    </span>
+                    <button
+                      onClick={() => removeInjury(injury.area)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                        lineHeight: 1,
+                      }}
+                      aria-label={`Remove ${injury.area}`}
+                    >
+                      <X size={14} color={colors.muted} />
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setInjuryModification(injury.area, 'modify')}
+                      className="flex-1 py-2 text-[12px] font-['DM_Sans'] font-medium transition-all duration-150 active:scale-[0.96]"
+                      style={{
+                        borderRadius: radius.button,
+                        border: `1.5px solid ${injury.modification === 'modify' ? colors.accent : colors.border}`,
+                        background:
+                          injury.modification === 'modify' ? colors.accentMuted : colors.surface,
+                        color: injury.modification === 'modify' ? colors.accent : colors.muted,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Modify
+                    </button>
+                    <button
+                      onClick={() => setInjuryModification(injury.area, 'avoid')}
+                      className="flex-1 py-2 text-[12px] font-['DM_Sans'] font-medium transition-all duration-150 active:scale-[0.96]"
+                      style={{
+                        borderRadius: radius.button,
+                        border: `1.5px solid ${injury.modification === 'avoid' ? colors.accent : colors.border}`,
+                        background:
+                          injury.modification === 'avoid' ? colors.accentMuted : colors.surface,
+                        color: injury.modification === 'avoid' ? colors.accent : colors.muted,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Avoid
+                    </button>
+                  </div>
+                  {!injury.modification && (
+                    <p className="text-[11px] mt-1.5 pl-1" style={{ color: colors.error }}>
+                      Select Modify or Avoid
+                    </p>
+                  )}
+                </div>
+              ))}
             </>
           )}
         </div>

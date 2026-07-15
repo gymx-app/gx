@@ -100,10 +100,7 @@ export default function Account() {
   const [confirmSheet, setConfirmSheet] = useState<'signout' | 'delete' | null>(null)
   const [profileSheetOpen, setProfileSheetOpen] = useState(false)
   const [healthDetailsOpen, setHealthDetailsOpen] = useState(false)
-  const [displayProfile, setDisplayProfile] = useState<{
-    first_name: string
-    last_name: string
-  } | null>(null)
+  const [displayProfile, setDisplayProfile] = useState<{ full_name: string } | null>(null)
 
   const handleSignOut = useCallback(async () => {
     setConfirmSheet(null)
@@ -186,10 +183,8 @@ export default function Account() {
   )
 
   const email = user?.email ?? ''
-  const profileFullName = displayProfile
-    ? `${displayProfile.first_name} ${displayProfile.last_name}`.trim()
-    : undefined
-  const fullName = profileFullName ?? (user?.user_metadata?.full_name as string | undefined)
+  const fullName =
+    displayProfile?.full_name ?? (user?.user_metadata?.full_name as string | undefined)
   const initials = getInitials(email, fullName)
   const displayName = getDisplayName(email, fullName)
 

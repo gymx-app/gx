@@ -154,7 +154,7 @@ export function Screen9Constraints({
       .from('user_profiles')
       .update({
         onboarding_completed: extra.onboarding_completed,
-        onboarding_step: 9,
+        onboarding_step: 8,
         updated_at: new Date().toISOString(),
       })
       .eq('user_id', userId)
@@ -178,7 +178,7 @@ export function Screen9Constraints({
     if (isPregnant) {
       onPregnancySaved()
     } else {
-      onSaved(9)
+      onSaved(8)
     }
   }
 
