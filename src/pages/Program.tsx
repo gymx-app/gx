@@ -523,20 +523,25 @@ export default function Program() {
         </div>
       )}
 
-      {/* Tab shell: fetched once above, switching tabs just changes what's rendered */}
-      <div className="flex-shrink-0 flex gap-2 px-4 pt-3">
+      {/* Tab shell: underline indicator so tabs read as attached to the panel
+        below rather than as standalone pill buttons */}
+      <div
+        className="flex-shrink-0 flex px-4 pt-3"
+        style={{ borderBottom: `1px solid ${colors.border}` }}
+      >
         {tabs.map((t) => {
           const isActive = activeTab === t.key
           return (
             <button
               key={t.key}
               onClick={() => setActiveTab(t.key)}
-              className="flex-1 py-2 text-[12px] font-['DM_Sans'] font-bold uppercase tracking-[0.5px]"
+              className="flex-1 pb-2.5 text-[12px] font-['DM_Sans'] font-bold uppercase tracking-[0.5px]"
               style={{
-                borderRadius: radius.chip,
-                background: isActive ? colors.accent : colors.surface2,
-                color: isActive ? colors.white : colors.muted,
-                border: `1px solid ${isActive ? colors.accent : colors.border}`,
+                marginBottom: '-1px',
+                background: 'none',
+                color: isActive ? colors.text : colors.muted,
+                border: 'none',
+                borderBottom: `2px solid ${isActive ? colors.accent : 'transparent'}`,
                 cursor: 'pointer',
               }}
             >
