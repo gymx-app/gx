@@ -122,3 +122,45 @@ export function getSharedRationale(rationales: string[]): string | null {
   if (rationales.length < 2) return null
   return rationales.every((r) => r === rationales[0]) ? (rationales[0] ?? null) : null
 }
+
+// Session-level "why this session" rationale (conditioning_items.rationale) comes
+// from Odin as either a plain sentence or a JSON-encoded array of SCREAMING_SNAKE_CASE
+// reason codes (e.g. '["LOW_IMPACT_MODALITY_SELECTED","MEASURABLE_CONDITIONING_TARGET"]').
+// This map covers the codes we've seen; anything unmapped still gets a readable
+// fallback via humanizeSlug rather than showing raw enum text.
+const SESSION_RATIONALE_CODE_MAP: Record<string, string> = {
+  LOW_IMPACT_MODALITY_SELECTED: 'chosen for its low impact on your joints',
+  MEASURABLE_CONDITIONING_TARGET: 'gives you a clear, measurable target',
+  HEART_RATE_ZONE_MATCHED: 'matched to your target heart-rate zone',
+  RECOVERY_DAY_PLACEMENT: 'placed here as part of your recovery',
+  FATIGUE_MANAGEMENT: 'balances training load without adding fatigue',
+  EQUIPMENT_AVAILABLE: 'fits the equipment you have access to',
+  GOAL_ALIGNED: 'aligned with your programme goal',
+}
+
+function humanizeSessionCode(code: string): string {
+  return SESSION_RATIONALE_CODE_MAP[code] ?? humanizeSlug(code).toLowerCase()
+}
+
+/**
+ * Humanizes a session-level rationale string for display. If it's a
+ * JSON-encoded array of reason codes, maps each to a plain-English phrase
+ * and joins them into one sentence. Otherwise returns the string unchanged
+ * (it's already a human sentence).
+ */
+export function humanizeSessionRationale(raw: string | null | undefined): string | null {
+  if (!raw) return null
+
+  let codes: string[] | null = null
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (Array.isArray(parsed) && parsed.every((p) => typeof p === 'string')) codes = parsed
+  } catch {
+    // Not JSON — already a plain sentence, return as-is.
+  }
+  if (!codes || codes.length === 0) return raw
+
+  const phrases = codes.map(humanizeSessionCode)
+  const sentence = joinWithAnd(phrases)
+  return sentence.charAt(0).toUpperCase() + sentence.slice(1) + '.'
+}

@@ -5,6 +5,7 @@ import { upsertChecklistLog } from '../../services/checklistService'
 import { supabase } from '../../lib/supabase'
 import { Text, Button, SectionLabel } from '../ui'
 import { mapConditioningTypeLabel } from '../../utils/odinMappers'
+import { humanizeSessionRationale } from '../../utils/swapReasons'
 import { colors, radius } from '../../styles/tokens'
 import useOptimisticUpdate from '../../hooks/useOptimisticUpdate'
 import * as idbCache from '../../services/idbCache'
@@ -271,7 +272,9 @@ const ConditioningDay = memo(function ConditioningDay({
             {showRationale ? '▾' : '▸'} Why this session?
           </button>
           {showRationale && (
-            <p className="text-[13px] text-text-secondary leading-[1.6] mt-2">{item.rationale}</p>
+            <p className="text-[13px] text-text-secondary leading-[1.6] mt-2">
+              {humanizeSessionRationale(item.rationale)}
+            </p>
           )}
         </div>
       )}

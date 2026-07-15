@@ -7,6 +7,7 @@ import { Text, Button } from '../ui'
 import { colors } from '../../styles/tokens'
 import useOptimisticUpdate from '../../hooks/useOptimisticUpdate'
 import * as idbCache from '../../services/idbCache'
+import { humanizeSessionRationale } from '../../utils/swapReasons'
 import type { ConditioningItem } from './ConditioningDay'
 
 const ACTIVITY_INSTRUCTIONS: Record<string, (durationMin: number) => string> = {
@@ -37,6 +38,7 @@ const RecoveryDay = memo(function RecoveryDay({
 
   const [isLogged, setIsLogged] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [showRationale, setShowRationale] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -107,6 +109,22 @@ const RecoveryDay = memo(function RecoveryDay({
         <Text variant="bodyMuted" className="mt-2">
           {item.intensity_description}
         </Text>
+      )}
+
+      {item.rationale && (
+        <div className="mt-3">
+          <button
+            onClick={() => setShowRationale((v) => !v)}
+            className="text-[11px] font-bold tracking-[0.08em] uppercase text-muted"
+          >
+            {showRationale ? '▾' : '▸'} Why this session?
+          </button>
+          {showRationale && (
+            <p className="text-[13px] text-text-secondary leading-[1.6] mt-2">
+              {humanizeSessionRationale(item.rationale)}
+            </p>
+          )}
+        </div>
       )}
 
       <div
